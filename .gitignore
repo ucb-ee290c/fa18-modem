@@ -1,0 +1,12 @@
+target/
+.idea/
+*.fir
+test_run_dir/
+generated-src/
+hammer-vlsi*
+out/
+*-output.json
+*.riscv
+verilator/
+simulator-*
+*.vcd

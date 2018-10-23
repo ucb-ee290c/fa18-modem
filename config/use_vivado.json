@@ -1,0 +1,12 @@
+{
+    "vlsi.core.max_threads": 8,
+    "vlsi.core.technology": "nop",
+    "vlsi.core.synthesis_tool": "vivado",
+    "vlsi.core.synthesis_tool_path": ["hammer/src/hammer-vlsi/synthesis"],
+    "vlsi.core.synthesis_tool_path_meta": "append",
+    "vlsi.core.par_tool": "vivado",
+    "vlsi.core.par_tool_path": ["hammer/src/hammer-vlsi/par"],
+    "vlsi.core.par_tool_path_meta": "append",
+    "synthesis.vivado.setup_script": "hammer/src/hammer-vlsi/synthesis/vivado/file_templates/vivado_setup.sh",
+    "synthesis.vivado.constraints_file": "hammer/src/hammer-vlsi/synthesis/vivado/file_templates/vc707.xdc"
+}
