@@ -19,7 +19,7 @@ trait HasPeripheryModem extends BaseSubsystem {
   val packetDetectChain = LazyModule(new PacketDetectThing(FixedPacketDetectParams(8, 10)))
   val equalizerChain = LazyModule(new EqualizerThing(FixedEqualizerParams(8, 10)))
   // connect memory interfaces to pbus
-  pbus.toVariableWidthSlave(Some("cordicWrite")) { cordicChain.writeQueue.mem.get }
-  pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
+  pbus.toVariableWidthSlave(Some("modemWrite")) { modemChain.writeQueue.mem.get }
+  pbus.toVariableWidthSlave(Some("modemRead")) { modemChain.readQueue.mem.get }
 }
 
