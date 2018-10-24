@@ -12,6 +12,13 @@ scalacOptions ++= Seq(
   "-Ywarn-value-discard",
 )
 
+libraryDependencies ++= Seq(
+  "edu.berkeley.cs" %% "rocket-dsptools" % "1.2-102318-SNAPSHOT"
+)
+resolvers ++= Seq(
+  Resolver.sonatypeRepo("snapshots"),
+  Resolver.sonatypeRepo("releases")
+)
 
 name := "ee290c"
 organization := "edu.berkeley.cs"
