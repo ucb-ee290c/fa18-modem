@@ -14,11 +14,11 @@ import freechips.rocketchip.subsystem.BaseSubsystem
  * These are type generic
  */
 trait CFOParams[T <: Data] {
-  val protoIQ: T
-  // val protoZ: T
-  val nStages: Int
-  val hasPreamble: Boolean
-  val stagesPerCycle: Int
+  val protoIn: DspComplex[T]
+  val protoout: DspComplex[T]
+  val mulPipe: Int
+  val addPipe: Int
+  val preamble: Boolean
 }
 
 /**
@@ -52,27 +52,27 @@ trait CFOParams[T <: Data] {
 /**
  * Bundle type that describes the input, state, and output of CORDIC
  */
-class CFOBundle[T <: Data](params: CFOParams[T]) extends Bundle {
-  val i: T = params.protoIQ.cloneType
-  val q: T = params.protoIQ.cloneType
-
-  override def cloneType: this.type = CordicBundle(params).asInstanceOf[this.type]
-}
-object CFOBundle {
-  def apply[T <: Data](params: CFOParams[T]): CFOBundle[T] = new CFOBundle(params)
-}
+// class CFOBundle[T <: Data](params: CFOParams[T]) extends Bundle {
+//   val i: T = params.protoIQ.cloneType
+//   val q: T = params.protoIQ.cloneType
+//
+//   override def cloneType: this.type = CordicBundle(params).asInstanceOf[this.type]
+// }
+// object CFOBundle {
+//   def apply[T <: Data](params: CFOParams[T]): CFOBundle[T] = new CFOBundle(params)
+// }
 
 /**
  * Bundle type as IO for iterative CORDIC modules
  */
 class CFOIO[T <: Data](params: CFOParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(CFOBundle(params)))
-  val out = Decoupled(CFOBundle(params))
+  val in = Flipped(Decoupled(params.protoIn))
+  val out = Decoupled(params.protoOut)
 
   val stPreamble = Bool()
   val ltPreamble = Bool()
 
-  override def cloneType: this.type = IterativeCordicIO(params).asInstanceOf[this.type]
+  override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
 object CFOIO {
   def apply[T <: Data](params: CFOParams[T]): CFOIO[T] =
@@ -98,11 +98,12 @@ object AddSub {
 //   pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
 // }
 
-class CFO(val params: CFOParams[FixedPoint]) extends Module {
+class CFOCorrection(val params: CFOParams[FixedPoint]) extends Module {
+  requireIsChiselType(params.protoIn)
   val io = IO(CFOIO(params))
 
   if(params.hasPreamble == true){
-    
+
   }
 
 }
