@@ -10,3 +10,4 @@ out/
 verilator/
 simulator-*
 *.vcd
+.vscode/

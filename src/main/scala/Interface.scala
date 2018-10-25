@@ -21,6 +21,7 @@ class IQBundle[T <: Data](params: IQBundleParams[T]) extends Bundle {
 }
 object IQBundle {
   def apply[T <: Data](params: IQBundleParams[T]): IQBundle[T] = new IQBundle[T](params)
+  def apply[T <: Data](proto: DspComplex[T]): IQBundle[T] = new IQBundle[T](IQBundleParams[T](proto))
 }
 
 
@@ -32,9 +33,9 @@ trait PacketBundleParams[T <: Data] {
   val protoIQ: DspComplex[T]
 }
 object PacketBundleParams {
-  def apply[T <: Data](w: Int, proto: DspComplex[T]): PacketBundleParams[T] = {
+  def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundleParams[T] = {
      new PacketBundleParams[T] {
-      val width = w
+      val width = size
       val protoIQ = proto
     }
   }
@@ -49,4 +50,5 @@ class PacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
 }
 object PacketBundle {
   def apply[T <: Data](params: PacketBundleParams[T]): PacketBundle[T] = new PacketBundle[T](params)
+  def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundle[T] = new PacketBundle[T](PacketBundleParams[T](size, proto))
 }
