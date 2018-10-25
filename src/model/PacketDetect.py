@@ -26,9 +26,9 @@ class PacketDetect:
         powerLow = not any(powers)
         print("Packet: {}".format(self.state == self.sPkt))
         print()
-        corrNum = sum([self.buf[i] * self.buf[i+self.corrStride].conjugate() for i in range(self.corrWindow)])
+        corrNum = sum([(self.buf[i] * self.buf[i+self.corrStride].conjugate()) / 4 for i in range(self.corrWindow)])
         print("corrNum {}".format(corrNum))
-        corrDenom = sum([self.buf[i+self.corrStride] * self.buf[i+self.corrStride].conjugate() for i in range(self.corrWindow)])
+        corrDenom = sum([(self.buf[i+self.corrStride] * self.buf[i+self.corrStride].conjugate()) / 4 for i in range(self.corrWindow)])
         corrComp = corrNum.real > 0.75 * corrDenom.real
         print("corrDenom {}".format(corrDenom))
         print("corrComp {}".format(corrComp))
@@ -93,6 +93,7 @@ def main():
             assert len(iqOut) == len(ref), "len(iqOut) {} != {} len(ref)".format(len(iqOut), len(ref))
             for iqr, iqo in zip(ref, iqOut):
                 assert iqr == iqo, "iqr {} != {} iqo".format(iqr, iqo)
+            print("All {} samples matched".format(len(ref)))
         print("Passed checks for this run...")
     print("Passed all runs!")
 
