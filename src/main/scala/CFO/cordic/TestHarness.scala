@@ -1,6 +1,6 @@
 // See LICENSE.SiFive for license details.
 
-package cordic
+package cfo.cordic
 
 import chisel3._
 import freechips.rocketchip.config.Parameters

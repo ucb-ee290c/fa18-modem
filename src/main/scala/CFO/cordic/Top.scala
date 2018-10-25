@@ -1,4 +1,4 @@
-package cordic
+package cfo.cordic
 
 import freechips.rocketchip.config.Parameters
 import freechips.rocketchip.devices.tilelink._
