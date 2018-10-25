@@ -1,6 +1,6 @@
 package cordic
 
-import breeze.numerics.{atan, pow, sqrt}
+import breeze.numerics.{atan, pow, sqrt, floor}
 
 /**
  * Object for computing useful constants
@@ -18,4 +18,9 @@ object Constants {
    * Get sequences of length n that go atan(1), atan(0.5), atan(0.25), ...
    */
   def arctan(n: Int) = linear(n).map(atan(_))
+
+  def interleaving1(Ncbps: Int, k: Int): Int =  floor(Ncbps/16) * (k % 16) + floor(k/16)
+  //def interleaving2(Ncbps: Int, i: Int, Nbpsc: Int) Int = linear(i).map( max(Nbpsc/2, 1)*(i/max(Nbpsc/2, 1)) ) + (i+ Ncbps - (16*i/Ncbps)%max(Nbpsc/2,1)) )
+
+  
 }

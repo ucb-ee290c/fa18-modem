@@ -57,7 +57,8 @@ object CordicApp extends App {
     xyWidth = 12,
     zWidth = 12,
     stagesPerCycle = 1
-  )
+    //nStages = 15
+    )
   val (chiselArgs, params) = argParse(args.toList, defaultParams)
   // Run the Chisel driver to generate a cordic
   Driver.execute(chiselArgs.toArray, () => new IterativeCordic(params))

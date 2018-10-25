@@ -92,26 +92,22 @@ abstract class ReadQueue
   lazy val module = new LazyModuleImp(this) {
     require(streamNode.in.length == 1)
 
-    // get the output bundle associated with the AXI4Stream node
+    // TODO
+
     val in = streamNode.in(0)._1
-    // width (in bits) of the output interface
     val width = in.params.n * 8
-    // instantiate a queue
     val queue = Module(new Queue(UInt(in.params.dataBits.W), depth))
-    // connect queue output to streaming output
     queue.io.enq.valid := in.valid
     queue.io.enq.bits := in.bits.data
-    // don't use last
-    //in.bits.last := false.B
     in.ready := queue.io.enq.ready
 
     regmap(
-      // each read eats an entry from the queue
+      // each write adds an entry to the queue
       0x0 -> Seq(RegField.r(width, queue.io.deq)),
       // read the number of entries in the queue
-      ((width+7)/8) -> Seq(RegField.r(width, queue.io.count)),
+      (width+7)/8 -> Seq(RegField.r(width, queue.io.count)),
     )
-
+    
   }
 }
 
@@ -155,7 +151,7 @@ class TLReadQueue
   * @tparam B
   * @tparam T Type parameter for cordic, i.e. FixedPoint or DspReal
   */
-abstract class CordicBlock[D, U, EO, EI, B <: Data, T <: Data:Real:BinaryRepresentation]
+abstract class CordicBlock[D, U, EO, EI, B <: Data, T <: Data  :Real:BinaryRepresentation]
 (
   val cordicParams: CordicParams[T]
 )(implicit p: Parameters) extends DspBlock[D, U, EO, EI, B] {
@@ -172,16 +168,39 @@ abstract class CordicBlock[D, U, EO, EI, B <: Data, T <: Data:Real:BinaryReprese
     val descriptorWidth: Int = CordicBundle(cordicParams).getWidth + 1 // + 1 because of vectoring
     require(descriptorWidth <= in.params.n * 8, "Streaming interface too small")
 
-    val cordic = Module( new IterativeCordic[T](cordicParams))
-    // cordic.io.in.bits := in.bits.data.take(descriptorWidth-1).asTypeOf(CordicBundle(cordicParams))
-    // cordic.io.in.vectoring := in.bits.data.drop(descriptorWidth-1).asTypeOf(Bool()) // Does this work?
-    cordic.io.in.bits := in.bits.data.asTypeOf(new CordicBundle(cordicParams))
-    out.bits.data := cordic.io.out.bits.asUInt()
+    // TODO
+    val mycordic = Module(new IterativeCordic(cordicParams))
+    val vectoring_sel = RegInit(false.B)
+    //mycordic.io.vectoring := vectoring_sel
+    //out := mycordic.io.out
+    //mycordic.io.in.bits.x := in[15:0]
 
-    cordic.io.in.valid := in.valid
-    cordic.io.out.ready := out.ready
-    in.ready := cordic.io.in.ready
-    out.valid := cordic.io.out.valid
+    mycordic.io.in.valid := in.valid
+    //true.B
+    mycordic.io.out.ready := out.ready
+    //true.B
+    mycordic.io.vectoring := in.bits.data(36).asTypeOf(Bool())
+    mycordic.io.in.bits.x := in.bits.data(35,26).asTypeOf(cordicParams.protoXY.cloneType)
+    mycordic.io.in.bits.y := in.bits.data(25,16).asTypeOf(cordicParams.protoXY.cloneType)
+    mycordic.io.in.bits.z := in.bits.data(15,0).asTypeOf(cordicParams.protoZ.cloneType)
+    //out.bits.data(15,0) := mycordic.io.out.bits.z.asUInt()
+    //out.bits.data(25,16) := mycordic.io.out.bits.y.asTypeOf(SInt(10.W))
+    //out.bits.data(35,26) := mycordic.io.out.bits.x.asTypeOf(SInt(10.W))
+    out.bits.data := mycordic.io.out.bits.asUInt()
+
+    in.ready := mycordic.io.in.ready
+    
+    out.valid := mycordic.io.out.valid
+    //out.bits.data(63,38) :=0.U(26.W)
+
+    
+    //out :=Cat( Cat( mycordic.io.in.ready, mycordic.io.out.valid), Cat( Cat(mycordic.io.out.bits.x, mycordic.io.out.bits.y), mycordic.io.out.bits.z ) )
+
+    
+              
+
+    
+    
   }
 }
 
@@ -194,7 +213,7 @@ abstract class CordicBlock[D, U, EO, EI, B <: Data, T <: Data:Real:BinaryReprese
   * @param p
   * @tparam T Type parameter for cordic data type
   */
-class TLCordicBlock[T <: Data:Real:BinaryRepresentation]
+class TLCordicBlock[T <: Data :Real:BinaryRepresentation]
 (
   cordicParams: CordicParams[T]
 )(implicit p: Parameters) extends
