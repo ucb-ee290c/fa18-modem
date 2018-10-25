@@ -257,5 +257,3 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   io.debug.powerLow := powerLow
   io.debug.iq := dataVec(windowSize-1)// dataVec(0) * dataVec(0).conj()
 }
-
-
