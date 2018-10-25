@@ -32,8 +32,8 @@ case class FixedPacketDetectParams(
   correlationThresh: Boolean = false
 ) extends PacketDetectParams[FixedPoint] {
   // prototype for iq
-  // binary point is iqWidth-2 to allow for some inflation
-  val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-2).BP))
+  // binary point is iqWidth-3 to allow for some inflation
+  val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP))
   val powerThreshVal = 0.75
   val correlationThreshVal = 0.75
   val correlationWindow = powerThreshWindow
@@ -59,10 +59,9 @@ class PacketDetectDebugBundle[T <: Data](params: PacketDetectParams[T]) extends 
   val powerHigh: Bool = Bool()
   val powerLow: Bool = Bool()
   val corrComp: Bool = Bool()
-  val flushing: Bool = Bool()
   val iq: DspComplex[T] = params.protoIQ.cloneType
-  val cnt: UInt = UInt()
-
+  val corrNum: T = params.protoIQ.real.cloneType
+  val corrDenom: T = params.protoIQ.real.cloneType
   override def cloneType: this.type = PacketDetectDebugBundle(params).asInstanceOf[this.type]
 
 }
@@ -95,27 +94,33 @@ class Correlator[T <: Data : Real : BinaryRepresentation](params: PacketDetectPa
   val windowSize = params.correlationStride + params.correlationWindow
   val io = IO(new Bundle {
     val data = Input(Vec(windowSize, params.protoIQ))
-    val correlated = Output(new Bool())
+    val correlated = Output(Bool())
+
+    val corrNum = Output(params.protoIQ.real.cloneType)
+    val corrDenom = Output(params.protoIQ.real.cloneType)
   })
   // Squared magnitude of sum of correlations
   val corrNumVal = (0 until params.correlationWindow).map(
       i => io.data(i) * io.data(i + params.correlationStride).conj()
-      ).reduce(_ + _).abssq()
+      ).reduce(_ + _).abssq() //>> log2Ceil(params.correlationWindow)
+  io.corrNum := corrNumVal
   // Squared magnitude (real)
-  val corrDenomVal = (0 until params.correlationWindow).map(i => io.data(i).abssq()).reduce(_ + _)
+  val corrDenomVal = (0 until params.correlationWindow).map(i => io.data(i).abssq()).reduce(_ + _) //>> log2Ceil(params.correlationWindow)
+  io.corrDenom := corrDenomVal
   if (params.correlationThreshVal == 0.75) {
     // Compare 0.75 numerate to denominator for the
-    val corrComp = ((corrNumVal >> 1) + (corrNumVal >> 2)) > corrDenomVal * corrDenomVal
+    val corrComp = corrNumVal > ((corrDenomVal >> 1) + (corrDenomVal >> 2))
     io.correlated := corrComp
   } else {
     assert(false, "Correlation thresholds other than 0.75 not implemented")
   }
 }
 object Correlator {
-  def apply[T <: Data : Real : BinaryRepresentation](data: Vec[DspComplex[T]], params: PacketDetectParams[T]): Bool = {
+  def apply[T <: Data : Real : BinaryRepresentation](data: Vec[DspComplex[T]], params: PacketDetectParams[T]): (Bool, T, T) = {
     val correlator = Module(new Correlator(params))
     correlator.io.data := data
-    correlator.io.correlated
+    //correlator.io.correlated
+    (correlator.io.correlated, correlator.io.corrNum, correlator.io.corrDenom)
   }
 }
 
@@ -190,8 +195,17 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   // Correlation Threshold
   val corrComp = Wire(Bool())
   corrComp := true.B
+  val corrNum = Wire(params.protoIQ.real.cloneType)
+  corrNum := Real[T].zero
+  val corrDenom = Wire(params.protoIQ.real.cloneType)
+  corrDenom := Real[T].zero
   if (params.correlationThresh) {
-    corrComp := Correlator(dataVec, params)
+    // Reverse dataVec to have denominator based on earlier-in-time data
+//    corrComp := Correlator(Vec(dataVec.reverse), params)
+    val (cmp, num, denom) = Correlator(Vec(dataVec.reverse), params)
+    corrComp := cmp
+    corrNum := num
+    corrDenom := denom
   }
 
   // State Update
@@ -236,11 +250,11 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
 
   // debug output
   io.debug.corrComp := corrComp
-  io.debug.flushing := state === sFlushing
+  io.debug.corrNum := corrNum
+  io.debug.corrDenom := corrDenom
   io.debug.powerHigh := powerHigh
   io.debug.powerLow := powerLow
   io.debug.iq := dataVec(windowSize-1)// dataVec(0) * dataVec(0).conj()
-  io.debug.cnt := flushCounter
 }
 
 
