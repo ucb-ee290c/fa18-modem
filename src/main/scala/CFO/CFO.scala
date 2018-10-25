@@ -1,4 +1,4 @@
-// package cordic
+ package cfo
 
 import chisel3._
 import chisel3.experimental.FixedPoint
@@ -21,56 +21,20 @@ trait CFOParams[T <: Data] {
   val preamble: Boolean
 }
 
-/**
- * CORDIC parameters object for fixed-point CORDICs
- */
-// case class FixedCordicParams(
-//   // width of X and Y
-//   xyWidth: Int,
-//   // width of Z
-//   zWidth: Int,
-//   // scale output by correction factor?
-//   correctGain: Boolean = true,
-//   // number of CORDIC stages to perform per clock cycle
-//   stagesPerCycle: Int = 1,
-// ) extends CordicParams[FixedPoint] {
-//   // prototype for x and y
-//   // binary point is (xyWidth-2) to represent 1.0 exactly
-//   val protoXY = FixedPoint(xyWidth.W, (xyWidth-3).BP)
-//   // prototype for z
-//   // binary point is (xyWidth-3) to represent Pi/2 exactly
-//   val protoZ = FixedPoint(zWidth.W, (zWidth-2).BP)
-//   val minNumber = math.pow(2.0, -(zWidth-2))
-//   // number of cordic stages
-//   private var n = 0
-//   while (breeze.numerics.tan(math.pow(2.0, -n)) >= minNumber) {
-//     n += 1
-//   }
-//   val nStages = n
-// }
+trait PacketBundleParams[T <: Data] {
+  val width: Int
+  val protoIQ: DspComplex[T]
+}
 
-/**
- * Bundle type that describes the input, state, and output of CORDIC
- */
-// class CFOBundle[T <: Data](params: CFOParams[T]) extends Bundle {
-//   val i: T = params.protoIQ.cloneType
-//   val q: T = params.protoIQ.cloneType
-//
-//   override def cloneType: this.type = CordicBundle(params).asInstanceOf[this.type]
-// }
-// object CFOBundle {
-//   def apply[T <: Data](params: CFOParams[T]): CFOBundle[T] = new CFOBundle(params)
-// }
+class PacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
+  val pktStart: Bool = Bool()
+  val pktEnd: Bool = Bool()
+  val iq: Vec[DspComplex[T]] = Vec(params.width, params.protoIQ)
+}
 
-/**
- * Bundle type as IO for iterative CORDIC modules
- */
 class CFOIO[T <: Data](params: CFOParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(params.protoIn))
-  val out = Decoupled(params.protoOut)
-
-  val stPreamble = Bool()
-  val ltPreamble = Bool()
+  val in = Flipped(Decoupled(PacketBundle(params.PacketBundleParams)))
+  val out = Decoupled(PacketBundle(params.PacketBundleParams))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
@@ -85,6 +49,49 @@ object AddSub {
   }
 }
 
+class PreambleStateMachine(val stf: Boolean, val ltf Boolean, val frameLength: Int) extends Module{
+  val io = IO(new Bundle{
+      val pktStart = Input(Bool())
+      val pktEnd = Input(Bool())
+      val state = Output(UInt(3.W))
+  })
+
+  val curState = Reg(UInt(3.W))
+  val nexState = Wire(UInt(3.W))
+
+  val idle::st::lt::data = Enum(nodeType:UInt, n: 4)
+
+  switch(curState){
+    is(idle){
+      when(pktStart){
+        nexState := st
+      }.otherwise{
+        nexState := idle
+      }
+    }
+    is(st){
+      when(pktStop){
+        nexState := lt
+      }.otherwise{
+        nexState := st
+      }
+    }
+    is(lt){
+      when(pktStop){
+        nexState := data
+      }.otherwise{
+        nexState := lt
+      }
+    }
+    is(data){
+
+    }
+  }
+
+  io.state := curState
+  curState := nexState
+
+}
 
 /**
   * Mixin for top-level rocket to add a PWM
@@ -102,7 +109,11 @@ class CFOCorrection(val params: CFOParams[FixedPoint]) extends Module {
   requireIsChiselType(params.protoIn)
   val io = IO(CFOIO(params))
 
-  if(params.hasPreamble == true){
+
+
+  if(params.preamble == true){
+
+
 
   }
 
