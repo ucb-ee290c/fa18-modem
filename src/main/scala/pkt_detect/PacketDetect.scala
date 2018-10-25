@@ -4,7 +4,6 @@ import chisel3._
 import chisel3.experimental.FixedPoint
 import chisel3.util._
 import dsptools.numbers._
-import breeze.math.Complex
 
 
 /**
@@ -102,10 +101,12 @@ class Correlator[T <: Data : Real : BinaryRepresentation](params: PacketDetectPa
   // Squared magnitude of sum of correlations
   val corrNumVal = (0 until params.correlationWindow).map(
       i => io.data(i) * io.data(i + params.correlationStride).conj()
-      ).reduce(_ + _).abssq() //>> log2Ceil(params.correlationWindow)
+      ).map(x => x.div2(log2Ceil(params.correlationWindow))).
+      reduce(_ + _).abssq()
   io.corrNum := corrNumVal
   // Squared magnitude (real)
-  val corrDenomVal = (0 until params.correlationWindow).map(i => io.data(i).abssq()).reduce(_ + _) //>> log2Ceil(params.correlationWindow)
+  val corrDenomVal = (0 until params.correlationWindow).map(i => io.data(i).abssq()).
+    map(x => x >> log2Ceil(params.correlationWindow)).reduce(_ + _)
   io.corrDenom := corrDenomVal
   if (params.correlationThreshVal == 0.75) {
     // Compare 0.75 numerate to denominator for the
