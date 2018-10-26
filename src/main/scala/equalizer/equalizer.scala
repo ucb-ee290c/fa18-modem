@@ -18,6 +18,8 @@ case class FixedEqualizerParams(
   width: Int,
   mu: Double = 0.25,
   pilots: Seq[Int] = Seq(5, 21, 43, 59),
+  // Default to non-fft-shifted output from fft block, 802.11a mask
+  carrierMask: Seq[Boolean] = Seq.fill(1)(false) ++ Seq.fill(27)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(5)(false) ++ Seq.fill(27)(true)
   nSubcarriers: Int = 64
 ) extends EqualizerParams[FixedPoint] {
   val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
@@ -37,4 +39,6 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   val io = IO(EqualizerIO(params))
   // Passthrough
   io.out <> io.in
+
+
 }
