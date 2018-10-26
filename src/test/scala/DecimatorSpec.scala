@@ -2,6 +2,7 @@ package decimator
 
 import breeze.math.Complex
 import dsptools.numbers._
+import chisel3.experimental.FixedPoint
 import org.scalatest.{FlatSpec, Matchers}
 
 case class TestVectors() {
@@ -14,7 +15,7 @@ case class FixedDecimatorParams(
   iqWidth: Int,
   // Amount to decimate by
   nDecimation: Int
-) extends PacketDetectParams[FixedPoint] {
+) extends DecimatorParams[FixedPoint] {
   //PacketBundleParams fields
   // prototype for iq
   // binary point is iqWidth-3 to allow for some inflation
