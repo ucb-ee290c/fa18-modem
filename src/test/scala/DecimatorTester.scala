@@ -42,7 +42,7 @@ class DecimatorTester[T <: chisel3.Data](c: DecimateByN[T], trials: Seq[IQ], tol
 /**
   * Convenience function for running tests
   */
-object FixedDecimationester {
+object FixedDecimationTester {
   def apply(params: FixedDecimationParams, trials: Seq[IQ]): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new DecimateByN(params)) {
       c => new DecimatorTester(c, trials)
