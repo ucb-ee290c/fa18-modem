@@ -25,7 +25,7 @@ class DecimateByN[T<:Data:Real](val params: DecimatorParams[T]) extends Module {
   val count = Counter(params.nDecimation)
   io.in.ready := true.B
 
-  when(io.in.valid){
+  when(io.in.fire()){
     when(count.inc()){
       io.out.bits.iq := io.in.bits.iq
       io.out.valid := io.in.valid
