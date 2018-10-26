@@ -1,4 +1,4 @@
-package cfo.cordic
+package cfo
 
 import breeze.numerics.{atan, pow, sqrt}
 

@@ -1,4 +1,4 @@
-package cfo.cordic
+package cfo
 
 import chisel3._
 import chisel3.experimental.FixedPoint
