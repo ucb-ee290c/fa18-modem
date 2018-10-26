@@ -8,7 +8,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 case class TestVectors() {
   val bigInputVector: Seq[Complex] =
-    Seq.fill(100)(Complex(1, 0))
+    Seq(Seq.fill(100)(Complex(1, 0)))
 }
 
 case class FixedDecimationParams(
