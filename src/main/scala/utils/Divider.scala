@@ -1,7 +1,7 @@
 package modem
 
 /**
- * Based on https://github.com/grebe/ofdm/src/main/scala/ofdm/Divider.scala
+ * From https://github.com/grebe/ofdm/src/main/scala/ofdm/Divider.scala
  */
 
 
@@ -103,6 +103,7 @@ class RedundantToNonRedundant(n: Int) extends RawModule {
 
 class PipelinedDivider(val n: Int, val conversionDelay: Int = 1) extends Module {
   require(n > 0)
+  require(conversionDelay > 0)
 
   val io = IO(new PipelinedDividerIO(n))
 

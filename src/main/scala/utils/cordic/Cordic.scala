@@ -165,7 +165,7 @@ class IterativeCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val
 
 class PipelinedCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val params: CordicParams[T]) extends Module{
   val io = IO(PipelinedCordicIO(params))
-  val cycles = params.nStages/params.stagesPerCycle // Calculate number of pipeline stages
+  val cycles: Int = params.nStages/params.stagesPerCycle // Calculate number of pipeline stages
 
   val stages = (0 until params.nStages).map{ i: Int => Module( new CordicIter(params, i) )} // Instatiate all the CORDIC iterations
 
