@@ -34,17 +34,46 @@ case class TestVectors() {
     Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1))
 }
 
+case class FixedCFOCorrectionParams(
+  // width of I and Q
+  iqWidth: Int,
+  // Correct for gain
+  correctGain: Boolean = true,
+  // Just have one iteration per pipeline stage
+  stagesPerCycle: Int = 1,
+  // ST Field overall length
+  stLength: Int = 10 * 16,
+  // LT Field overall length,
+  ltLength: Int = 2 * 64,
+  // Preamble based?
+  preamble: Boolean = true
+) extends PacketDetectParams[FixedPoint] {
+  //PacketBundleParams fields
+  // prototype for iq
+  // binary point is iqWidth-3 to allow for some inflation
+  val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP))
+  val width = 1
+  // CordicParams fields
+  val protoXY = FixedPoint(iqWidth.W, (iqWidth-3).BP)
+  val protoZ = FixedPoint(iqWidth.W, (iqWidth-3).BP)
+  val minNumber = math.pow(2.0, -(zWidth-2))
+  // number of cordic stages
+  private var n = 0
+  while (breeze.numerics.tan(math.pow(2.0, -n)) >= minNumber) {
+    n += 1
+  }
+  val nStages = n
+  // CFOParams fields
+}
 
-class PacketDetectSpec extends FlatSpec with Matchers {
+class CFOCorrectionSpec extends FlatSpec with Matchers {
   val vecs = TestVectors()
-  behavior of "FixedPacketDetect"
+  behavior of "FixedCFOCorrection"
 
-  val noCorrParams = FixedPacketDetectParams(
-    iqWidth = 16,
-    powerThreshWindow = 4,
-    correlationThresh = false
+  val noCorrParams = FixedCFOCorrectionParams(
+    iqWidth = 16
   )
-  it should "detect power" in {
+  it should "correct rotation" in {
     val trials = Seq(IQ(vecs.tvNoPkt, None),
                      IQ(vecs.tvPwrOnly, Option(vecs.tvPwrOnlyOut)),
                      IQ(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
