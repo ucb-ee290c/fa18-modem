@@ -41,18 +41,18 @@ class RX[T<:Data:Real:BinaryRepresentation, U:<Data](
     val out = Decoupled(DecodeBitsBundle(params))
   })
 
-  val phaseRotator = Module( new PhaseRotator(params) )
-  val pktDetect = Module( new PacketDetect(params) )
-  val cfoEstimator = Module( new CFOCorrection(params) )
-  val fft = Module( new FFT(params) )
-  val eq = Module( new Equalizer(params) )
-  val cfoPilot = Module( new CFOPilot(params) )
-  val demod = Module( new Demodulator(params) )
-  val decode = Module( new Decoder(params) )
+  val phaseRotator = Module( new PhaseRotator(cfoParams) )
+  val pktDetect = Module( new PacketDetect(pktDetectParams) )
+  val cfoEstimator = Module( new CFOCorrection(cfoParams) )
+  val fft = Module( new FFT(fftParams) )
+  val eq = Module( new Equalizer(equalizerParams) )
+  val cfoPilot = Module( new CFOPilot(cfoParams) )
+  val demod = Module( new Demodulator(demodParams) )
+  val decode = Module( new Decoder(viterbiParams) )
 
   // Phase Rotation Block
   phaseRotator.io.inIQ := io.in
-  phaseRotator.io.phiCorrect := cfoEstimator.phiCorrect
+  phaseRotator.io.phiCorrect := ConvertableTo[T].fromDouble(0) //cfoEstimator.phiCorrect
 
   // Packet Detector Block
   pktDetect.io.in := phaseRotator.io.outIQ
