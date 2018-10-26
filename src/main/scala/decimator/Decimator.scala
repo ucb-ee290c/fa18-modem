@@ -29,6 +29,8 @@ class DecimateByN[T<:Data:Real](val params: DecimatorParams[T]) extends Module {
     when(count.inc()){
       io.out.bits.iq := io.in.bits.iq
       io.out.valid := io.in.valid
+    }.otherwise{
+      io.out.valid := false.B
     }
   }
 }
