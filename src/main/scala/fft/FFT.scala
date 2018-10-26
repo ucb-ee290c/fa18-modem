@@ -1,7 +1,6 @@
 package modem
 
 import chisel3._
-// import chisel3.util._
 import chisel3.experimental.FixedPoint
 import chisel3.util.{Decoupled, Enum, isPow2, log2Ceil}
 
@@ -58,7 +57,7 @@ object FFTIO {
 }
 
 /**
-  * Mixin for top-level rocket to add a PWM
+  * Mixin for top-level rocket to add a FFT
   *
   */
 trait HasPeripheryFFT extends BaseSubsystem {
