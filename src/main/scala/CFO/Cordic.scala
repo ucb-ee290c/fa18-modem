@@ -24,30 +24,30 @@ import freechips.rocketchip.subsystem.BaseSubsystem
 /**
  * CORDIC parameters object for fixed-point CORDICs
  */
-case class FixedCordicParams(
-  // width of X and Y
-  xyWidth: Int,
-  // width of Z
-  zWidth: Int,
-  // scale output by correction factor?
-  correctGain: Boolean = true,
-  // number of CORDIC stages to perform per clock cycle
-  stagesPerCycle: Int = 1,
-) extends CordicParams[FixedPoint] {
-  // prototype for x and y
-  // binary point is (xyWidth-2) to represent 1.0 exactly
-  val protoXY = FixedPoint(xyWidth.W, (xyWidth-3).BP)
-  // prototype for z
-  // binary point is (xyWidth-3) to represent Pi/2 exactly
-  val protoZ = FixedPoint(zWidth.W, (zWidth-2).BP)
-  val minNumber = math.pow(2.0, -(zWidth-2))
-  // number of cordic stages
-  private var n = 0
-  while (breeze.numerics.tan(math.pow(2.0, -n)) >= minNumber) {
-    n += 1
-  }
-  val nStages = n
-}
+// case class FixedCordicParams(
+//   // width of X and Y
+//   xyWidth: Int,
+//   // width of Z
+//   zWidth: Int,
+//   // scale output by correction factor?
+//   correctGain: Boolean = true,
+//   // number of CORDIC stages to perform per clock cycle
+//   stagesPerCycle: Int = 1,
+// ) extends CordicParams[FixedPoint] {
+//   // prototype for x and y
+//   // binary point is (xyWidth-2) to represent 1.0 exactly
+//   val protoXY = FixedPoint(xyWidth.W, (xyWidth-3).BP)
+//   // prototype for z
+//   // binary point is (xyWidth-3) to represent Pi/2 exactly
+//   val protoZ = FixedPoint(zWidth.W, (zWidth-2).BP)
+//   val minNumber = math.pow(2.0, -(zWidth-2))
+//   // number of cordic stages
+//   private var n = 0
+//   while (breeze.numerics.tan(math.pow(2.0, -n)) >= minNumber) {
+//     n += 1
+//   }
+//   val nStages = n
+// }
 
 /**
  * Bundle type that describes the input, state, and output of CORDIC
