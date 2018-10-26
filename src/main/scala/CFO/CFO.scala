@@ -51,12 +51,6 @@ object CFOIO {
     new CFOIO(params)
 }
 
-object AddSub {
-  def apply[T <: Data : Ring](sel: Bool, a: T, b: T): T = {
-    Mux(sel, a + b, a - b)
-  }
-}
-
 // class PreambleStateMachine[T<:Data](stLength: Int, ltLength: Int) extends Module{
 //   val io = IO(new Bundle{
 //       val pktStart = Input(Bool())
