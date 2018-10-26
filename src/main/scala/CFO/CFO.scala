@@ -67,12 +67,12 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
   cordic.io.in.bits.x := io.inIQ.bits.iq.real
   cordic.io.in.bits.y := io.inIQ.bits.iq.imag
   cordic.io.in.bits.z := io.phiCorrect
-  cordic.io.in.bits.vectoring := true.B
+  cordic.io.in.bits.vectoring := false.B
   cordic.io.in.valid := true.B
   io.inIQ.ready := cordic.io.in.ready
-  io.outIQ.real := cordic.io.out.bits.x
-  io.outIQ.imag := cordic.io.out.bits.y
-  io.out.valid := cordic.io.out.valid
+  io.outIQ.bits.iq.real := cordic.io.out.bits.x
+  io.outIQ.bits.iq.imag := cordic.io.out.bits.y
+  io.outIQ.valid := cordic.io.out.valid
 }
 
 /**
@@ -97,7 +97,7 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
   phaseCorrect.io.inIQ.bits.iq := io.in.bits.iq
   io.out.bits.iq := phaseCorrect.io.outIQ.bits.iq
   io.out.bits.pktStart := io.in.bits.pktStart
-  io.out.bits.pktStop := io.in.bits.pktStop
+  io.out.bits.pktEnd := io.in.bits.pktEnd
 
   if(params.preamble == true){
     // val sm = Module( new PreambleStateMachine(params.stLength, params.ltLength) )
@@ -116,7 +116,7 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     val ltCounter = Counter(params.ltLength)
 
     val estimatorReady = Wire(Bool())
-    val rotatorReady = phaseCorrect.io.in.ready
+    val rotatorReady = phaseCorrect.io.inIQ.ready
 
     val delayIQByST = (0 until stDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
     val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
@@ -151,7 +151,7 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }.elsewhen(io.in.fire()){
           curState := st
           when(delayValidByST){
-            stMul := (io.in.bits.iq * delayIQByST.conj)
+            stMul := (io.in.bits.iq * delayIQByST.conj())
             stAcc := stAcc + stMul
           }
         }.otherwise{
@@ -175,7 +175,7 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }.elsewhen(io.in.fire()){
           curState := lt
           when(delayValidByLT){
-            ltMul := (io.in.bits.iq * delayIQByLT.conj)
+            ltMul := (io.in.bits.iq * delayIQByLT.conj())
             ltAcc := stAcc + stMul
           }
         }
@@ -189,7 +189,7 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(data){
-        when(io.in.bits.pktStop){
+        when(io.in.bits.pktEnd){
           curState := idle
         }.otherwise{
           curState := data
