@@ -11,3 +11,4 @@ verilator/
 simulator-*
 *.vcd
 .vscode/
+__pycache__/

@@ -11,7 +11,16 @@ trait EqualizerParams[T <: Data] {
   val mu: Double
   val pilots: Seq[Int]
   val nSubcarriers: Int
-  val dataCarriers: Seq[Int]
+  // val dataCarriers: Seq[Int]
+}
+
+case class FixedEqualizerParams(
+  width: Int,
+  mu: Double = 0.25,
+  pilots: Seq[Int] = Seq(5, 21, 43, 59),
+  nSubcarriers: Int = 64
+) extends EqualizerParams[FixedPoint] {
+  val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
 }
 
 class EqualizerIO[T <: Data](params: EqualizerParams[T]) extends Bundle {
