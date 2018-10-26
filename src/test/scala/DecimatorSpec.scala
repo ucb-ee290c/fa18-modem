@@ -11,7 +11,7 @@ case class TestVectors() {
     Seq.fill(100)(Complex(1, 0))
 }
 
-case class FixedDecimatorParams(
+case class FixedDecimationParams(
   // width of I and Q
   iqWidth: Int,
   // Amount to decimate by
