@@ -2,11 +2,9 @@ package modem
 
 import chisel3._
 import chisel3.experimental.FixedPoint
-import chisel3.util.{Decoupled, Enum, isPow2, log2Ceil}
+import chisel3.util.{Decoupled, Valid, isPow2, log2Ceil}
 
 import dsptools.numbers._
-import freechips.rocketchip.diplomacy.LazyModule
-import freechips.rocketchip.subsystem.BaseSubsystem
 
 import breeze.numerics.{cos, sin}
 import breeze.signal.{fourierTr}
@@ -22,6 +20,7 @@ import scala.math._
 trait FFTParams[T <: Data] extends IQBundleParams[T] {
   val numPoints: Int
   val protoTwiddle: DspComplex[T]
+  val pipeline: Boolean
 }
 
 /**
@@ -33,7 +32,8 @@ case class FixedFFTParams(
   // width of twiddle constants
   twiddleWidth: Int,
   maxVal: Int,
-  numPoints: Int = 4
+  numPoints: Int = 4,
+  pipeline: Boolean = false
 ) extends FFTParams[FixedPoint] {
   // prototype for x and y
   // binary point is (xyWidth-2) to represent 1.0 exactly
@@ -43,7 +43,7 @@ case class FixedFFTParams(
 }
 
 /**
- * Bundle type as IO for iterative CORDIC modules
+ * Bundle type as IO for FFT modules
  */
 class FFTIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
   val in = Flipped(Decoupled(PacketBundle(params.numPoints, params.protoIQ.cloneType)))
@@ -56,22 +56,10 @@ object FFTIO {
     new FFTIO(params)
 }
 
-/**
-  * Mixin for top-level rocket to add a FFT
-  *
-  */
-trait HasPeripheryFFT extends BaseSubsystem {
-  // instantiate fft chain
-  val fftChain = LazyModule(new FFTThing(FixedFFTParams(8, 8, 2)))
-  // connect memory interfaces to pbus
-  pbus.toVariableWidthSlave(Some("fftWrite")) { fftChain.writeQueue.mem.get }
-  pbus.toVariableWidthSlave(Some("fftRead")) { fftChain.readQueue.mem.get }
-}
-
 class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
   val io = IO(FFTIO(params))
   io.in.ready := true.B
-  io.out.valid := io.in.fire()
+  // io.out.valid := io.in.fire()
   val fft_stage = {
     if (params.numPoints != 2 && FFTUtil.is_prime(params.numPoints)) {
       Module(new RaderFFT(params.numPoints, params))
@@ -80,24 +68,29 @@ class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val p
       Module(new FFTStage(params.numPoints, params))
     } 
   }
-  fft_stage.io.in := io.in.bits
-  io.out.bits := fft_stage.io.out
+  fft_stage.io.in.bits  := io.in.bits
+  fft_stage.io.in.valid := io.in.fire()
+
+  io.out.bits  := fft_stage.io.out.bits
+  io.out.valid := fft_stage.io.out.valid
 }
 
 class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   val io = IO(FFTIO(params))
   io.in.ready := true.B
-  io.out.valid := io.in.fire()
-  val fft_stage = Module(new IFFTStage(params.numPoints, params))
-  fft_stage.io.in := io.in.bits
-  io.out.bits := fft_stage.io.out
+  val ifft_stage = Module(new IFFTStage(params.numPoints, params))
+
+  ifft_stage.io.in.bits  := io.in.bits
+  ifft_stage.io.in.valid := io.in.fire()
+
+  io.out.bits  := ifft_stage.io.out.bits
+  io.out.valid := ifft_stage.io.out.valid
 }
 
 
-// submodule
 class FFTStageIO[T <: Data : Ring](numPoints: Int, params: FFTParams[T]) extends Bundle {
-  val in = Input(PacketBundle(numPoints, params.protoIQ.cloneType))
-  val out = Output(PacketBundle(numPoints, params.protoIQ.cloneType))
+  val in = Flipped(Valid(PacketBundle(numPoints, params.protoIQ.cloneType)))
+  val out = Valid(PacketBundle(numPoints, params.protoIQ.cloneType))
 
   override def cloneType: this.type = FFTStageIO(numPoints, params).asInstanceOf[this.type]
 }
@@ -120,32 +113,49 @@ class FFTStage[T <: Data : Real : BinaryRepresentation](val numPoints: Int, val 
   val butterfly_inputs = Wire(Vec(numPoints, params.protoIQ.cloneType))
 
   if (numPoints == 2) {
-    butterfly_inputs := io.in.iq
+    butterfly_inputs := io.in.bits.iq
 
     // TODO
-    io.out.pktStart := io.in.pktStart
-    io.out.pktEnd   := io.in.pktEnd
+    io.out.bits.pktStart := io.in.bits.pktStart
+    io.out.bits.pktEnd   := io.in.bits.pktEnd
+    io.out.valid := io.in.valid
   }
   else {
     val fft_even = Module(new FFTStage(numPointsDiv2, params))
     val fft_odd  = Module(new FFTStage(numPointsDiv2, params))
-    fft_even.io.in.iq := io.in.iq.zipWithIndex.filter(_._2 % 2 == 0).map(_._1)
-    fft_odd.io.in.iq  := io.in.iq.zipWithIndex.filter(_._2 % 2 == 1).map(_._1)
-    butterfly_inputs  := fft_even.io.out.iq ++ fft_odd.io.out.iq
+    fft_even.io.in.bits.iq := io.in.bits.iq.zipWithIndex.filter(_._2 % 2 == 0).map(_._1)
+    fft_odd.io.in.bits.iq  := io.in.bits.iq.zipWithIndex.filter(_._2 % 2 == 1).map(_._1)
 
-    // TODO???
-    fft_even.io.in.pktStart := io.in.pktStart
-    fft_odd.io.in.pktStart := io.in.pktStart
-    fft_even.io.in.pktEnd := io.in.pktEnd
-    fft_odd.io.in.pktEnd := io.in.pktEnd
-    io.out.pktStart := fft_even.io.out.pktStart
-    io.out.pktEnd   := fft_even.io.out.pktEnd
+    if (params.pipeline) {
+      // Register the outputs of sub-fft stages
+      butterfly_inputs := RegNext(fft_even.io.out.bits.iq) ++ RegNext(fft_odd.io.out.bits.iq)
+    } else {
+      butterfly_inputs := fft_even.io.out.bits.iq ++ fft_odd.io.out.bits.iq
+    }
+
+    fft_even.io.in.bits.pktStart := io.in.bits.pktStart
+    fft_odd.io.in.bits.pktStart  := io.in.bits.pktStart
+    fft_even.io.in.bits.pktEnd   := io.in.bits.pktEnd
+    fft_odd.io.in.bits.pktEnd    := io.in.bits.pktEnd
+    fft_even.io.in.valid         := io.in.valid
+    fft_odd.io.in.valid          := io.in.valid
+
+    if (params.pipeline) {
+      // Register the outputs of sub-fft stages
+      io.out.bits.pktStart := RegNext(fft_even.io.out.bits.pktStart)
+      io.out.bits.pktEnd   := RegNext(fft_even.io.out.bits.pktEnd)
+      io.out.valid         := RegNext(fft_even.io.out.valid, init=false.B)
+    } else {
+      io.out.bits.pktStart := fft_even.io.out.bits.pktStart
+      io.out.bits.pktEnd   := fft_even.io.out.bits.pktEnd
+      io.out.valid         := fft_even.io.out.valid
+    }
   }
 
   (0 until numPointsDiv2).map(n => {
     val butterfly_outputs = Butterfly[T](Seq(butterfly_inputs(n), butterfly_inputs(n + numPointsDiv2)), twiddles_vec(n))
-    io.out.iq(n)                 := butterfly_outputs(0)
-    io.out.iq(n + numPointsDiv2) := butterfly_outputs(1)
+    io.out.bits.iq(n)                 := butterfly_outputs(0)
+    io.out.bits.iq(n + numPointsDiv2) := butterfly_outputs(1)
   })
 }
 
@@ -157,27 +167,28 @@ class IFFTStage[T <: Data : Real : BinaryRepresentation](val numPoints: Int, val
 
   val scalar = ConvertableTo[T].fromDouble(1.0 / numPoints.toDouble)
 
-  io.in.iq.zip(io.out.iq).zipWithIndex.foreach {
+  io.in.bits.iq.zip(io.out.bits.iq).zipWithIndex.foreach {
     case ((inp, out), index) => {
-      fft.io.in.iq(index).real := inp.imag
-      fft.io.in.iq(index).imag := inp.real
+      fft.io.in.bits.iq(index).real := inp.imag
+      fft.io.in.bits.iq(index).imag := inp.real
 
       if (scale) {
-        out.real := fft.io.out.iq(index).imag * scalar
-        out.imag := fft.io.out.iq(index).real * scalar
+        out.real := fft.io.out.bits.iq(index).imag * scalar
+        out.imag := fft.io.out.bits.iq(index).real * scalar
       } else {
-        out.real := fft.io.out.iq(index).imag
-        out.imag := fft.io.out.iq(index).real
+        out.real := fft.io.out.bits.iq(index).imag
+        out.imag := fft.io.out.bits.iq(index).real
       }
     }
   }
 
-  fft.io.in.pktStart := io.in.pktStart
-  fft.io.in.pktEnd   := io.in.pktEnd
+  fft.io.in.bits.pktStart := io.in.bits.pktStart
+  fft.io.in.bits.pktEnd   := io.in.bits.pktEnd
+  fft.io.in.valid         := io.in.valid
 
-  // TODO
-  io.out.pktStart := fft.io.out.pktStart
-  io.out.pktEnd   := fft.io.out.pktEnd
+  io.out.bits.pktStart := fft.io.out.bits.pktStart
+  io.out.bits.pktEnd   := fft.io.out.bits.pktEnd
+  io.out.valid         := fft.io.out.valid
 }
 
 class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val numPoints: Int, val params: FFTParams[T]) extends Module {
@@ -198,73 +209,51 @@ class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](
   twiddles_extended = twiddles_extended ++ twiddles.slice(0, pad_length_rem)
   val twiddles_fft = fourierTr(DenseVector(twiddles_extended)).toScalaVector
 
-  // println(s"sub_fft_size: $sub_fft_size")
-  // println(s"index map: $idx_map")
-  // println(s"inv index map: $inv_idx_map")
-  // println(s"twiddles: ${DenseVector(twiddles).toScalaVector}")
-  // println(s"twiddles padded: ${DenseVector(twiddles_extended).toScalaVector}")
-  // println(s"twiddles FFT: $twiddles_fft")
-
   val sub_fft = Module(new FFTStage(sub_fft_size, params))
 
-  sub_fft.io.in.iq.zipWithIndex.foreach {
+  sub_fft.io.in.bits.iq.zipWithIndex.foreach {
     case (sub_inp, index) => {
       if (index == 0) {
-        sub_inp := io.in.iq(idx_map(index).U)
+        sub_inp := io.in.bits.iq(idx_map(index).U)
       }
       else if (index <= pad_length) {
         sub_inp.real := Ring[T].zero
         sub_inp.imag := Ring[T].zero
       }
       else {
-        sub_inp := io.in.iq(idx_map(index - pad_length).U)
+        sub_inp := io.in.bits.iq(idx_map(index - pad_length).U)
       }
     }
   }
 
-  sub_fft.io.in.pktStart := io.in.pktStart
-  sub_fft.io.in.pktEnd   := io.in.pktEnd
+  sub_fft.io.in.bits.pktStart := io.in.bits.pktStart
+  sub_fft.io.in.bits.pktEnd   := io.in.bits.pktEnd
+  sub_fft.io.in.valid := io.in.valid
 
-  io.out.iq(0.U) := io.in.iq(0.U) + sub_fft.io.out.iq(0.U)
+  io.out.bits.iq(0.U) := io.in.bits.iq(0.U) + sub_fft.io.out.bits.iq(0.U)
 
   val sub_ifft = Module(new IFFTStage(sub_fft_size, params, false))
-  sub_ifft.io.in.iq.zip(sub_fft.io.out.iq).zip(twiddles_fft).foreach {
+  sub_ifft.io.in.bits.iq.zip(sub_fft.io.out.bits.iq).zip(twiddles_fft).foreach {
     case ((sub_ifft_in, sub_fft_out), twiddle) => {
       val twiddle_wire = Wire(params.protoIQ.cloneType)
       twiddle_wire.real := Real[T].fromDouble(twiddle.real)
       twiddle_wire.imag := Real[T].fromDouble(twiddle.imag)
-      // printf(p"Twiddle: ${(twiddle_wire.real << 10).intPart()} + ${(twiddle_wire.imag << 10).intPart()}j\n")
       sub_ifft_in := sub_fft_out * twiddle_wire
     }
   }
 
   // TODO
-  sub_ifft.io.in.pktStart := sub_fft.io.out.pktStart
-  sub_ifft.io.in.pktEnd   := sub_fft.io.out.pktEnd
+  sub_ifft.io.in.bits.pktStart := sub_fft.io.out.bits.pktStart
+  sub_ifft.io.in.bits.pktEnd   := sub_fft.io.out.bits.pktEnd
+  sub_ifft.io.in.valid := sub_fft.io.out.valid
 
   (0 until numPoints - 1).map(n => {
-    io.out.iq(inv_idx_map(n).U) := io.in.iq(0.U) + sub_ifft.io.out.iq(n.U)
+    io.out.bits.iq(inv_idx_map(n).U) := io.in.bits.iq(0.U) + sub_ifft.io.out.bits.iq(n.U)
   })
 
-  // sub_fft.io.in.zipWithIndex.foreach {
-  //   case (inp, idx) => {
-  //     printf(p"Sub  FFT input  at ${idx.U}: ${(inp.real << 10).intPart()} + ${(inp.imag << 10).intPart()}j\n")
-  //   }
-  // }
-  // sub_fft.io.out.zipWithIndex.foreach {
-  //   case (out, idx) => {
-  //     printf(p"Sub  FFT output at ${idx.U}: ${(out.real << 10).intPart()} + ${(out.imag << 10).intPart()}j\n")
-  //   }
-  // }
-  // sub_ifft.io.in.zipWithIndex.foreach {
-  //   case (inp, idx) => {
-  //     printf(p"Sub IFFT input  at ${idx.U}: ${(inp.real << 10).intPart()} + ${(inp.imag << 10).intPart()}j\n")
-  //   }
-  // }
-
-  // TODO
-  io.out.pktStart := sub_ifft.io.out.pktStart
-  io.out.pktEnd   := sub_ifft.io.out.pktEnd
+  io.out.bits.pktStart := sub_ifft.io.out.bits.pktStart
+  io.out.bits.pktEnd   := sub_ifft.io.out.bits.pktEnd
+  io.out.valid         := sub_ifft.io.out.valid
 }
 
 // single radix-2 butterfly

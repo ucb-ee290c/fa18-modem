@@ -1,6 +1,6 @@
 package modem
 
-import breeze.numerics.{atan, pow, sqrt}
+import breeze.numerics.pow
 
 /**
  * Object for computing useful functions
@@ -38,7 +38,7 @@ object FFTUtil {
   def primitive_root(n: Int): Int = {
     val powers = factorize(n - 1).map((n - 1) / _)
     (2 until n).toList.find(x => {
-      val modded = powers.map(scala.math.pow(x, _) % n)
+      val modded = powers.map(pow(x, _) % n)
       !modded.contains(1)
     }).getOrElse(0) // TODO: Raise error if not found?
   }
