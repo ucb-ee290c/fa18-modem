@@ -37,10 +37,10 @@ trait CFOParams[T <: Data] extends CordicParams[T]{
 class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
-  val iq: DspComplex[T] = protoIQ
+  val iq: DspComplex[T] = params.protoIQ
 }
 object SerialPacketBundle {
-  def apply[T <: Data](params: PacketBundleParams[T]): PacketBundle[T] = new PacketBundle(params)
+  def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
 }
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
@@ -50,7 +50,7 @@ class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
 object CFOIO {
-  def apply[T <: Data](params: CFOParams[T]): CFOIO[T] =
+  def apply[T <: Data](params: PacketBundleParams[T]): CFOIO[T] =
     new CFOIO(params)
 }
 
@@ -96,7 +96,6 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
   phaseCorrect.io.inIQ.bits.iq := io.in.bits.iq
   io.out.bits.iq := phaseCorrect.io.outIQ.bits.iq
-  phaseCorrect.io.phiCorrect := coarseOffset + fineOffset
   io.out.bits.pktStart := io.in.bits.pktStart
   io.out.bits.pktStop := io.in.bits.pktStop
 
@@ -106,8 +105,8 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     val ltDelay = 64
 
     val curState = Reg(UInt(2.W))
-    val coarseOffset = RegInit(params.protoZ, 0)
-    val fineOffset = RegInit(params.protoZ, 0)
+    val coarseOffset = RegInit(params.protoZ, ConvertableTo[T].fromDouble(0))
+    val fineOffset = RegInit(params.protoZ, ConvertableTo[T].fromDouble(0))
 
     val stMul = Wire(params.protoIQ)
     val stAcc = Reg(params.protoIQ)
@@ -129,6 +128,7 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     io.in.ready := estimatorReady && rotatorReady
     io.out.valid := phaseCorrect.io.outIQ.valid
     phaseCorrect.io.outIQ.ready := io.out.ready
+    phaseCorrect.io.phiCorrect := coarseOffset + fineOffset
 
     switch(curState){
       is(idle){
