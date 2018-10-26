@@ -34,7 +34,7 @@ class DecimationSpec extends FlatSpec with Matchers {
   )
   it should "decimate by 10" in {
     val trials = IQ(vecs.bigInputVector, None)
-    DecimatorTester(decimateBy10Params, trials) should be (true)
+    FixedDecimatorTester(decimateBy10Params, trials) should be (true)
   }
 
   // val corrParams = FixedPacketDetectParams(
