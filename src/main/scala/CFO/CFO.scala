@@ -39,6 +39,9 @@ class PacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val pktEnd: Bool = Bool()
   val iq: Vec[DspComplex[T]] = Vec(params.width, params.protoIQ)
 }
+object PacketBundle {
+  def apply[T <: Data](params: PacketBundleParams[T]): PacketBundle[T] = new PacketBundle(params)
+}
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val in = Flipped(Decoupled(PacketBundle(params)))
