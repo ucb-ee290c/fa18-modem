@@ -145,6 +145,7 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T])
 
     val curState = Reg(UInt(2.W))
     val nexState = Wire(UInt(2.W))
+    val stMul = Wire(params.protoIQ)
     val stAcc = Reg(params.protoIQ)
     val stCounter = Counter(params.stLength)
     val ltCounter = Counter(params.ltLength)
@@ -154,7 +155,7 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T])
     val delayValidByST = (0 until stDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
     val delayValidByLT = (0 until ltDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
 
-    val idle::st::lt::data = Enum(4)
+    val idle::st::lt::data::Nil = Enum(4)
 
     switch(curState){
       is(idle){
@@ -171,7 +172,8 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T])
 
         }.otherwise{
           curState := st
-          stAcc := stAcc + (io.in.bits.iq * delayIQByST.conj)
+          stMul := (io.in.bits.iq * delayIQByST.conj)
+          stAcc := stAcc + stMul
         }
       }
       is(lt){
