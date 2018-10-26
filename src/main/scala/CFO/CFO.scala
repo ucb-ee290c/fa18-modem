@@ -34,18 +34,18 @@ trait CFOParams[T <: Data] extends CordicParams[T]{
   val preamble: Boolean
 }
 
-class PacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
+class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
-  val iq: Vec[DspComplex[T]] = Vec(params.width, params.protoIQ)
+  val iq: DspComplex[T] = protoIQ
 }
-object PacketBundle {
+object SerialPacketBundle {
   def apply[T <: Data](params: PacketBundleParams[T]): PacketBundle[T] = new PacketBundle(params)
 }
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(PacketBundle(params)))
-  val out = Decoupled(PacketBundle(params))
+  val in = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
@@ -105,15 +105,15 @@ object CFOIO {
 
 class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
   val io = IO(new Bundle{
-    val inIQ = Flipped(Decoupled(PacketBundle(params)))
-    val outIQ = Decoupled(PacketBundle(params))
+    val inIQ = Flipped(Decoupled(SerialPacketBundle(params)))
+    val outIQ = Decoupled(SerialPacketBundle(params))
     val phiCorrect = Input(params.protoZ)
   })
 
   val cordic = Module( new IterativeCordic(params))
 
-  cordic.io.in.bits.x := io.inIQ.bits.real
-  cordic.io.in.bits.y := io.inIQ.bits.imag
+  cordic.io.in.bits.x := io.inIQ.bits.iq.real
+  cordic.io.in.bits.y := io.inIQ.bits.iq.imag
   cordic.io.in.bits.z := io.phiCorrect
 
 
