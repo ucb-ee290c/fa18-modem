@@ -115,10 +115,9 @@ class FFTStage[T <: Data : Real : BinaryRepresentation](val numPoints: Int, val 
   if (numPoints == 2) {
     butterfly_inputs := io.in.bits.iq
 
-    // TODO
     io.out.bits.pktStart := io.in.bits.pktStart
     io.out.bits.pktEnd   := io.in.bits.pktEnd
-    io.out.valid := io.in.valid
+    io.out.valid         := io.in.valid
   }
   else {
     val fft_even = Module(new FFTStage(numPointsDiv2, params))
@@ -228,7 +227,7 @@ class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](
 
   sub_fft.io.in.bits.pktStart := io.in.bits.pktStart
   sub_fft.io.in.bits.pktEnd   := io.in.bits.pktEnd
-  sub_fft.io.in.valid := io.in.valid
+  sub_fft.io.in.valid         := io.in.valid
 
   io.out.bits.iq(0.U) := io.in.bits.iq(0.U) + sub_fft.io.out.bits.iq(0.U)
 
@@ -242,10 +241,9 @@ class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](
     }
   }
 
-  // TODO
   sub_ifft.io.in.bits.pktStart := sub_fft.io.out.bits.pktStart
   sub_ifft.io.in.bits.pktEnd   := sub_fft.io.out.bits.pktEnd
-  sub_ifft.io.in.valid := sub_fft.io.out.valid
+  sub_ifft.io.in.valid         := sub_fft.io.out.valid
 
   (0 until numPoints - 1).map(n => {
     io.out.bits.iq(inv_idx_map(n).U) := io.in.bits.iq(0.U) + sub_ifft.io.out.bits.iq(n.U)
