@@ -14,12 +14,12 @@ import freechips.rocketchip.subsystem.BaseSubsystem
   */
 trait HasPeripheryModem extends BaseSubsystem {
   // instantiate chain blocks
-  val cordicChain = LazyModule(new CordicThing(FixedCordicParams(8, 10)))
-  val CFOChain = LazyModule(new CFOThing(FixedCFOParams(8, 10)))
-  val packetDetectChain = LazyModule(new PacketDetectThing(FixedPacketDetectParams(8, 10)))
-  val equalizerChain = LazyModule(new EqualizerThing(FixedEqualizerParams(8, 10)))
+//  val cordicChain = LazyModule(new CordicThing(FixedCordicParams(8, 10)))
+//  val CFOChain = LazyModule(new CFOThing(FixedCFOParams(8, 10)))
+//  val packetDetectChain = LazyModule(new PacketDetectThing(FixedPacketDetectParams(8, 10)))
+//  val equalizerChain = LazyModule(new EqualizerThing(FixedEqualizerParams(8, 10)))
   // connect memory interfaces to pbus
-  pbus.toVariableWidthSlave(Some("cordicWrite")) { cordicChain.writeQueue.mem.get }
-  pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
+//  pbus.toVariableWidthSlave(Some("modemWrite")) { modemChain.writeQueue.mem.get }
+//  pbus.toVariableWidthSlave(Some("modemRead")) { modemChain.readQueue.mem.get }
 }
 
