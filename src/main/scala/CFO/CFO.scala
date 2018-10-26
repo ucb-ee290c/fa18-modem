@@ -106,12 +106,12 @@ object AddSub {
 //   curState := nexState
 // }
 
-class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams) extends Module{
+class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
   val io = IO(new Bundle{
     val inIQ = Flipped(Decoupled(PacketBundle(params)))
     val outIQ = Decoupled(PacketBundle(params))
     val phiCorrect = Input(params.protoZ)
-  }
+  })
 
   val cordic = Module( new IterativeCordic(params))
 
@@ -149,15 +149,15 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T])
     val curState = Reg(UInt(2.W))
     val nexState = Wire(UInt(2.W))
     val stAcc = Reg(params.protoIQ)
-    val stCounter = Counter(stLength)
-    val ltCounter = Counter(ltLength)
+    val stCounter = Counter(params.stLength)
+    val ltCounter = Counter(params.ltLength)
 
     val delayIQByST = (0 until stDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
     val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
     val delayValidByST = (0 until stDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
     val delayValidByLT = (0 until ltDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
 
-    val idle::st::lt::data = Enum(nodeType:UInt, n: 4)
+    val idle::st::lt::data = Enum(4)
 
     switch(curState){
       is(idle){
