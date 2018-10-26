@@ -28,7 +28,7 @@ class DecimationSpec extends FlatSpec with Matchers {
   val vecs = TestVectors()
   behavior of "DecimatebyN"
 
-  val decimateBy10Params = FixedDecimatorParams(
+  val decimateBy10Params = FixedDecimationParams(
     iqWidth = 16,
     nDecimation = 10
   )
