@@ -11,4 +11,5 @@ verilator/
 simulator-*
 *.vcd
 *.sc 
+.vscode/ 
 
