@@ -18,10 +18,6 @@ import freechips.rocketchip.subsystem.BaseSubsystem
    val protoIQ: DspComplex[T]
  }
 
- trait DecimatorParams[T <: Data] extends PacketBundleParams[T] {
-   val nDecimation: Int
- }
-
  class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
    val pktStart: Bool = Bool()
    val pktEnd: Bool = Bool()
