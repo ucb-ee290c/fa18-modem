@@ -13,7 +13,7 @@ import freechips.rocketchip.subsystem.BaseSubsystem
  *
  * These are type generic
  */
-trait DecimatorParams[T <: Data] extends PacketBundleParams {
+trait DecimatorParams[T <: Data] extends PacketBundleParams[T] {
   val protoIn: DspComplex[T]
   val protoout: DspComplex[T]
   val nDecimation: Int
@@ -22,8 +22,8 @@ trait DecimatorParams[T <: Data] extends PacketBundleParams {
 class DecimateByN(val params: DecimatorParams[T]) extends Module {
   requireIsChiselType(params.protoIn)
   val io = IO(new Bundle{
-    val in = Flipped(Decoupled(SerialPacketBundle))
-    val out = Decoupled(SerialPacketBundle)
+    val in = Flipped(Decoupled(SerialPacketBundle(params)))
+    val out = Decoupled(SerialPacketBundle(params))
   })
   val count = Counter(params.nDecimation)
   io.in.ready := true.B
