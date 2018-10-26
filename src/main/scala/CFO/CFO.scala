@@ -14,10 +14,26 @@ import freechips.rocketchip.subsystem.BaseSubsystem
  * These are type generic
  */
 
+ trait IQBundleParams[T <: Data] {
+   val protoIQ: DspComplex[T]
+ }
+ object IQBundleParams {
+   def apply[T <: Data](proto: DspComplex[T]): IQBundleParams[T] = new IQBundleParams[T] { val protoIQ = proto }
+ }
 
-trait PacketBundleParams[T <: Data] {
+ class IQBundle[T <: Data](params: IQBundleParams[T]) extends Bundle {
+   val iq: DspComplex[T] = params.protoIQ.cloneType
+
+   override def cloneType: this.type = IQBundle(params).asInstanceOf[this.type]
+ }
+ object IQBundle {
+   def apply[T <: Data](params: IQBundleParams[T]): IQBundle[T] = new IQBundle[T](params)
+   def apply[T <: Data](proto: DspComplex[T]): IQBundle[T] = new IQBundle[T](IQBundleParams[T](proto))
+ }
+
+trait PacketBundleParams[T <: Data] extends IQBundleParams {
   val width: Int
-  val protoIQ: DspComplex[T]
+  // val protoIQ: DspComplex[T]
 }
 
 trait CordicParams[T<:Data] extends PacketBundleParams[T]{
@@ -44,8 +60,8 @@ object SerialPacketBundle {
 }
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val in = Flipped(Decoupled(IQBundle(params)))
+  val out = Decoupled(IQBundle(params))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
