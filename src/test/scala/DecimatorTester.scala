@@ -17,7 +17,7 @@ case class IQ(
   *
   * Run each trial in @trials
   */
-class DecimatorTester[T <: chisel3.Data](c: CFOCorrection[T], trials: Seq[IQ], tolLSBs: Int = 2) extends DspTester(c) {
+class DecimatorTester[T <: chisel3.Data](c: DecimateByN[T], trials: Seq[IQ], tolLSBs: Int = 2) extends DspTester(c) {
   poke(c.io.out.ready, 1)
   poke(c.io.in.valid, 1)
 
