@@ -57,7 +57,6 @@ class CordicBundle[T <: Data](params: CordicParams[T]) extends Bundle {
   val x: T = params.protoXY.cloneType
   val y: T = params.protoXY.cloneType
   val z: T = params.protoZ.cloneType
-  //val vectoring: Bool = Bool()
 
   override def cloneType: this.type = CordicBundle(params).asInstanceOf[this.type]
 }
@@ -80,13 +79,30 @@ class IterativeCordicIO[T <: Data](params: CordicParams[T]) extends Bundle {
   val in = Flipped(Decoupled(CordicBundle(params)))
   val out = Decoupled(CordicBundle(params))
 
-   //val vectoring = Input(Bool())
+  // val vectoring = Input(Bool())
 
   override def cloneType: this.type = IterativeCordicIO(params).asInstanceOf[this.type]
 }
 object IterativeCordicIO {
   def apply[T <: Data](params: CordicParams[T]): IterativeCordicIO[T] =
     new IterativeCordicIO(params)
+}
+
+/**
+ * Bundle type as IO for pipelined CORDIC modules
+ * Same as iterative CORDIC IO but with valid interface instead of decoupled
+ */
+class PipelinedCordicIO[T <: Data](params: CordicParams[T]) extends Bundle {
+  val in = Flipped(Valid(CordicBundle(params)))
+  val out = Valid(CordicBundle(params))
+
+  // val vectoring = Input(Bool())
+
+  override def cloneType: this.type = PipelinedCordicIO(params).asInstanceOf[this.type]
+}
+object PipelinedCordicIO {
+  def apply[T <: Data](params: CordicParams[T]): PipelinedCordicIO[T] =
+    new PipelinedCordicIO(params)
 }
 
 object AddSub {
@@ -145,4 +161,21 @@ class IterativeCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val
 
   io.out.valid := ShiftRegister(in=io.in.valid, n=cycles, resetData=false.B, en=push) // Shift Register to track ready/valids
   io.in.ready := push // Input is ready when pipeline is clear to advance
+}
+
+class PipelinedCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val params: CordicParams[T]) extends Module{
+  val io = IO(PipelinedCordicIO(params))
+  val cycles = params.nStages/params.stagesPerCycle // Calculate number of pipeline stages
+
+  val stages = (0 until params.nStages).map{ i: Int => Module( new CordicIter(params, i) )} // Instatiate all the CORDIC iterations
+
+  io.out.bits := stages.grouped(params.stagesPerCycle).foldLeft(io.in.bits){    // Group iterations into pipeline stage Seqs
+    (prevStage, currStage) => Reg(currStage.foldLeft(prevStage){                // For each pipeline Seq, make a Reg to store value
+      (prevIter, currIter) => {                                                 // Iterate through pipeline Seq to perform unrolling
+        currIter.io.inXYZ := prevIter                                           // Connect each iteration to previous iteration output or previous pipeline register
+        currIter.io.outXYZ                                                      // Return output of current stage
+      }})
+  }
+
+  io.out.valid := ShiftRegister(in=io.in.valid, n=cycles, resetData=false.B) // Shift Register to track valids
 }
