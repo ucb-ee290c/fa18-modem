@@ -13,13 +13,13 @@ import freechips.rocketchip.subsystem.BaseSubsystem
  *
  * These are type generic
  */
-trait CordicParams[T <: Data] {
-  val protoXY: T
-  val protoZ: T
-  val nStages: Int
-  val correctGain: Boolean
-  val stagesPerCycle: Int
-}
+// trait CordicParams[T <: Data] {
+//   val protoXY: T
+//   val protoZ: T
+//   val nStages: Int
+//   val correctGain: Boolean
+//   val stagesPerCycle: Int
+// }
 
 /**
  * CORDIC parameters object for fixed-point CORDICs
