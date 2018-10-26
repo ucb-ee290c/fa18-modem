@@ -35,10 +35,7 @@ case class FixedFFTParams(
   numPoints: Int = 4,
   pipeline: Boolean = false
 ) extends FFTParams[FixedPoint] {
-  // prototype for x and y
-  // binary point is (xyWidth-2) to represent 1.0 exactly
   val protoIQ = DspComplex(FixedPoint(dataWidth.W, (dataWidth-2-log2Ceil(maxVal)).BP))
-  // binary point is (xyWidth-2) to represent 1.0 exactly
   val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP))
 }
 
@@ -59,7 +56,6 @@ object FFTIO {
 class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
   val io = IO(FFTIO(params))
   io.in.ready := true.B
-  // io.out.valid := io.in.fire()
   val fft_stage = {
     if (params.numPoints != 2 && FFTUtil.is_prime(params.numPoints)) {
       Module(new RaderFFT(params.numPoints, params))
