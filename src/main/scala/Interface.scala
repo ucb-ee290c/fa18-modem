@@ -7,13 +7,6 @@ import dsptools.numbers._
 /**
   * Bundle type for IQ data
   */
-trait IQBundleParams[T <: Data] {
-  val protoIQ: DspComplex[T]
-}
-object IQBundleParams {
-  def apply[T <: Data](proto: DspComplex[T]): IQBundleParams[T] = new IQBundleParams[T] { val protoIQ = proto }
-}
-
 class IQBundle[T <: Data](params: IQBundleParams[T]) extends Bundle {
   val iq: DspComplex[T] = params.protoIQ.cloneType
 
@@ -28,19 +21,6 @@ object IQBundle {
 /**
  * Bundle type for packetized IQ data
  */
-trait PacketBundleParams[T <: Data] {
-  val width: Int
-  val protoIQ: DspComplex[T]
-}
-object PacketBundleParams {
-  def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundleParams[T] = {
-     new PacketBundleParams[T] {
-      val width = size
-      val protoIQ = proto
-    }
-  }
-}
-
 class PacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
