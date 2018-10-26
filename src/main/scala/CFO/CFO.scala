@@ -54,54 +54,6 @@ object CFOIO {
     new CFOIO(params)
 }
 
-// class PreambleStateMachine[T<:Data](stLength: Int, ltLength: Int) extends Module{
-//   val io = IO(new Bundle{
-//       val pktStart = Input(Bool())
-//       val pktEnd = Input(Bool())
-//       val state = Output(UInt(2.W))
-//   })
-//
-//   val curState = Reg(UInt(2.W))
-//   val nexState = Wire(UInt(2.W))
-//   val stCounter = Counter(stLength)
-//   val ltCounter = Counter(ltLength)
-//
-//   val idle::st::lt::data = Enum(nodeType:UInt, n: 4)
-//
-//   switch(curState){
-//     is(idle){
-//       when(pktStart){
-//         nexState := st
-//       }.otherwise{
-//         nexState := idle
-//       }
-//     }
-//     is(st){
-//       when(stCounter.inc()){
-//         nexState := lt
-//       }.otherwise{
-//         nexState := st
-//       }
-//     }
-//     is(lt){
-//       when(ltCounter.inc()){
-//         nexState := data
-//       }.otherwise{
-//         nexState := lt
-//       }
-//     }
-//     is(data){
-//       when(pktStop){
-//         nexState := idle
-//       }.otherwise{
-//         nexState := data
-//       }
-//     }
-//   }
-//
-//   io.state := curState
-//   curState := nexState
-// }
 
 class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
   val io = IO(new Bundle{
@@ -115,9 +67,12 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
   cordic.io.in.bits.x := io.inIQ.bits.iq.real
   cordic.io.in.bits.y := io.inIQ.bits.iq.imag
   cordic.io.in.bits.z := io.phiCorrect
-
-
-
+  cordic.io.in.bits.vectoring := true.B
+  cordic.io.in.valid := true.B
+  io.inIQ.ready := cordic.io.in.ready
+  io.outIQ.real := cordic.io.out.bits.x
+  io.outIQ.imag := cordic.io.out.bits.y
+  io.out.valid := cordic.io.out.valid
 }
 
 /**
@@ -132,11 +87,18 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
 //   pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
 // }
 
-class CFOCorrection[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module {
+class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params: CFOParams[T]) extends Module {
   // requireIsChiselType(params.protoIn)
   val io = IO(CFOIO(params))
 
   val cordic = Module ( new IterativeCordic(params))
+  val phaseCorrect = Module( new PhaseRotator(params))
+
+  phaseCorrect.io.inIQ.bits.iq := io.in.bits.iq
+  io.out.bits.iq := phaseCorrect.io.outIQ.bits.iq
+  phaseCorrect.io.phiCorrect := coarseOffset + fineOffset
+  io.out.bits.pktStart := io.in.bits.pktStart
+  io.out.bits.pktStop := io.in.bits.pktStop
 
   if(params.preamble == true){
     // val sm = Module( new PreambleStateMachine(params.stLength, params.ltLength) )
@@ -144,11 +106,18 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T])
     val ltDelay = 64
 
     val curState = Reg(UInt(2.W))
-    val nexState = Wire(UInt(2.W))
+    val coarseOffset = RegInit(params.protoZ, 0)
+    val fineOffset = RegInit(params.protoZ, 0)
+
     val stMul = Wire(params.protoIQ)
     val stAcc = Reg(params.protoIQ)
+    val ltMul = Wire(params.protoIQ)
+    val ltAcc = Reg(params.protoIQ)
     val stCounter = Counter(params.stLength)
     val ltCounter = Counter(params.ltLength)
+
+    val estimatorReady = Wire(Bool())
+    val rotatorReady = phaseCorrect.io.in.ready
 
     val delayIQByST = (0 until stDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
     val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
@@ -157,37 +126,73 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T])
 
     val idle::st::lt::data::Nil = Enum(4)
 
+    io.in.ready := estimatorReady && rotatorReady
+    io.out.valid := phaseCorrect.io.outIQ.valid
+    phaseCorrect.io.outIQ.ready := io.out.ready
+
     switch(curState){
       is(idle){
         when(io.in.bits.pktStart && io.in.fire()){
           curState := st
         }.otherwise{
           curState := idle
+          // stAcc := DspComplex[T](0,0)
         }
       }
       is(st){
         when(stCounter.inc()){
-
-          curState := lt
-
-        }.otherwise{
+          cordic.io.in.bits.x := stAcc.real
+          cordic.io.in.bits.y := stAcc.imag
+          cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
+          cordic.io.in.bits.vectoring := true.B
+          cordic.io.in.valid := true.B
+          estimatorReady := false.B
+          cordic.io.out.ready := true.B
+        }.elsewhen(io.in.fire()){
           curState := st
-          stMul := (io.in.bits.iq * delayIQByST.conj)
-          stAcc := stAcc + stMul
+          when(delayValidByST){
+            stMul := (io.in.bits.iq * delayIQByST.conj)
+            stAcc := stAcc + stMul
+          }
+        }.otherwise{
+          cordic.io.in.valid := false.B
+          when(cordic.io.out.valid){
+            coarseOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/stDelay)
+            estimatorReady := true.B
+            curState := lt
+          }
         }
       }
       is(lt){
         when(ltCounter.inc()){
-          nexState := data
-        }.otherwise{
-          nexState := lt
+          cordic.io.in.bits.x := ltAcc.real
+          cordic.io.in.bits.y := ltAcc.imag
+          cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
+          cordic.io.in.bits.vectoring := true.B
+          cordic.io.in.valid := true.B
+          estimatorReady := false.B
+          cordic.io.out.ready := true.B
+        }.elsewhen(io.in.fire()){
+          curState := lt
+          when(delayValidByLT){
+            ltMul := (io.in.bits.iq * delayIQByLT.conj)
+            ltAcc := stAcc + stMul
+          }
+        }
+        .otherwise{
+          cordic.io.in.valid := false.B
+          when(cordic.io.out.valid){
+            fineOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/ltDelay)
+            estimatorReady := true.B
+            curState := data
+          }
         }
       }
       is(data){
-        when(pktStop){
-          nexState := idle
+        when(io.in.bits.pktStop){
+          curState := idle
         }.otherwise{
-          nexState := data
+          curState := data
         }
       }
     }
