@@ -8,7 +8,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 case class TestVectors() {
   val bigInputVector: Seq[Complex] =
-    Seq(Seq.fill(100)(Complex(1, 0)))
+    Seq.fill(100)(Complex(1, 0))
 }
 
 case class FixedDecimationParams(
@@ -33,7 +33,7 @@ class DecimationSpec extends FlatSpec with Matchers {
     nDecimation = 10
   )
   it should "decimate by 10" in {
-    val trials = IQ(vecs.bigInputVector, None)
+    val trials = Seq(IQ(vecs.bigInputVector, None))
     FixedDecimationTester(decimateBy10Params, trials) should be (true)
   }
 
