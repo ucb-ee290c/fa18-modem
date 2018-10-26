@@ -1,4 +1,4 @@
- package cfo
+package cfo
 
 import chisel3._
 import chisel3.experimental.FixedPoint
@@ -13,17 +13,25 @@ import freechips.rocketchip.subsystem.BaseSubsystem
  *
  * These are type generic
  */
-trait CFOParams[T <: Data] {
-  val protoIn: DspComplex[T]
-  val protoout: DspComplex[T]
-  val mulPipe: Int
-  val addPipe: Int
-  val preamble: Boolean
-}
+
 
 trait PacketBundleParams[T <: Data] {
   val width: Int
   val protoIQ: DspComplex[T]
+}
+
+trait CordicParams[T<:Data] extends PacketBundleParams[T]{
+  val protoXY: T
+  val protoZ: T
+  val nStages: Int
+  val correctGain: Boolean
+  val stagesPerCycle: Int
+}
+
+trait CFOParams[T <: Data] extends CordicParams[T]{
+  val stLength: Int
+  val ltLength: Int
+  val preamble: Boolean
 }
 
 class PacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
@@ -32,9 +40,9 @@ class PacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val iq: Vec[DspComplex[T]] = Vec(params.width, params.protoIQ)
 }
 
-class CFOIO[T <: Data](params: CFOParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(PacketBundle(params.PacketBundleParams)))
-  val out = Decoupled(PacketBundle(params.PacketBundleParams))
+class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
+  val in = Flipped(Decoupled(PacketBundle(params)))
+  val out = Decoupled(PacketBundle(params))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
@@ -49,47 +57,69 @@ object AddSub {
   }
 }
 
-class PreambleStateMachine(val stf: Boolean, val ltf Boolean, val frameLength: Int) extends Module{
+// class PreambleStateMachine[T<:Data](stLength: Int, ltLength: Int) extends Module{
+//   val io = IO(new Bundle{
+//       val pktStart = Input(Bool())
+//       val pktEnd = Input(Bool())
+//       val state = Output(UInt(2.W))
+//   })
+//
+//   val curState = Reg(UInt(2.W))
+//   val nexState = Wire(UInt(2.W))
+//   val stCounter = Counter(stLength)
+//   val ltCounter = Counter(ltLength)
+//
+//   val idle::st::lt::data = Enum(nodeType:UInt, n: 4)
+//
+//   switch(curState){
+//     is(idle){
+//       when(pktStart){
+//         nexState := st
+//       }.otherwise{
+//         nexState := idle
+//       }
+//     }
+//     is(st){
+//       when(stCounter.inc()){
+//         nexState := lt
+//       }.otherwise{
+//         nexState := st
+//       }
+//     }
+//     is(lt){
+//       when(ltCounter.inc()){
+//         nexState := data
+//       }.otherwise{
+//         nexState := lt
+//       }
+//     }
+//     is(data){
+//       when(pktStop){
+//         nexState := idle
+//       }.otherwise{
+//         nexState := data
+//       }
+//     }
+//   }
+//
+//   io.state := curState
+//   curState := nexState
+// }
+
+class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams) extends Module{
   val io = IO(new Bundle{
-      val pktStart = Input(Bool())
-      val pktEnd = Input(Bool())
-      val state = Output(UInt(3.W))
-  })
-
-  val curState = Reg(UInt(3.W))
-  val nexState = Wire(UInt(3.W))
-
-  val idle::st::lt::data = Enum(nodeType:UInt, n: 4)
-
-  switch(curState){
-    is(idle){
-      when(pktStart){
-        nexState := st
-      }.otherwise{
-        nexState := idle
-      }
-    }
-    is(st){
-      when(pktStop){
-        nexState := lt
-      }.otherwise{
-        nexState := st
-      }
-    }
-    is(lt){
-      when(pktStop){
-        nexState := data
-      }.otherwise{
-        nexState := lt
-      }
-    }
-    is(data){
-
-    }
+    val inIQ = Flipped(Decoupled(PacketBundle(params)))
+    val outIQ = Decoupled(PacketBundle(params))
+    val phiCorrect = Input(params.protoZ)
   }
 
-  io.state := curState
-  curState := nexState
+  val cordic = Module( new IterativeCordic(params))
+
+  cordic.io.in.bits.x := io.inIQ.bits.real
+  cordic.io.in.bits.y := io.inIQ.bits.imag
+  cordic.io.in.bits.z := io.phiCorrect
+
+
 
 }
 
@@ -105,15 +135,63 @@ class PreambleStateMachine(val stf: Boolean, val ltf Boolean, val frameLength: I
 //   pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
 // }
 
-class CFOCorrection(val params: CFOParams[FixedPoint]) extends Module {
-  requireIsChiselType(params.protoIn)
+class CFOCorrection[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module {
+  // requireIsChiselType(params.protoIn)
   val io = IO(CFOIO(params))
 
-
+  val cordic = Module ( new IterativeCordic(params))
 
   if(params.preamble == true){
+    // val sm = Module( new PreambleStateMachine(params.stLength, params.ltLength) )
+    val stDelay = 16
+    val ltDelay = 64
 
+    val curState = Reg(UInt(2.W))
+    val nexState = Wire(UInt(2.W))
+    val stAcc = Reg(params.protoIQ)
+    val stCounter = Counter(stLength)
+    val ltCounter = Counter(ltLength)
 
+    val delayIQByST = (0 until stDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
+    val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
+    val delayValidByST = (0 until stDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
+    val delayValidByLT = (0 until ltDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
+
+    val idle::st::lt::data = Enum(nodeType:UInt, n: 4)
+
+    switch(curState){
+      is(idle){
+        when(io.in.bits.pktStart && io.in.fire()){
+          curState := st
+        }.otherwise{
+          curState := idle
+        }
+      }
+      is(st){
+        when(stCounter.inc()){
+
+          curState := lt
+
+        }.otherwise{
+          curState := st
+          stAcc := stAcc + (io.in.bits.iq * delayIQByST.conj)
+        }
+      }
+      is(lt){
+        when(ltCounter.inc()){
+          nexState := data
+        }.otherwise{
+          nexState := lt
+        }
+      }
+      is(data){
+        when(pktStop){
+          nexState := idle
+        }.otherwise{
+          nexState := data
+        }
+      }
+    }
 
   }
 
