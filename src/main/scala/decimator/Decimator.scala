@@ -20,7 +20,6 @@ trait DecimatorParams[T <: Data] extends PacketBundleParams[T] {
 }
 
 class DecimateByN[T<:Data:Real](val params: DecimatorParams[T]) extends Module {
-  requireIsChiselType(params.protoIn)
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(SerialPacketBundle(params)))
     val out = Decoupled(SerialPacketBundle(params))
