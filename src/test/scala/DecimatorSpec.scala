@@ -2,6 +2,7 @@ package decimator
 
 import breeze.math.Complex
 import dsptools.numbers._
+import chisel3._
 import chisel3.experimental.FixedPoint
 import org.scalatest.{FlatSpec, Matchers}
 
