@@ -32,7 +32,7 @@ class DecimatorTester[T <: chisel3.Data](c: DecimateByN[T], trials: Seq[IQ], tol
         if (cyclesWaiting >= maxCyclesWait) {
           expect(false, "waited for input too long")
         }
-        iqOut = peek(c.io.out.bits.iq)
+        iqOut = Vector(peek(c.io.out.bits.iq))
         step(1)
       }
     }
