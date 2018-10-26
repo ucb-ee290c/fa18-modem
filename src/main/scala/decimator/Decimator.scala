@@ -14,8 +14,6 @@ import freechips.rocketchip.subsystem.BaseSubsystem
  * These are type generic
  */
 trait DecimatorParams[T <: Data] extends PacketBundleParams[T] {
-  val protoIn: DspComplex[T]
-  val protoout: DspComplex[T]
   val nDecimation: Int
 }
 
