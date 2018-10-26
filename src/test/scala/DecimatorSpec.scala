@@ -1,4 +1,4 @@
-package cfo
+package decimator
 
 import breeze.math.Complex
 import dsptools.numbers._
