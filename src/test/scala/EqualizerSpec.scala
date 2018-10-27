@@ -1,100 +1,69 @@
 package modem
 
 import breeze.math.Complex
+import breeze.linalg._
+import breeze.numerics._
 import dsptools.numbers._
 import org.scalatest.{FlatSpec, Matchers}
 
 case class TestVectors() {
-  def alternateHighPwr(n: Int): Seq[Complex] = {
-    var out = Seq[Complex]()
-    for (i <- 0 until n) {
-      out = out :+ Complex(1, 1 - 2*(i%2))
-    }
-    out
+  def buildPacket(nSymbols: Int, impairment: DenseVector[Complex]) = {
+    val data = DenseMatrix.rand(64, nSymbols).map(x => if(x < 0.5) 1 else 0)
+    var bidata = 1 - 2*data
+    bidata(0) *= 0
+    bidata(27 to 38) *= 0
+    val LTF = IEEE80211.lftFreq
+    val reference = DenseMatrix.vertcat(LTF, LTF, bidata)
+    val chan = reference * impairment
+    (chan, reference)
   }
-  def alternateLowPwr(n: Int): Seq[Complex] = {
-    alternateHighPwr(n).map(c => c * 0.1)
-  }
-  val tvNoPkt: Seq[Complex] = alternateLowPwr(64)
-  // Has power but not correlated
-  val tvPwrOnly: Seq[Complex] =
-    Seq.fill(10)(Complex(0, 0)) ++ Seq.fill(15)(Complex(1, -1)) ++ Seq.fill(15)(Complex(-1, 1)) ++
-    Seq.fill(15)(Complex(1, -1)) ++ Seq.fill(15)(Complex(-1, 1)) ++ Seq.fill(15)(Complex(0, 0))
-  val tvPwrOnlyOut: Seq[Complex] =
-    Seq.fill(15)(Complex(1, -1)) ++ Seq.fill(15)(Complex(-1, 1)) ++
-    Seq.fill(15)(Complex(1, -1)) ++ Seq.fill(15)(Complex(-1, 1))
-  // Has power and correlation
-  val tvPwrCorr: Seq[Complex] =
-    Seq.fill(10)(Complex(0, 0)) ++ Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(8)(Complex(-1, 1)) ++
-    Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1)) ++
-    Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(16)(Complex(0, 0))
-  val tvPwrCorrOut: Seq[Complex] =
-    Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(8)(Complex(-1, 1)) ++
-    Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1)) ++
-    Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1))
-}
 
+  def fadingChannel(carrier: Int, gain: Complex) = {
+    var chan = DenseVector.fill(64){Complex(1,0)}
+    chan(carrier) *= gain
+    chan
+  }
+
+  val cleanChan = DenseVector.fill(64){Complex(1,1)}
+  val gainChan = DenseVector.fill(64){Complex(0.5,0)}
+  val phaseChan = DenseVector.fill(64){Complex(0.707107, 0.707107)}
+  val tvClean1 = buildPacket(1, cleanChan)
+  val tvClean2 = buildPacket(2, cleanChan)
+  val tvHalfGain = buildPacket(2, gainChan)
+  val tvRotate = buildPacket(2, phaseChan)
+  val tvFade = buildPacket(2, fadingChannel(20, Complex(0.25, 0.25))
+  val tvList = List(tvClean1, tvClean2, tvHalfGain, tvRotate, tvFade)
+}
 
 class EqualizerSpec extends FlatSpec with Matchers {
   val vecs = TestVectors()
   behavior of "FixedEqualizer"
 
-  val noCorrParams = FixedEqualizerParams(
-    iqWidth = 16,
-    powerThreshWindow = 4,
-    correlationThresh = false
+  val eqParams = FixedEqualizerParams(
+    width=16,
+    mu=0.25
+    pilots=Seq(5, 21, 43, 59),
+    carrierMask=Seq.fill(1)(false) ++ Seq.fill(27)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(5)(false) ++ Seq.fill(27)(true),
+    nSubcarriers=64
   )
-  it should "detect power" in {
-    val trials = Seq(IQWide(vecs.tvNoPkt, None),
-                     IQWide(vecs.tvPwrOnly, Option(vecs.tvPwrOnlyOut)),
-                     IQWide(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
-    FixedEqualizerTester(noCorrParams, trials) should be (true)
+  it should "pass data" in {
+    val trials = Seq(IQWide(vecs.tvClean1(0), Option(vecs.tvClean1(1))),
+                     IQWide(vecs.tvClean2(0), Option(vecs.tvClean2(1))))
+    FixedEqualizerTester(eqParams, trials) should be (true)
   }
 
-  val corrParams = FixedEqualizerParams(
-    iqWidth = 16,
-    powerThreshWindow = 4,
-    correlationThresh = true
-  )
-  it should "detect power and correlation" in {
-    val trials = Seq(IQ(vecs.tvNoPkt, None))
-      // IQ(vecs.tvPwrOnly, None),
-      // IQ(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
-    FixedEqualizerTester(corrParams, trials) should be (true)
+  it should "correct gain" in {
+    val trials = Seq(IQWide(vecs.tvHalfGain(0), Option(vecs.tvHalfGain(1))))
+    FixedEqualizerTester(eqParams, trials) should be (true)
   }
 
-//  behavior of "RealEqualizer"
-//
-//  val realNoCorrParams = new EqualizerParams[DspReal] {
-//    val protoIQ = DspComplex(DspReal())
-//    val powerThreshVal: Double = 0.75 // Power threshold
-//    val powerThreshWindow: Int = 4 // Number of samples greater than power in a row before triggering
-//    val correlationThresh: Boolean = false
-//    val correlationThreshVal: Double = 0.75
-//    val correlationWindow: Int = 4 // Number of strided correlations to sum
-//    val correlationStride: Int = 16 // Stride between correlated samples
-//  }
-//  it should "detect power for reals" in {
-//    val trials = Seq(IQ(vecs.tvNoPkt, None),
-//      IQ(vecs.tvPwrOnly, Option(vecs.tvPwrOnlyOut)),
-//      IQ(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
-//    RealEqualizerTester(realNoCorrParams, trials) should be (true)
-//  }
-//
-//  val realCorrParams = new EqualizerParams[DspReal] {
-//    val protoIQ = DspComplex(DspReal())
-//    val powerThreshVal: Double = 0.75 // Power threshold
-//    val powerThreshWindow: Int = 4 // Number of samples greater than power in a row before triggering
-//    val correlationThresh: Boolean = true
-//    val correlationThreshVal: Double = 0.75
-//    val correlationWindow: Int = 4 // Number of strided correlations to sum
-//    val correlationStride: Int = 16 // Stride between correlated samples
-//  }
-//  it should "detect power and correlation for reals" in {
-//    val trials = Seq(IQ(vecs.tvNoPkt, None),
-//                    IQ(vecs.tvPwrOnly, None),
-//                    IQ(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
-//    RealEqualizerTester(realCorrParams, trials) should be (true)
-//  }
+  it should "correct phase" in {
+    val trials = Seq(IQWide(vecs.tvRotate(0), Option(vecs.tvRotate(1))))
+    FixedEqualizerTester(eqParams, trials) should be (true)
+  }
 
+  it should "correct fading" in {
+    val trials = Seq(IQWide(vecs.tvFade(0), Option(vecs.tvFade(1))))
+    FixedEqualizerTester(eqParams, trials) should be (true)
+  }
 }

@@ -1,4 +1,4 @@
-package ieee80211
+package modem
 
 /**
  * Sourced from https://github.com/grebe/ofdm/src/main/scala/ieee80211/IEEE80211.scala

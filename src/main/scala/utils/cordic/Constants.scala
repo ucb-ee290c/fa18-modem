@@ -1,4 +1,4 @@
-package cordic
+package modem
 
 import breeze.numerics.{atan, pow, sqrt}
 

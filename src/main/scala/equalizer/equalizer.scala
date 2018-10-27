@@ -10,6 +10,7 @@ trait EqualizerParams[T <: Data] {
   val protoIQ: DspComplex[T]
   val mu: Double
   val pilots: Seq[Int]
+  val carrierMask: Seq[Boolean]
   val nSubcarriers: Int
   // val dataCarriers: Seq[Int]
 }
@@ -19,7 +20,7 @@ case class FixedEqualizerParams(
   mu: Double = 0.25,
   pilots: Seq[Int] = Seq(5, 21, 43, 59),
   // Default to non-fft-shifted output from fft block, 802.11a mask
-  carrierMask: Seq[Boolean] = Seq.fill(1)(false) ++ Seq.fill(27)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(5)(false) ++ Seq.fill(27)(true)
+  carrierMask: Seq[Boolean] = Seq.fill(1)(false) ++ Seq.fill(27)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(5)(false) ++ Seq.fill(27)(true),
   nSubcarriers: Int = 64
 ) extends EqualizerParams[FixedPoint] {
   val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
@@ -48,7 +49,7 @@ class ChannelInverterIO[T <: Data](params: EqualizerParams[T]) extends Bundle {
   override def cloneType: this.type = ChannelInverterIO(params).asInstanceOf[this.type]
 }
 object ChannelInverterIO {
-  def apply[T <: Data](params: ChannelInverterParams[T]): ChannelInverterIO[T] = new ChannelInverterIO[T](params)
+  def apply[T <: Data](params: EqualizerParams[T]): ChannelInverterIO[T] = new ChannelInverterIO[T](params)
 }
 
  /**
@@ -57,14 +58,14 @@ object ChannelInverterIO {
 class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: EqualizerParams[T]) extends Module {
   val io = IO(ChannelInverterIO(params))
 
-  val cordicParams = new FixedCordicParams(xyWidth=params.protoIQ.width, zWidth=params.protoIQ.width + 4, correctGain=true, stagesPerCycle=4)
+  val cordicParams = new FixedCordicParams(xyWidth=params.protoIQ.real.getWidth, zWidth=params.protoIQ.real.getWidth + 4, correctGain=true, stagesPerCycle=4)
   val toPolar = Module(new PipelinedCordic(cordicParams))
   val toCartesian = Module(new PipelinedCordic(cordicParams))
   val cordicDelay = toPolar.cycles
 
-  val dividerWidth = params.protoIQ.width
+  val dividerWidth = params.protoIQ.real.getWidth
   val dividerConversionDelay = 2
-  val divider = Module(new PipelinedDivider(n=dividerStages, conversionDelay=dividerConversionDelay))
+  val divider = Module(new PipelinedDivider(n=dividerWidth, conversionDelay=dividerConversionDelay))
   val dividerDelay = dividerWidth + 1 + dividerConversionDelay
 
   val delay = cordicDelay * 2 + dividerDelay
@@ -76,20 +77,20 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
 
   divider.io.in.valid      := toPolar.io.out.valid
   divider.io.in.bits.num   := Real[T].fromDouble(1.0).asUInt()
-  divider.io.in.bits.denom := toPolar.io.out.x
+  divider.io.in.bits.denom := toPolar.io.out.bits.x
 
-  toCartesian.io.in.valid  := divider.out.valid
-  toCartesian.io.in.bits.x := divider.out.bits
+  toCartesian.io.in.valid  := divider.io.out.valid
+  toCartesian.io.in.bits.x := divider.io.out.bits
   toCartesian.io.in.bits.y := Real[T].zero
   toCartesian.io.in.bits.z := -toPolar.io.out.bits.z
   toCartesian.io.in.bits.vectoring := false.B
 
-  io.out.valid := toCartesian.out.valid
-  io.out.bits.iq.real := toCartesian.io.out.x
-  io.out.bits.iq.imag := toCartesian.io.out.y
+  io.out.valid := toCartesian.io.out.valid
+  io.out.bits.iq.real := toCartesian.io.out.bits.x
+  io.out.bits.iq.imag := toCartesian.io.out.bits.y
 }
 object ChannelInverter {
-  def apply[T <: Data](in: IQBundle[T], params: EqualizerParams[T]): ChannelInverter[T] = {
+  def apply[T <: Data : Real : BinaryRepresentation](in: IQBundle[T], params: EqualizerParams[T]): Valid[IQBundle[T]] = {
     val ci = Module(new ChannelInverter(params))
     ci.io.in <> in
     ci.io.out
@@ -99,7 +100,7 @@ object ChannelInverter {
 class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams[T]) extends Module {
   // Calculate useful stuff based on params
   val nLTFCarriers = params.carrierMask.map(c => if (c) 1 else 0).reduce(_ + _)
-  val ltfIdxs = params.carrierMask zip (0 until params.carrierMask.length) filter {case (b, i) => b} map {case (b, i) => i}
+  val ltfIdxs = VecInit(params.carrierMask zip (0 until params.carrierMask.length) filter {case (b, i) => b} map {case (b, i) => i.U})
   // IO
   val io = IO(EqualizerIO(params))
   // State machine values
@@ -116,7 +117,7 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   pktStartReg := false.B
   // Storage for channel weights
   val correction = RegInit(VecInit(
-    Seq.fill(params.nSubcarriers)(DspComplex[T].wire(ConvertableTo[T].fromDouble(1.0),
+    Seq.fill(params.nSubcarriers)(DspComplex(params.protoIQ.real).wire(ConvertableTo[T].fromDouble(1.0),
                                                      ConvertableTo[T].fromDouble(0.0))
                                   )
   ))
@@ -143,16 +144,17 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
     is(sLTS2) {
       io.in.ready := true.B
       nextState := Mux(io.in.fire(), sInvert, sLTS2)
-      val ltsAverage = (0 until params.nSubcarriers).map(i => ((dataBuf(i) * io.in.bits.iq(i)) >> 2) * IEEE80211.ltfFreq(i))
-      dataBuf := Mux(!io.in.fire(), ltsAverage, dataBuf)
+      val ltsAverage = (0 until params.nSubcarriers).map(i => ((dataBuf(i) * io.in.bits.iq(i)) >> 2) * DspComplex[T].fromComplex(IEEE80211.ltfFreq(i)))
+      dataBuf := Mux(!io.in.fire(), Vec(ltsAverage), dataBuf)
       invertInCounter := 0.U
       invertOutCounter := 0.U
     }
     is(sInvert) {
       io.in.ready := false.B
-      nextState := Mux(invertOutCounter < params.nLTFCarriers.U, sInvert, sCorrect)
+      nextState := Mux(invertOutCounter < nLTFCarriers.U, sInvert, sCorrect)
       invertInCounter := invertInCounter + 1.U
-      ciBundle = Valid(IQBundle(dataBuf(ltfIdxs(invertInCounter))))
+      val ciBundle = Valid(IQBundle(params.protoIQ))
+      ciBundle.iq := dataBuf(ltfIdxs(invertInCounter))
       ciBundle.valid := invertInCounter < nLTFCarriers.U
       val inverter = ChannelInverter(ciBundle, params)
       invertOutCounter := invertOutCounter + inverter.valid

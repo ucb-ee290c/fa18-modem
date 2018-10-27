@@ -1,4 +1,4 @@
-package cordic
+package modem
 
 import chisel3._
 import chisel3.experimental.FixedPoint
@@ -134,13 +134,13 @@ class CordicIter[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val para
   * Mixin for top-level rocket to add a PWM
   *
   */
-trait HasPeripheryCordic extends BaseSubsystem {
-  // instantiate cordic chain
-  val cordicChain = LazyModule(new CordicThing(FixedCordicParams(16, 16)))
-  // connect memory interfaces to pbus
-  pbus.toVariableWidthSlave(Some("cordicWrite")) { cordicChain.writeQueue.mem.get }
-  pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
-}
+// trait HasPeripheryCordic extends BaseSubsystem {
+//   // instantiate cordic chain
+//   val cordicChain = LazyModule(new CordicThing(FixedCordicParams(16, 16)))
+//   // connect memory interfaces to pbus
+//   pbus.toVariableWidthSlave(Some("cordicWrite")) { cordicChain.writeQueue.mem.get }
+//   pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
+// }
 
 class IterativeCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val params: CordicParams[T]) extends Module{
   val io = IO(IterativeCordicIO(params))
@@ -177,5 +177,5 @@ class PipelinedCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val
       }})
   }
 
-  io.out.valid := ShiftRegister(in=io.in.valid, n=cycles, resetData=false.B) // Shift Register to track valids
+  io.out.valid := ShiftRegister(in=io.in.valid, n=cycles, resetData=false.B, en=true.B) // Shift Register to track valids
 }
