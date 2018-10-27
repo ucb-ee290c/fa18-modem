@@ -109,9 +109,11 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   // Calculate useful stuff based on params
   val nLTFCarriers = params.carrierMask.map(c => if (c) 1 else 0).reduce(_ + _)
   val ltfIdxs = VecInit(params.carrierMask zip (0 until params.carrierMask.length) filter {case (b, i) => b} map {case (b, i) => i.U})
-  val ltfTable = VecInit(IEEE80211.ltfFreq.map {iq =>
-      DspComplex.wire(ConvertableTo[T].fromDouble(iq.real),
-                      ConvertableTo[T].fromDouble(iq.imag))}.toScalaVector)
+  val ltfWires = Seq.fill(params.nSubcarriers)(Wire(params.protoIQ))
+  ltfWires zip (IEEE80211.ltfFreq.toScalaVector) foreach {
+    case (w, x) => w := DspComplex.wire(Real[T].fromDouble(x.real), Real[T].fromDouble(x.imag))
+  }
+  val ltfTable = VecInit(ltfWires)
   // IO
   val io = IO(EqualizerIO(params))
   // State machine values
@@ -128,8 +130,8 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   pktStartReg := false.B
   // Storage for channel weights
   val correction = RegInit(VecInit(
-    Seq.fill(params.nSubcarriers)(DspComplex.wire(ConvertableTo[T].fromDouble(1.0),
-                                                  ConvertableTo[T].fromDouble(0.0))
+    Seq.fill(params.nSubcarriers)(DspComplex.wire(Real[T].fromDouble(1.0),
+                                                  Real[T].fromDouble(0.0))
                                   )
   ))
   correction := correction // Stays the same except during occasional updates
@@ -155,8 +157,13 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
     is(sLTS2) {
       io.in.ready := true.B
       nextState := Mux(io.in.fire(), sInvert, sLTS2)
-      val ltsAverage = (0 until params.nSubcarriers).map(i => ((dataBuf(i) * io.in.bits.iq(i)) >> 2) * ltfTable(i))
-      dataBuf := Mux(!io.in.fire(), Vec(ltsAverage), dataBuf)
+      val ltsAverage = (0 until params.nSubcarriers).map(i => ((dataBuf(i) * io.in.bits.iq(i)).div2(1)) * ltfTable(i))
+      // dataBuf := Mux(!io.in.fire(), VecInit(ltsAverage), dataBuf)
+      when(!io.in.fire()) {
+        dataBuf := ltsAverage
+      }.otherwise {
+        dataBuf := dataBuf
+      }
       invertInCounter := 0.U
       invertOutCounter := 0.U
     }
