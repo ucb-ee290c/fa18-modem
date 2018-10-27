@@ -46,12 +46,6 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
         step(1)
       }
       iqOut = getIQOut(c, iqOut)
-      peek(c.io.debug.powerHigh)
-      peek(c.io.debug.powerLow)
-      peek(c.io.debug.corrComp)
-      peek(c.io.debug.corrNum)
-      peek(c.io.debug.corrDenom)
-//      peek(c.io.debug.iq)
       step(1)
     }
     // wait for remaining output after pushing in IQ data
@@ -60,21 +54,9 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
     var cyclesWaiting = 0
     while (cyclesWaiting < maxCyclesWait) {
       cyclesWaiting += 1
-      peek(c.io.debug.powerHigh)
-      peek(c.io.debug.powerLow)
-      peek(c.io.debug.corrComp)
-      peek(c.io.debug.corrNum)
-      peek(c.io.debug.corrDenom)
-      //      peek(c.io.debug.iq)
       iqOut = getIQOut(c, iqOut)
       step(1)
     }
-    peek(c.io.debug.powerHigh)
-    peek(c.io.debug.powerLow)
-    peek(c.io.debug.corrComp)
-    peek(c.io.debug.corrNum)
-    peek(c.io.debug.corrDenom)
-    //    peek(c.io.debug.iq)
     iqOut = getIQOut(c, iqOut)
     // set desired tolerance
     // in this case, it's pretty loose (2 bits)
@@ -98,7 +80,7 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
   * Convenience function for running tests
   */
 object FixedEqualizerTester {
-  def apply(params: FixedEqualizerParams, trials: Seq[IQ]): Boolean = {
+  def apply(params: FixedEqualizerParams, trials: Seq[IQWide]): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Equalizer(params)) {
       c => new EqualizerTester(c, trials)
     }
@@ -106,7 +88,7 @@ object FixedEqualizerTester {
 }
 
 object RealEqualizerTester {
-  def apply(params: EqualizerParams[dsptools.numbers.DspReal], trials: Seq[IQ]): Boolean = {
+  def apply(params: EqualizerParams[dsptools.numbers.DspReal], trials: Seq[IQWide]): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "verilator", "-fiwv"), () => new Equalizer(params)) {
       c => new EqualizerTester(c, trials)
     }

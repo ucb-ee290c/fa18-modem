@@ -6,14 +6,13 @@ import breeze.numerics._
 import dsptools.numbers._
 import org.scalatest.{FlatSpec, Matchers}
 
-case class TestVectors() {
+case class EqualizerTestVectors() {
   def buildPacket(nSymbols: Int, impairment: DenseVector[Complex]) = {
-    val data = DenseMatrix.rand(64, nSymbols).map(x => if(x < 0.5) 1 else 0)
-    var bidata = 1 - 2*data
-    bidata(0) *= 0
-    bidata(27 to 38) *= 0
-    val LTF = IEEE80211.lftFreq
-    val reference = DenseMatrix.vertcat(LTF, LTF, bidata)
+    val data = DenseMatrix.rand(64, nSymbols).map(x => if(x < 0.5) Complex(1,0) else Complex(0,0))
+    var bidata = data map (x => 1 - 2*x)
+    bidata.slice(0,1) := Complex(0,0)
+    val LTF = IEEE80211.ltfFreq
+    val reference = DenseMatrix.vertcat(LTF.asDenseMatrix, LTF.asDenseMatrix, bidata)
     val chan = reference * impairment
     (chan, reference)
   }
@@ -31,12 +30,12 @@ case class TestVectors() {
   val tvClean2 = buildPacket(2, cleanChan)
   val tvHalfGain = buildPacket(2, gainChan)
   val tvRotate = buildPacket(2, phaseChan)
-  val tvFade = buildPacket(2, fadingChannel(20, Complex(0.25, 0.25))
+  val tvFade = buildPacket(2, fadingChannel(20, Complex(0.25, 0.25)))
   val tvList = List(tvClean1, tvClean2, tvHalfGain, tvRotate, tvFade)
 }
 
 class EqualizerSpec extends FlatSpec with Matchers {
-  val vecs = TestVectors()
+  val vecs = EqualizerTestVectors()
   behavior of "FixedEqualizer"
 
   val eqParams = FixedEqualizerParams(

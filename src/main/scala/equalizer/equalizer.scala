@@ -90,7 +90,7 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
   io.out.bits.iq.imag := toCartesian.io.out.bits.y
 }
 object ChannelInverter {
-  def apply[T <: Data : Real : BinaryRepresentation](in: IQBundle[T], params: EqualizerParams[T]): Valid[IQBundle[T]] = {
+  def apply[T <: Data : Real : BinaryRepresentation](in: Valid[IQBundle[T]], params: EqualizerParams[T]): Valid[IQBundle[T]] = {
     val ci = Module(new ChannelInverter(params))
     ci.io.in <> in
     ci.io.out
@@ -101,6 +101,9 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   // Calculate useful stuff based on params
   val nLTFCarriers = params.carrierMask.map(c => if (c) 1 else 0).reduce(_ + _)
   val ltfIdxs = VecInit(params.carrierMask zip (0 until params.carrierMask.length) filter {case (b, i) => b} map {case (b, i) => i.U})
+  val ltfTable = VecInit(IEEE80211.ltfFreq.map {iq =>
+      DspComplex.wire(ConvertableTo[T].fromDouble(iq.real),
+                      ConvertableTo[T].fromDouble(iq.imag))}.toScalaVector)
   // IO
   val io = IO(EqualizerIO(params))
   // State machine values
@@ -117,8 +120,8 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   pktStartReg := false.B
   // Storage for channel weights
   val correction = RegInit(VecInit(
-    Seq.fill(params.nSubcarriers)(DspComplex(params.protoIQ.real).wire(ConvertableTo[T].fromDouble(1.0),
-                                                     ConvertableTo[T].fromDouble(0.0))
+    Seq.fill(params.nSubcarriers)(DspComplex.wire(ConvertableTo[T].fromDouble(1.0),
+                                                  ConvertableTo[T].fromDouble(0.0))
                                   )
   ))
   correction := correction // Stays the same except during occasional updates
@@ -144,7 +147,7 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
     is(sLTS2) {
       io.in.ready := true.B
       nextState := Mux(io.in.fire(), sInvert, sLTS2)
-      val ltsAverage = (0 until params.nSubcarriers).map(i => ((dataBuf(i) * io.in.bits.iq(i)) >> 2) * DspComplex[T].fromComplex(IEEE80211.ltfFreq(i)))
+      val ltsAverage = (0 until params.nSubcarriers).map(i => ((dataBuf(i) * io.in.bits.iq(i)) >> 2) * ltfTable(i))
       dataBuf := Mux(!io.in.fire(), Vec(ltsAverage), dataBuf)
       invertInCounter := 0.U
       invertOutCounter := 0.U
@@ -154,11 +157,11 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
       nextState := Mux(invertOutCounter < nLTFCarriers.U, sInvert, sCorrect)
       invertInCounter := invertInCounter + 1.U
       val ciBundle = Valid(IQBundle(params.protoIQ))
-      ciBundle.iq := dataBuf(ltfIdxs(invertInCounter))
+      ciBundle.bits.iq := dataBuf(ltfIdxs(invertInCounter))
       ciBundle.valid := invertInCounter < nLTFCarriers.U
       val inverter = ChannelInverter(ciBundle, params)
       invertOutCounter := invertOutCounter + inverter.valid
-      correction(invertOutCounter) := inverter.iq
+      correction(invertOutCounter) := inverter.bits.iq
       pktStartReg := true.B
     }
     is(sCorrect) {
