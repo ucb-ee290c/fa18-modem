@@ -17,7 +17,7 @@ Not implemented yet.
 ## Current Standard Support
 ### CFO
 - Preamble based coarse correction
-- ? Preamble based fine correction
+- Preamble based fine correction
 - ? Pilot based correction
 
 ### Packet Detection
