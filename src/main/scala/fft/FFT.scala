@@ -51,7 +51,7 @@ case class FixedFFTParams(
  * Bundle type as IO for FFT modules
  */
 class FFTIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(PacketBundle(params.numPoints, params.protoIQ.cloneType)))
+  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ.cloneType)))
   val out = Decoupled(PacketBundle(params.numPoints, params.protoIQ.cloneType))
 
   override def cloneType: this.type = FFTIO(params).asInstanceOf[this.type]
@@ -61,8 +61,29 @@ object FFTIO {
     new FFTIO(params)
 }
 
+class FFTDeserIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
+  val in = Flipped(Decoupled(PacketBundle(params.numPoints, params.protoIQ.cloneType)))
+  val out = Decoupled(PacketBundle(params.numPoints, params.protoIQ.cloneType))
+
+  override def cloneType: this.type = FFTDeserIO(params).asInstanceOf[this.type]
+}
+object FFTDeserIO {
+  def apply[T <: Data : Ring](params: FFTParams[T]): FFTDeserIO[T] =
+    new FFTDeserIO(params)
+}
+
 class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
   val io = IO(FFTIO(params))
+  val deser = Module(new Deserializer(DeserializerParams(params.protoIQ.cloneType, params.numPoints)))
+  val fft = Module(new FFTDeser(params))
+
+  deser.io.in <> io.in
+  fft.io.in <> deser.io.out
+  io.out <> fft.io.out
+}
+
+class FFTDeser[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
+  val io = IO(FFTDeserIO(params))
   io.in.ready := true.B
   val fft_stage = {
     if (params.numPoints != 2 && FFTUtil.is_prime(params.numPoints)) {
@@ -80,7 +101,7 @@ class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val p
 }
 
 class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
-  val io = IO(FFTIO(params))
+  val io = IO(FFTDeserIO(params))
   io.in.ready := true.B
   val ifft_stage = Module(new IFFTStage(params))
 

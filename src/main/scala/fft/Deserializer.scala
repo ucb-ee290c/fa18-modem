@@ -16,6 +16,12 @@ import scala.math._
 trait DeserializerParams[T <: Data] extends IQBundleParams[T] {
   val deserRatio: Int
 }
+object DeserializerParams {
+  def apply[T <: Data](proto: DspComplex[T], ratio: Int): DeserializerParams[T] = new DeserializerParams[T] {
+    val protoIQ = proto
+    val deserRatio = ratio
+  }
+}
 
 /**
  * Deserializer parameters object for fixed-point Deserializers

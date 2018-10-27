@@ -23,6 +23,7 @@ class FFTSpec extends FlatSpec with Matchers {
       val out_ifft = iFourierTr(inp)
       val params = base_params.copy(numPoints = i, maxVal = i, pipeline = true)
       FixedFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      FixedFFTDeserTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
       FixedIFFTTester(params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
     }
   }
@@ -33,6 +34,7 @@ class FFTSpec extends FlatSpec with Matchers {
       val out_fft = fourierTr(inp)
       val params = base_params.copy(numPoints = i, maxVal = i, pipeline = false)
       FixedFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      FixedFFTDeserTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
     }
   }
 
