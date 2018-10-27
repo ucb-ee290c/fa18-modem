@@ -22,6 +22,14 @@ trait FFTParams[T <: Data] extends IQBundleParams[T] {
   val protoTwiddle: DspComplex[T]
   val pipeline: Boolean
 }
+object FFTParams {
+  def apply[T <: Data](old_params: FFTParams[T], new_num_points: Int): FFTParams[T] = new FFTParams[T] {
+    val protoIQ = old_params.protoIQ
+    val protoTwiddle = old_params.protoTwiddle
+    val numPoints = new_num_points
+    val pipeline = old_params.pipeline
+  }
+}
 
 /**
  * FFT parameters object for fixed-point FFTs
@@ -35,10 +43,7 @@ case class FixedFFTParams(
   numPoints: Int = 4,
   pipeline: Boolean = false
 ) extends FFTParams[FixedPoint] {
-  // prototype for x and y
-  // binary point is (xyWidth-2) to represent 1.0 exactly
   val protoIQ = DspComplex(FixedPoint(dataWidth.W, (dataWidth-2-log2Ceil(maxVal)).BP))
-  // binary point is (xyWidth-2) to represent 1.0 exactly
   val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP))
 }
 
@@ -59,13 +64,12 @@ object FFTIO {
 class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
   val io = IO(FFTIO(params))
   io.in.ready := true.B
-  // io.out.valid := io.in.fire()
   val fft_stage = {
     if (params.numPoints != 2 && FFTUtil.is_prime(params.numPoints)) {
-      Module(new RaderFFT(params.numPoints, params))
+      Module(new RaderFFT(params))
     }
     else {
-      Module(new FFTStage(params.numPoints, params))
+      Module(new FFTStage(params))
     } 
   }
   fft_stage.io.in.bits  := io.in.bits
@@ -78,7 +82,7 @@ class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val p
 class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   val io = IO(FFTIO(params))
   io.in.ready := true.B
-  val ifft_stage = Module(new IFFTStage(params.numPoints, params))
+  val ifft_stage = Module(new IFFTStage(params))
 
   ifft_stage.io.in.bits  := io.in.bits
   ifft_stage.io.in.valid := io.in.fire()
@@ -88,31 +92,31 @@ class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) ex
 }
 
 
-class FFTStageIO[T <: Data : Ring](numPoints: Int, params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Valid(PacketBundle(numPoints, params.protoIQ.cloneType)))
-  val out = Valid(PacketBundle(numPoints, params.protoIQ.cloneType))
+class FFTStageIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
+  val in = Flipped(Valid(PacketBundle(params.numPoints, params.protoIQ.cloneType)))
+  val out = Valid(PacketBundle(params.numPoints, params.protoIQ.cloneType))
 
-  override def cloneType: this.type = FFTStageIO(numPoints, params).asInstanceOf[this.type]
+  override def cloneType: this.type = FFTStageIO(params).asInstanceOf[this.type]
 }
 object FFTStageIO {
-  def apply[T <: Data : Ring](numPoints: Int, params: FFTParams[T]): FFTStageIO[T] =
-    new FFTStageIO(numPoints, params)
+  def apply[T <: Data : Ring](params: FFTParams[T]): FFTStageIO[T] =
+    new FFTStageIO(params)
 }
-class FFTStage[T <: Data : Real : BinaryRepresentation](val numPoints: Int, val params: FFTParams[T]) extends Module {
-  require(isPow2(numPoints), "number of points must be a power of 2")
-  val io = IO(FFTStageIO(numPoints, params))
+class FFTStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
+  require(isPow2(params.numPoints), "number of points must be a power of 2")
+  val io = IO(FFTStageIO(params))
 
-  val numPointsDiv2 = numPoints / 2
+  val numPointsDiv2 = params.numPoints / 2
   // twiddling
   val twiddles_vec = Wire(Vec(numPointsDiv2, params.protoTwiddle.cloneType))
   (0 until numPointsDiv2).map(n => {
-    twiddles_vec(n).real := Real[T].fromDouble( cos(2 * Pi / numPoints * n))
-    twiddles_vec(n).imag := Real[T].fromDouble(-sin(2 * Pi / numPoints * n))
+    twiddles_vec(n).real := Real[T].fromDouble( cos(2 * Pi / params.numPoints * n))
+    twiddles_vec(n).imag := Real[T].fromDouble(-sin(2 * Pi / params.numPoints * n))
   })
 
-  val butterfly_inputs = Wire(Vec(numPoints, params.protoIQ.cloneType))
+  val butterfly_inputs = Wire(Vec(params.numPoints, params.protoIQ.cloneType))
 
-  if (numPoints == 2) {
+  if (params.numPoints == 2) {
     butterfly_inputs := io.in.bits.iq
 
     io.out.bits.pktStart := io.in.bits.pktStart
@@ -120,8 +124,9 @@ class FFTStage[T <: Data : Real : BinaryRepresentation](val numPoints: Int, val 
     io.out.valid         := io.in.valid
   }
   else {
-    val fft_even = Module(new FFTStage(numPointsDiv2, params))
-    val fft_odd  = Module(new FFTStage(numPointsDiv2, params))
+    val new_params = FFTParams(params, numPointsDiv2)
+    val fft_even = Module(new FFTStage(new_params))
+    val fft_odd  = Module(new FFTStage(new_params))
     fft_even.io.in.bits.iq := io.in.bits.iq.zipWithIndex.filter(_._2 % 2 == 0).map(_._1)
     fft_odd.io.in.bits.iq  := io.in.bits.iq.zipWithIndex.filter(_._2 % 2 == 1).map(_._1)
 
@@ -158,13 +163,13 @@ class FFTStage[T <: Data : Real : BinaryRepresentation](val numPoints: Int, val 
   })
 }
 
-class IFFTStage[T <: Data : Real : BinaryRepresentation](val numPoints: Int, val params: FFTParams[T], val scale : Boolean = true) extends Module {
-  require(isPow2(numPoints), "number of points must be a power of 2")
-  val io = IO(FFTStageIO(numPoints, params))
+class IFFTStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val scale : Boolean = true) extends Module {
+  require(isPow2(params.numPoints), "number of points must be a power of 2")
+  val io = IO(FFTStageIO(params))
 
-  val fft = Module(new FFTStage(numPoints, params))
+  val fft = Module(new FFTStage(params))
 
-  val scalar = ConvertableTo[T].fromDouble(1.0 / numPoints.toDouble)
+  val scalar = ConvertableTo[T].fromDouble(1.0 / params.numPoints.toDouble)
 
   io.in.bits.iq.zip(io.out.bits.iq).zipWithIndex.foreach {
     case ((inp, out), index) => {
@@ -190,25 +195,26 @@ class IFFTStage[T <: Data : Real : BinaryRepresentation](val numPoints: Int, val
   io.out.valid         := fft.io.out.valid
 }
 
-class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val numPoints: Int, val params: FFTParams[T]) extends Module {
-  require(FFTUtil.is_prime(numPoints), "number of points must be prime")
-  val io = IO(FFTStageIO(numPoints, params))
+class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
+  require(FFTUtil.is_prime(params.numPoints), "number of points must be prime")
+  val io = IO(FFTStageIO(params))
 
-  val sub_fft_size = if (isPow2(numPoints - 1)) numPoints - 1 else scala.math.pow(2, log2Ceil(2 * numPoints - 3)).toInt
-  val pad_length = sub_fft_size - (numPoints - 1)
-  val g = FFTUtil.primitive_root(numPoints)
-  val g_inv = FFTUtil.mult_inv(g, numPoints)
-  val inv_idx_map = (0 until numPoints - 1).map(scala.math.pow(g_inv, _).toInt % numPoints)
-  val idx_map = (0 until numPoints - 1).map(scala.math.pow(g, _).toInt % numPoints)
+  val sub_fft_size = if (isPow2(params.numPoints - 1)) params.numPoints - 1 else scala.math.pow(2, log2Ceil(2 * params.numPoints - 3)).toInt
+  val pad_length = sub_fft_size - (params.numPoints - 1)
+  val g = FFTUtil.primitive_root(params.numPoints)
+  val g_inv = FFTUtil.mult_inv(g, params.numPoints)
+  val inv_idx_map = (0 until params.numPoints - 1).map(scala.math.pow(g_inv, _).toInt % params.numPoints)
+  val idx_map = (0 until params.numPoints - 1).map(scala.math.pow(g, _).toInt % params.numPoints)
 
-  val pad_length_quot = pad_length / (numPoints - 1)
-  val pad_length_rem = pad_length % (numPoints - 1)
-  val twiddles = inv_idx_map.map(x => Complex(cos(2 * Pi / numPoints * x), -sin(2 * Pi / numPoints * x)) / sub_fft_size).toArray
-  var twiddles_extended = (0 until pad_length_quot).foldRight(twiddles)((_, list) => list ++ twiddles)
-  twiddles_extended = twiddles_extended ++ twiddles.slice(0, pad_length_rem)
+  val pad_length_quot = pad_length / (params.numPoints - 1)
+  val pad_length_rem = pad_length % (params.numPoints - 1)
+  val twiddles = inv_idx_map.map(x => Complex(cos(2 * Pi / params.numPoints * x), -sin(2 * Pi / params.numPoints * x)) / sub_fft_size).toArray
+  val twiddles_extended = (0 until pad_length_quot).foldRight(twiddles)((_, list) => list ++ twiddles) ++ twiddles.slice(0, pad_length_rem)
   val twiddles_fft = fourierTr(DenseVector(twiddles_extended)).toScalaVector
 
-  val sub_fft = Module(new FFTStage(sub_fft_size, params))
+  val sub_fft_params = FFTParams(params, sub_fft_size)
+
+  val sub_fft = Module(new FFTStage(sub_fft_params))
 
   sub_fft.io.in.bits.iq.zipWithIndex.foreach {
     case (sub_inp, index) => {
@@ -231,7 +237,7 @@ class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](
 
   io.out.bits.iq(0.U) := io.in.bits.iq(0.U) + sub_fft.io.out.bits.iq(0.U)
 
-  val sub_ifft = Module(new IFFTStage(sub_fft_size, params, false))
+  val sub_ifft = Module(new IFFTStage(sub_fft_params, false))
   sub_ifft.io.in.bits.iq.zip(sub_fft.io.out.bits.iq).zip(twiddles_fft).foreach {
     case ((sub_ifft_in, sub_fft_out), twiddle) => {
       val twiddle_wire = Wire(params.protoIQ.cloneType)
@@ -245,7 +251,7 @@ class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](
   sub_ifft.io.in.bits.pktEnd   := sub_fft.io.out.bits.pktEnd
   sub_ifft.io.in.valid         := sub_fft.io.out.valid
 
-  (0 until numPoints - 1).map(n => {
+  (0 until params.numPoints - 1).map(n => {
     io.out.bits.iq(inv_idx_map(n).U) := io.in.bits.iq(0.U) + sub_ifft.io.out.bits.iq(n.U)
   })
 
