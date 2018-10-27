@@ -18,12 +18,22 @@ case class IQWide(
   * Run each trial in @trials
   */
 class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], tolLSBs: Int = 2) extends DspTester(c) {
-  def getIQOut(c: Equalizer[T], v: Vector[Vector[Complex]]): Vector[Vector[Complex]] = {
+  def peekIQ(c: Equalizer[T], v: Vector[Vector[Complex]]): Vector[Vector[Complex]] = {
     var vout = v
     if (peek(c.io.out.valid)) {
-      vout = vout :+ peek(c.io.out.bits.iq(0))
+      var tmp = Vector[Complex]()
+      for (i <- 0 until 64) {
+        tmp = tmp :+ peek(c.io.out.bits.iq(i))
+      }
+      vout = vout :+ tmp
     }
     vout
+  }
+
+  def pokeIQ(c: Equalizer[T], v: Seq[Complex]): Unit = {
+    for (i <- 0 until 64) {
+      poke(c.io.in.bits.iq(i), v(i))
+    }
   }
 
   val maxCyclesWait = 32
@@ -34,7 +44,7 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
   for (trial <- trials) {
     var iqOut = Vector[Vector[Complex]]()
     for (iq <- trial.iqin) {
-      poke(c.io.in.bits.iq, iq)
+      pokeIQ(c, iq)
       // wait until input is accepted
       var cyclesWaiting = 0
       while (!peek(c.io.in.ready) && cyclesWaiting < maxCyclesWait) {
@@ -42,22 +52,14 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
         if (cyclesWaiting >= maxCyclesWait) {
           expect(false, "waited for input too long")
         }
-        iqOut = getIQOut(c, iqOut)
+        iqOut = peekIQ(c, iqOut)
         step(1)
       }
-      iqOut = getIQOut(c, iqOut)
+      iqOut = peekIQ(c, iqOut)
       step(1)
     }
     // wait for remaining output after pushing in IQ data
-    poke(c.io.in.valid, 1)
-    poke(c.io.in.bits.iq, Complex(0, 0))
-    var cyclesWaiting = 0
-    while (cyclesWaiting < maxCyclesWait) {
-      cyclesWaiting += 1
-      iqOut = getIQOut(c, iqOut)
-      step(1)
-    }
-    iqOut = getIQOut(c, iqOut)
+    iqOut = peekIQ(c, iqOut)
     // set desired tolerance
     // in this case, it's pretty loose (2 bits)
     // can you get tolerance of 1 bit? 0? what makes the most sense?

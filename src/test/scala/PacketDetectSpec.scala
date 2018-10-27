@@ -1,7 +1,6 @@
 package modem
 
 import breeze.math.Complex
-import dsptools.numbers._
 import org.scalatest.{FlatSpec, Matchers}
 
 case class PacketDetectTestVectors() {
