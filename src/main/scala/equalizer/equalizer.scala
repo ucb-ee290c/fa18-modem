@@ -70,10 +70,18 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
 
   val delay = cordicDelay * 2 + dividerDelay
 
+  /**
+   * Operations are:
+   *   v = (i,q) -> |v|exp(<v) = mag(i,q) * phase(i,q) = (m, p)
+   *   m' = 1/mag(i,q)
+   *   p' = -phase(i,q)
+   *   (m', p') -> (i', q') = v_inverse
+   */
   toPolar.io.in.valid := io.in.valid
   toPolar.io.in.bits.vectoring := true.B
   toPolar.io.in.bits.x := io.in.bits.iq.real
   toPolar.io.in.bits.y := io.in.bits.iq.imag
+  toPolar.io.in.bits.z := Real[T].zero
 
   divider.io.in.valid      := toPolar.io.out.valid
   divider.io.in.bits.num   := Real[T].fromDouble(1.0).asUInt()

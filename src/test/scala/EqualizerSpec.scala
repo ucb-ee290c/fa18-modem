@@ -3,14 +3,16 @@ package modem
 import breeze.math.Complex
 import breeze.linalg._
 import breeze.numerics._
+import spire.algebra.Ring
 import dsptools.numbers._
 import org.scalatest.{FlatSpec, Matchers}
 
 case class EqualizerTestVectors() {
-  def buildPacket(nSymbols: Int, impairment: DenseVector[Complex]) = {
-    val data = DenseMatrix.rand(64, nSymbols).map(x => if(x < 0.5) Complex(1,0) else Complex(0,0))
+  def buildPacket(nSymbols: Int, impairment: DenseVector[Complex])(implicit env: Ring[Complex]) = {
+    val data = DenseMatrix.rand(64, nSymbols).map(x => if(x < 0.5) Complex.one else Complex.zero)
     var bidata = data map (x => 1 - 2*x)
-    bidata.slice(0,1) := Complex(0,0)
+    bidata(0) = Complex.zero
+    bidata(27 to 38) = DenseVector.fill(10){Complex.zero}
     val LTF = IEEE80211.ltfFreq
     val reference = DenseMatrix.vertcat(LTF.asDenseMatrix, LTF.asDenseMatrix, bidata)
     val chan = reference * impairment
@@ -18,8 +20,8 @@ case class EqualizerTestVectors() {
   }
 
   def fadingChannel(carrier: Int, gain: Complex) = {
-    var chan = DenseVector.fill(64){Complex(1,0)}
-    chan(carrier) *= gain
+    var chan = DenseVector.fill(64){Complex.one}
+    chan(carrier) := gain
     chan
   }
 
