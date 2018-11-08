@@ -33,7 +33,7 @@ trait DemodBundleParams[T<:Data]{
   val protoBits: T
 }
 object DemodBundleParams {
-  def apply[T <: Data](decodeWidth: Int, protoBits: T): DemodBundleParams[T] = new DemodBundleParams[T] { val decodeWidth = decodeWidth, val protoBits = protoBits }
+  def apply[T <: Data](width: Int, proto: T): DemodBundleParams[T] = new DemodBundleParams[T] { val decodeWidth = width; val protoBits = proto }
 }
 
 
@@ -70,11 +70,11 @@ object PacketBundle {
 class DemodBundle[T<:Data](params: DemodBundleParams[T]) extends Bundle{
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
-  val bits : Vec[T](params.decodeWidth, params.protoBits.cloneType)
+  val bits : Vec[T] = Vec(params.decodeWidth, params.protoBits.cloneType)
 
   override def cloneType: this.type = DemodBundle(params).asInstanceOf[this.type]
 }
 object DemodBundle {
   def apply[T<:Data](params: DemodBundleParams[T]): DemodBundle[T] = new DemodBundle[T](params)
-  def apply[T<:Data](decodeWidth: Int, protoBits: T): DemodBundle[T] = new DemodBundle[T](DemodBundle[T](decodeWidth, protoBits))
+  def apply[T<:Data](decodeWidth: Int, protoBits: T): DemodBundle[T] = new DemodBundle[T](DemodBundleParams[T](decodeWidth, protoBits))
 }
