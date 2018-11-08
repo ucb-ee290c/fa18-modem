@@ -46,7 +46,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U:<Data](
   val cfoEstimator = Module( new CFOCorrection(cfoParams) )
   val fft = Module( new FFT(fftParams) )
   val eq = Module( new Equalizer(equalizerParams) )
-  val cfoPilot = Module( new CFOPilot(cfoParams) )
+  // val cfoPilot = Module( new CFOPilot(cfoParams) )
   val demod = Module( new Demodulator(demodParams) )
   val decode = Module( new Decoder(viterbiParams) )
 
@@ -67,7 +67,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U:<Data](
   eq.io.in := fft.io.out
 
   // CFO Pilot Estimation
-  cfoPilot.io.in := fft.io.out
+  // cfoPilot.io.in := fft.io.out
 
   // Demodulator
   demod.io.in := eq.io.out
