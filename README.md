@@ -1,4 +1,7 @@
 # OFDM Baseband Modem
+
+[![Build Status](https://travis-ci.org/ucberkeley-ee290c/fa18-modem.svg?branch=master)](https://travis-ci.org/ucberkeley-ee290c/fa18-modem)
+
 ## Implemented in Chisel and supporting 802.11 and LTE radios
 ## Authors: Sean Huang, Kunmo Kim, Paul Kwon, Josh Sanz, Meng Wei
 

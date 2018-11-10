@@ -1,0 +1,22 @@
+language: scala
+sudo: false
+
+cache:
+  directories:
+    $HOME/.ivy2
+    $HOME/.sbt
+    $INSTALL_DIR
+
+env:
+  global:
+    INSTALL_DIR=$TRAVIS_BUILD_DIR/install
+    VERILATOR_ROOT=$INSTALL_DIR
+    PATH=$PATH:$VERILATOR_ROOT/bin
+    SBT_ARGS="-Dsbt.log.noformat=true"
+
+install:
+  - bash .install_verilator.sh
+  - verilator --version
+
+script:
+  - sbt $SBT_ARGS test
