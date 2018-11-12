@@ -59,7 +59,7 @@ object PacketBundle {
    val pktEnd: Bool = Bool()
    val iq: DspComplex[T] = params.protoIQ.cloneType
 
-   override def cloneType: this.type = PacketBundle(params).asInstanceOf[this.type]
+   override def cloneType: this.type = SerialPacketBundle(params).asInstanceOf[this.type]
  }
  object SerialPacketBundle {
    def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
