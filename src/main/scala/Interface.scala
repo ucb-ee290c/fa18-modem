@@ -65,6 +65,29 @@ object PacketBundle {
   def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundle[T] = new PacketBundle[T](PacketBundleParams[T](size, proto))
 }
 /**
+ * Bundle type for serializeds PacketBundles
+ */
+ class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
+   val pktStart: Bool = Bool()
+   val pktEnd: Bool = Bool()
+   val iq: DspComplex[T] = params.protoIQ.cloneType
+
+   override def cloneType: this.type = PacketBundle(params).asInstanceOf[this.type]
+ }
+ object SerialPacketBundle {
+   def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle[T](params)
+ }
+
+ /**
+  * Bundle type for bussed PacketBundles
+  */
+  object BusPacketBundle {
+    val busWidth = 64
+    def apply[T <: Data](params: PacketBundleParams[T]): PacketBundle[T] = new PacketBundle[T](params)
+    def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundle[T] = new PacketBundle[T](PacketBundleParams[T](busWidth, proto))
+  }
+
+/**
  * Bundle type for codewords from demod/deinterleaver
  */
 class DemodBundle[T<:Data](params: DemodBundleParams[T]) extends Bundle{
