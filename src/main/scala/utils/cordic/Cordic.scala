@@ -170,7 +170,7 @@ class PipelinedCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val
   val stages = (0 until params.nStages).map{ i: Int => Module( new CordicIter(params, i) )} // Instatiate all the CORDIC iterations
 
   io.out.bits := stages.grouped(params.stagesPerCycle).foldLeft(io.in.bits){    // Group iterations into pipeline stage Seqs
-    (prevStage, currStage) => Reg(currStage.foldLeft(prevStage){                // For each pipeline Seq, make a Reg to store value
+    (prevStage, currStage) => RegNext(currStage.foldLeft(prevStage){                // For each pipeline Seq, make a Reg to store value
       (prevIter, currIter) => {                                                 // Iterate through pipeline Seq to perform unrolling
         currIter.io.inXYZ := prevIter                                           // Connect each iteration to previous iteration output or previous pipeline register
         currIter.io.outXYZ                                                      // Return output of current stage

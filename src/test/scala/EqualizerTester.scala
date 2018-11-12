@@ -30,21 +30,25 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
     vout
   }
 
-  def pokeIQ(c: Equalizer[T], v: Seq[Complex]): Unit = {
+  def pokeIQ(c: Equalizer[T], v: Seq[Complex], pktStart: Boolean, pktEnd: Boolean): Unit = {
     for (i <- 0 until 64) {
       poke(c.io.in.bits.iq(i), v(i))
     }
+    poke(c.io.in.bits.pktStart, pktStart)
+    poke(c.io.in.bits.pktEnd, pktEnd)
   }
 
-  val maxCyclesWait = 32
+  val maxCyclesWait = 2 * c.nLTFCarriers
 
   poke(c.io.out.ready, 1)
   poke(c.io.in.valid, 1)
 
   for (trial <- trials) {
     var iqOut = Vector[Vector[Complex]]()
+    var nIQWritten = 0
     for (iq <- trial.iqin) {
-      pokeIQ(c, iq)
+      pokeIQ(c, iq, nIQWritten == 0, nIQWritten == trial.iqin.length - 1)
+      nIQWritten = nIQWritten + 1
       // wait until input is accepted
       var cyclesWaiting = 0
       while (!peek(c.io.in.ready) && cyclesWaiting < maxCyclesWait) {
@@ -53,6 +57,9 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
           expect(false, "waited for input too long")
         }
         iqOut = peekIQ(c, iqOut)
+        if (iqOut.length == 1) {
+          assert(peek(c.io.out.bits.pktStart) == true, "pktStart was not asserted")
+        }
         step(1)
       }
       iqOut = peekIQ(c, iqOut)
