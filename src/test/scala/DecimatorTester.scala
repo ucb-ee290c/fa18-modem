@@ -1,4 +1,4 @@
-package decimator
+package modem
 
 import breeze.math.Complex
 import dsptools.DspTester
