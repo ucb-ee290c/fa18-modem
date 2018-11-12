@@ -17,12 +17,3 @@ import freechips.rocketchip.subsystem.BaseSubsystem
    //val width: Int
    //val protoIQ: DspComplex[T]
  //}
-
- class SerialPacketBundle[T <: Data](val params: PacketBundleParams[T]) extends Bundle {
-   val pktStart: Bool = Bool()
-   val pktEnd: Bool = Bool()
-   val iq: DspComplex[T] = params.protoIQ
- }
- object SerialPacketBundle {
-   def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
- }
