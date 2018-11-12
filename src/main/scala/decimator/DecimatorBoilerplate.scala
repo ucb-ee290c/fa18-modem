@@ -1,4 +1,4 @@
-package decimator
+package modem
 
 import chisel3._
 import chisel3.experimental.FixedPoint
@@ -13,10 +13,10 @@ import freechips.rocketchip.subsystem.BaseSubsystem
  *
  * These are type generic
  */
- trait PacketBundleParams[T <: Data] {
-   val width: Int
-   val protoIQ: DspComplex[T]
- }
+ //trait PacketBundleParams[T <: Data] {
+   //val width: Int
+   //val protoIQ: DspComplex[T]
+ //}
 
  class SerialPacketBundle[T <: Data](val params: PacketBundleParams[T]) extends Bundle {
    val pktStart: Bool = Bool()
