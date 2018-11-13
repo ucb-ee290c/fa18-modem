@@ -30,6 +30,7 @@ class DecimatorTester[T <: chisel3.Data](c: DecimateByN[T], nDecimation: Int, tr
       // if (peek(c.io.out.valid) == 1){
       //   assert(peek(c.io.out.bits.iq) == iq, "Decimator should be outputting the same value as given")
       // }
+      step(1)
     }
   }
 }
