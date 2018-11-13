@@ -1,20 +1,23 @@
-package decimator
+package modem
 
 import breeze.math.Complex
 import dsptools.numbers._
+import chisel3._
+import chisel3.experimental.FixedPoint
 import org.scalatest.{FlatSpec, Matchers}
 
 case class TestVectors() {
+  val r = new scala.util.Random
   val bigInputVector: Seq[Complex] =
-    Seq.fill(100)(Complex(1, 0))
+    Seq.fill(100)(Complex(r.nextFloat(2)-1, r.nextFloat(2)-1))
 }
 
-case class FixedDecimatorParams(
+case class FixedDecimationParams(
   // width of I and Q
   iqWidth: Int,
   // Amount to decimate by
   nDecimation: Int
-) extends PacketDetectParams[FixedPoint] {
+) extends DecimatorParams[FixedPoint] {
   //PacketBundleParams fields
   // prototype for iq
   // binary point is iqWidth-3 to allow for some inflation
@@ -26,13 +29,13 @@ class DecimationSpec extends FlatSpec with Matchers {
   val vecs = TestVectors()
   behavior of "DecimatebyN"
 
-  val decimateBy10Params = FixedDecimatorParams(
+  val decimateBy10Params = FixedDecimationParams(
     iqWidth = 16,
     nDecimation = 10
   )
   it should "decimate by 10" in {
-    val trials = IQ(vecs.bigInputVector, None)
-    DecimatorTester(decimateBy10Params, trials) should be (true)
+    val trials = Seq(IQ(vecs.bigInputVector, None))
+    FixedDecimationTester(decimateBy10Params, trials) should be (true)
   }
 
   // val corrParams = FixedPacketDetectParams(

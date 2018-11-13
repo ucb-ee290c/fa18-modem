@@ -44,7 +44,7 @@ object PacketBundleParams {
 class PacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
-  val iq: Vec[DspComplex[T]] = Vec(params.width, params.protoIQ)
+  val iq: Vec[DspComplex[T]] = Vec(params.width, params.protoIQ.cloneType)
 
   override def cloneType: this.type = PacketBundle(params).asInstanceOf[this.type]
 }
@@ -52,3 +52,15 @@ object PacketBundle {
   def apply[T <: Data](params: PacketBundleParams[T]): PacketBundle[T] = new PacketBundle[T](params)
   def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundle[T] = new PacketBundle[T](PacketBundleParams[T](size, proto))
 }
+
+
+ class SerialPacketBundle[T <: Data](val params: PacketBundleParams[T]) extends Bundle {
+   val pktStart: Bool = Bool()
+   val pktEnd: Bool = Bool()
+   val iq: DspComplex[T] = params.protoIQ.cloneType
+
+   override def cloneType: this.type = SerialPacketBundle(params).asInstanceOf[this.type]
+ }
+ object SerialPacketBundle {
+   def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
+ }
