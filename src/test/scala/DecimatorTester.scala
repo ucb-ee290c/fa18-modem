@@ -17,16 +17,27 @@ case class IQ(
   *
   * Run each trial in @trials
   */
-class DecimatorTester[T <: chisel3.Data](c: DecimateByN[T], trials: Seq[IQ], tolLSBs: Int = 2) extends DspTester(c) {
+class DecimatorTester[T <: chisel3.Data](c: DecimateByN[T], nDecimation: Int, trials: Seq[IQ], tolLSBs: Int = 2) extends DspTester(c) {
 }
+  poke(c.io.in.valid, 1)
+  poke(c.io.out.ready, 1)
 
+  for(trial <- trials){
+    var outVec = Vector[Complex]()
+    for(iq <- trial.iqin){
+      poke(c.io.in.bits.iq, iq)
+      if (peek(c.io.out.valid) == 1){
+        assert(peek(c.io.out.bits.iq) == iq, "Decimator should be outputting the same value as given")
+      }
+    }
+  }
 /**
   * Convenience function for running tests
   */
 object FixedDecimationTester {
   def apply(params: FixedDecimationParams, trials: Seq[IQ]): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new DecimateByN(params)) {
-      c => new DecimatorTester(c, trials)
+      c => new DecimatorTester(c, params.nDecimation, trials)
     }
   }
 }
