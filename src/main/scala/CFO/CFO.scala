@@ -82,7 +82,7 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
 
   cordic.io.in.bits.x := io.inIQ.bits.iq.real
   cordic.io.in.bits.y := io.inIQ.bits.iq.imag
-  cordic.io.in.bits.z := io.phiCorrect
+  cordic.io.in.bits.z := -io.phiCorrect
   cordic.io.in.bits.vectoring := false.B
   cordic.io.in.valid := true.B
   io.inIQ.ready := cordic.io.in.ready
