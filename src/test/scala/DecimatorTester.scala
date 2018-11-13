@@ -25,11 +25,15 @@ class DecimatorTester[T <: chisel3.Data](c: DecimateByN[T], nDecimation: Int, tr
     var outVec = Vector[Complex]()
     for(iq <- trial.iqin){
       poke(c.io.in.bits.iq, iq)
-      peek(c.io.out.valid)
-      peek(c.io.out.bits.iq)
-      // if (peek(c.io.out.valid) == 1){
-      //   assert(peek(c.io.out.bits.iq) == iq, "Decimator should be outputting the same value as given")
-      // }
+      //peek(c.io.out.valid)
+      //peek(c.io.out.bits.iq)
+      fixTolLSBs.withValue(tolLSBs){
+       if (peek(c.io.out.valid)){
+         //assert(peek(c.io.out.bits.iq) == iq, "Decimator should be outputting the same value as given")
+         //val iqout = peek(c.io.out.bits.iq)
+         expect(c.io.out.bits.iq, iq)
+       }
+      }
       step(1)
     }
   }
