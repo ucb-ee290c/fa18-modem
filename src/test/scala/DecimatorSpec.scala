@@ -9,7 +9,7 @@ import org.scalatest.{FlatSpec, Matchers}
 case class TestVectors() {
   val r = new scala.util.Random
   val bigInputVector: Seq[Complex] =
-    Seq.fill(100)(Complex(r.nextInt(2)-1, r.nextInt(2)-1))
+    Seq.fill(100)(Complex(r.nextFloat(2)-1, r.nextFloat(2)-1))
 }
 
 case class FixedDecimationParams(
