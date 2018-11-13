@@ -11,6 +11,11 @@ case class IQWide(
   iqin: Seq[Seq[Complex]],
   iqout: Option[Seq[Seq[Complex]]] = None
 )
+case class IQNarrow(
+  // input iq vectors
+  iqin: Seq[Complex],
+  iqout: Option[Seq[Complex]] = None
+)
 
 /**
   * DspTester for Equalizer
@@ -85,6 +90,59 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
   }
 }
 
+
+/**
+  * DspTester for ChannelInverter
+  *
+  * Run each trial in @trials
+  */
+class ChannelInverterTester[T <: chisel3.Data](c: ChannelInverter[T], trials: Seq[IQNarrow], tolLSBs: Int = 2) extends DspTester(c) {
+  def peekIQ(c: ChannelInverter[T], v: Vector[Complex]): Vector[Complex] = {
+    var vout = v
+    if (peek(c.io.out.valid)) {
+      vout = vout :+ peek(c.io.out.bits.iq)
+    }
+    vout
+  }
+
+  val maxCyclesWait = 20
+
+  for (trial <- trials) {
+    var iqOut = Vector[Complex]()
+    var nIQWritten = 0
+    poke(c.io.in.valid, 1)
+    for (iq <- trial.iqin) {
+      poke(c.io.in.bits.iq, iq)
+      iqOut = peekIQ(c, iqOut)
+      step(1)
+    }
+    // wait for remaining output after pushing in IQ data
+    poke(c.io.in.valid, 0)
+    var cyclesWaiting = 0
+    while(cyclesWaiting < maxCyclesWait) {
+      iqOut = peekIQ(c, iqOut)
+      step(1)
+      cyclesWaiting += 1
+    }
+    // compare output
+    // set desired tolerance
+    // in this case, it's pretty loose (2 bits)
+    // can you get tolerance of 1 bit? 0? what makes the most sense?
+    fixTolLSBs.withValue(tolLSBs) {
+      // check every output where we have an expected value
+      if (trial.iqout.isEmpty) {
+        assert(iqOut.isEmpty, "No IQ should have been passed through")
+      } else {
+        val iqRef = trial.iqout.get
+        assert(iqOut.length == iqRef.length,
+               s"The packet length was ${iqOut.length} but should have been ${iqRef.length}")
+        iqOut.indices.foreach {
+         i => assert(iqOut(i) == iqRef(i), s"iq mismatch: ref ${iqRef(i)} != ${iqOut(i)} @$i")}
+      }
+    }
+  }
+}
+
 /**
   * Convenience function for running tests
   */
@@ -100,6 +158,14 @@ object RealEqualizerTester {
   def apply(params: EqualizerParams[dsptools.numbers.DspReal], trials: Seq[IQWide]): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "verilator", "-fiwv"), () => new Equalizer(params)) {
       c => new EqualizerTester(c, trials)
+    }
+  }
+}
+
+object ChannelInverterTester {
+  def apply(params: FixedEqualizerParams, trials: Seq[IQNarrow]): Boolean = {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new ChannelInverter(params)) {
+      c => new ChannelInverterTester(c, trials)
     }
   }
 }

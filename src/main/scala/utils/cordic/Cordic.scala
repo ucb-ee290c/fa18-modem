@@ -88,23 +88,6 @@ object IterativeCordicIO {
     new IterativeCordicIO(params)
 }
 
-/**
- * Bundle type as IO for pipelined CORDIC modules
- * Same as iterative CORDIC IO but with valid interface instead of decoupled
- */
-class PipelinedCordicIO[T <: Data](params: CordicParams[T]) extends Bundle {
-  val in = Flipped(Valid(CordicBundle(params)))
-  val out = Valid(CordicBundle(params))
-
-  // val vectoring = Input(Bool())
-
-  override def cloneType: this.type = PipelinedCordicIO(params).asInstanceOf[this.type]
-}
-object PipelinedCordicIO {
-  def apply[T <: Data](params: CordicParams[T]): PipelinedCordicIO[T] =
-    new PipelinedCordicIO(params)
-}
-
 object AddSub {
   def apply[T <: Data : Ring](sel: Bool, a: T, b: T): T = {
     Mux(sel, a + b, a - b)
@@ -131,6 +114,58 @@ class CordicIter[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val para
 }
 
 /**
+  * The main part of the cordic algorithm expects to see vectors in the 1st and 4th quadrant (or an    gles with absolute
+  * value < pi/2).
+  *
+  * This function transforms inputs into ranges that the main part of the cordic can deal with.
+  */
+object TransformInput {
+  def apply[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](xyz: CordicBundle[T], params: CordicParams[T]): CordicBundle[T] = {
+    val vectoring = xyz.vectoring
+    // val zBP = params.protoZ.binaryPoint
+    // val pi = math.Pi.F(zBP)
+    val pi = ConvertableTo[T].fromDouble(math.Pi)
+    // val piBy2 = (math.Pi/2).F(zBP)
+    val piBy2 = ConvertableTo[T].fromDouble(math.Pi/2)
+    val zBig = xyz.z >= piBy2
+    val zSmall = xyz.z <= -piBy2
+    val xNeg = xyz.x.isSignNegative()
+    val yNeg = xyz.y.isSignNegative()
+
+    val xyzTransformed = WireInit(xyz)
+
+    when (vectoring) {
+      // When vectoring, if in quadrant 2 or 3 we rotate by pi
+      when (xNeg) {
+        xyzTransformed.x := -xyz.x
+        xyzTransformed.y := -xyz.y
+        when (yNeg) {
+          // if yNeg, then transformed y is positive
+          // we'll have a positive z, so subtract pi
+          xyzTransformed.z := xyz.z - pi
+        } .otherwise {
+          xyzTransformed.z := xyz.z + pi
+        }
+      }
+    } .otherwise {
+      // when rotating, if |z| > pi/2 rotate by pi/2 so |z| < pi/2
+      when(zBig) {
+        xyzTransformed.x := -xyz.y
+        xyzTransformed.y := xyz.x
+        xyzTransformed.z := xyz.z - piBy2
+      }
+      when(zSmall) {
+        xyzTransformed.x := xyz.y
+        xyzTransformed.y := -xyz.x
+        xyzTransformed.z := xyz.z + piBy2
+      }
+    }
+
+    xyzTransformed
+  }
+}
+
+/**
   * Mixin for top-level rocket to add a PWM
   *
   */
@@ -144,13 +179,13 @@ class CordicIter[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val para
 
 class IterativeCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val params: CordicParams[T]) extends Module{
   val io = IO(IterativeCordicIO(params))
-  val cycles = params.nStages/params.stagesPerCycle // Calculate number of pipeline stages
+  val cycles = (params.nStages+params.stagesPerCycle-1)/params.stagesPerCycle// Calculate number of pipeline stages
   val push = io.out.ready || (!io.out.valid && io.in.valid) // Pipeline is clear to advance if there is space in the pipeline or output is ready to accept data
 
   val stages = (0 until params.nStages).map{ i: Int => Module( new CordicIter(params, i) )} // Instatiate all the CORDIC iterations
   // stages.foreach{ iter => iter.io.vectoring := io.vectoring } // Connect vectoring io port for all the stages
 
-  io.out.bits := stages.grouped(params.stagesPerCycle).foldLeft(io.in.bits){    // Group iterations into pipeline stage Seqs
+  io.out.bits := stages.grouped(params.stagesPerCycle).foldLeft(TransformInput(io.in.bits, params)){    // Group iterations into pipeline stage Seqs
     (prevStage, currStage) => RegEnable(currStage.foldLeft(prevStage){          // For each pipeline Seq, make a RegEnable to store value
       (prevIter, currIter) => {                                                 // Iterate through pipeline Seq to perform unrolling
         currIter.io.inXYZ := prevIter                                           // Connect each iteration to previous iteration output or previous pipeline register
@@ -161,21 +196,4 @@ class IterativeCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val
 
   io.out.valid := ShiftRegister(in=io.in.valid, n=cycles, resetData=false.B, en=push) // Shift Register to track ready/valids
   io.in.ready := push // Input is ready when pipeline is clear to advance
-}
-
-class PipelinedCordic[T<:Data:Ring:BinaryRepresentation:ConvertableTo:Order](val params: CordicParams[T]) extends Module{
-  val io = IO(PipelinedCordicIO(params))
-  val cycles: Int = params.nStages/params.stagesPerCycle // Calculate number of pipeline stages
-
-  val stages = (0 until params.nStages).map{ i: Int => Module( new CordicIter(params, i) )} // Instatiate all the CORDIC iterations
-
-  io.out.bits := stages.grouped(params.stagesPerCycle).foldLeft(io.in.bits){    // Group iterations into pipeline stage Seqs
-    (prevStage, currStage) => RegNext(currStage.foldLeft(prevStage){                // For each pipeline Seq, make a Reg to store value
-      (prevIter, currIter) => {                                                 // Iterate through pipeline Seq to perform unrolling
-        currIter.io.inXYZ := prevIter                                           // Connect each iteration to previous iteration output or previous pipeline register
-        currIter.io.outXYZ                                                      // Return output of current stage
-      }})
-  }
-
-  io.out.valid := ShiftRegister(in=io.in.valid, n=cycles, resetData=false.B, en=true.B) // Shift Register to track valids
 }

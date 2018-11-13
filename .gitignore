@@ -13,3 +13,4 @@ simulator-*
 .vscode/
 __pycache__/
 *.pyc
+.*.swp

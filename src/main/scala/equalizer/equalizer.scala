@@ -52,18 +52,34 @@ object ChannelInverterIO {
   def apply[T <: Data](params: EqualizerParams[T]): ChannelInverterIO[T] = new ChannelInverterIO[T](params)
 }
 
- /**
-  * ChannelInverter module
-  */
+/**
+ * ChannelInverter module
+ */
 class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: EqualizerParams[T]) extends Module {
   val io = IO(ChannelInverterIO(params))
 
-  val cordicParams = new FixedCordicParams(xyWidth=params.protoIQ.real.getWidth, zWidth=params.protoIQ.real.getWidth + 4, correctGain=true, stagesPerCycle=4)
-  val toPolar = Module(new PipelinedCordic(cordicParams))
-  val toCartesian = Module(new PipelinedCordic(cordicParams))
+  // number of cordic stages
+  val minNumber = math.pow(2.0, -(params.protoIQ.real.getWidth-2))
+  private var n = 0
+  while (breeze.numerics.tan(math.pow(2.0, -n)) >= minNumber) {
+    n += 1
+  }
+  val nCordicStages = n
+  println(s"stages cordic $nCordicStages")
+  // val cordicParams = new FixedCordicParams(xyWidth=params.protoIQ.real.getWidth, zWidth=params.protoIQ.real.getWidth + 4, correctGain=true, stagesPerCycle=4)
+  val cordicParams = new CordicParams[T]{
+    val protoXY=params.protoIQ.real
+    val protoZ=params.protoIQ.real
+    val correctGain=true
+    val stagesPerCycle=4
+    val nStages=nCordicStages
+    }
+  val toPolar = Module(new IterativeCordic(cordicParams))
+  val toCartesian = Module(new IterativeCordic(cordicParams))
   val cordicDelay = toPolar.cycles
+  println(s"delay cordic $cordicDelay")
 
-  val dividerWidth = params.protoIQ.real.getWidth
+  val dividerWidth = params.protoIQ.real.getWidth * 2  // Want this to be bigger to handle divisor < dividend case
   val dividerConversionDelay = 2
   val divider = Module(new PipelinedDivider(n=dividerWidth, conversionDelay=dividerConversionDelay))
   val dividerDelay = dividerWidth + 1 + dividerConversionDelay
@@ -82,16 +98,30 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
   toPolar.io.in.bits.x := io.in.bits.iq.real
   toPolar.io.in.bits.y := io.in.bits.iq.imag
   toPolar.io.in.bits.z := Real[T].zero
+  toPolar.io.out.ready := true.B
+
+  printf("cordic1 valid %d\n", toPolar.io.out.valid)
+  printf("polar x %d\n", toPolar.io.in.bits.x.asUInt())
+  printf("polar y %d\n", toPolar.io.in.bits.y.asUInt())
+  printf("polar angle %d\n", toPolar.io.out.bits.z.asUInt())
+
+  val phaseDelay = ShiftRegister(in=toPolar.io.out.bits.z, n=dividerDelay)
 
   divider.io.in.valid      := toPolar.io.out.valid
-  divider.io.in.bits.num   := Real[T].fromDouble(1.0).asUInt()
+  divider.io.in.bits.num   := Real[T].fromDouble(1.0).asUInt() << params.protoIQ.real.getWidth - 4 //TODO: make this not hardcoded
   divider.io.in.bits.denom := toPolar.io.out.bits.x.asUInt()
+
+  printf("divider num %d\n", divider.io.in.bits.num)
+  printf("divider denom %d\n", divider.io.in.bits.denom)
+  printf("divider out %d\n", divider.io.out.bits)
+  printf("division valid %d\n", divider.io.out.valid)
 
   toCartesian.io.in.valid  := divider.io.out.valid
   toCartesian.io.in.bits.x := divider.io.out.bits.asFixedPoint(params.protoIQ.real.getWidth.BP)
   toCartesian.io.in.bits.y := Real[T].zero
-  toCartesian.io.in.bits.z := -toPolar.io.out.bits.z
+  toCartesian.io.in.bits.z := -phaseDelay
   toCartesian.io.in.bits.vectoring := false.B
+  toCartesian.io.out.ready := true.B
 
   io.out.valid := toCartesian.io.out.valid
   io.out.bits.iq.real := toCartesian.io.out.bits.x
@@ -149,7 +179,7 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   dataBuf := io.in.bits.iq
   switch(state) {
     is(sLTS1) {
-      printf("LTS1 STATE")
+      printf("LTS1 STATE\n")
       io.in.ready := true.B
       nextState := Mux(io.in.fire(),
                        Mux(io.in.bits.pktStart, sLTS2, sError), // This better be the start of a new packet
@@ -157,10 +187,13 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
       dataBuf := io.in.bits.iq
     }
     is(sLTS2) {
-      printf("LTS2 STATE")
+      printf("LTS2 STATE\n")
       io.in.ready := true.B
       nextState := Mux(io.in.fire(), sInvert, sLTS2)
-      val ltsAverage = (0 until params.nSubcarriers).map(i => ((dataBuf(i) * io.in.bits.iq(i)).div2(1)) * ltfTable(i))
+      // Make sure we have the correct sign by multiplying by the table entries (assumes LTF is either 0, 1, or -1)
+      val ltsAverage = (0 until params.nSubcarriers).map(i => Mux(ltfTable(i).real > Real[T].zero,
+                                                                  dataBuf(i).div2(1) + io.in.bits.iq(i).div2(1),
+                                                                  -(dataBuf(i).div2(1) + io.in.bits.iq(i).div2(1))))
       // dataBuf := Mux(!io.in.fire(), VecInit(ltsAverage), dataBuf)
       when(!io.in.fire()) {
         dataBuf := ltsAverage
@@ -171,20 +204,24 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
       invertOutCounter := 0.U
     }
     is(sInvert) {
-      printf("INVERT STATE")
+      printf("INVERT STATE\n")
       io.in.ready := false.B
       nextState := Mux(invertOutCounter < nLTFCarriers.U, sInvert, sCorrect)
       invertInCounter := invertInCounter + 1.U
       val ciBundle = Wire(Valid(IQBundle(params.protoIQ)))
       ciBundle.bits.iq := dataBuf(ltfIdxs(invertInCounter))
       ciBundle.valid := invertInCounter < nLTFCarriers.U
+
+      printf("inverter in %d\n", dataBuf(ltfIdxs(invertInCounter)).asUInt())
+
       val inverter = ChannelInverter(ciBundle, params)
       invertOutCounter := invertOutCounter + inverter.valid
+      printf("invert out counter %d\n", invertOutCounter)
       correction(invertOutCounter) := inverter.bits.iq
       pktStartReg := true.B
     }
     is(sCorrect) {
-      printf("CORRECTION STATE")
+      printf("CORRECTION STATE\n")
       io.in.ready := true.B
       nextState := Mux(io.in.fire() && io.in.bits.pktEnd, sLTS1, sCorrect)
       // Should probably check for io.out.ready and handle it? Right now the sample will just be dropped.
@@ -193,7 +230,7 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
     }
     is(sError) {
       io.in.ready := true.B  // this has to be true to bring in IQ until the end of the packet
-      printf("ERROR STATE!")
+      printf("ERROR STATE!\n")
       nextState := Mux(io.in.fire() && io.in.bits.pktEnd, sLTS1, sError)
     }
   }

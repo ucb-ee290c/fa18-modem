@@ -81,3 +81,21 @@ class EqualizerSpec extends FlatSpec with Matchers {
   //   FixedEqualizerTester(eqParams, trials) should be (true)
   // }
 }
+
+class ChannelInverterSpec extends FlatSpec with Matchers {
+  val input = Seq(Complex(1,0), Complex(-1,0), Complex(0,1), Complex(0,-1), Complex(0.5, 0), Complex(2, 0), Complex(0.5, 0.5), Complex(2, 2))
+  val output = Seq(Complex(1,0), Complex(-1,0), Complex(0,-1), Complex(0,1), Complex(2, 0), Complex(0.5, 0), Complex(1, -1), Complex(0.25, -0.25))
+  behavior of "ChannelInverter"
+
+  val params = FixedEqualizerParams(
+    width=16,
+    mu=0.25,
+    pilots=Seq(5, 21, 43, 59),
+    carrierMask=Seq.fill(1)(false) ++ Seq.fill(27)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(5)(false) ++ Seq.fill(27)(true),
+    nSubcarriers=64
+  )
+  it should "invert" in {
+    val trials = Seq(IQNarrow(input, Option(output)))
+    ChannelInverterTester(params, trials) should be (true)
+  }
+}
