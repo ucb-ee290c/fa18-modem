@@ -28,12 +28,12 @@ object PacketBundleParams {
   }
 }
 
-trait DemodBundleParams[T<:Data]{
-  val decodeWidth: Int
+trait BitsBundleParams[T<:Data]{
+  val bitsWidth: Int
   val protoBits: T
 }
-object DemodBundleParams {
-  def apply[T <: Data](width: Int, proto: T): DemodBundleParams[T] = new DemodBundleParams[T] { val decodeWidth = width; val protoBits = proto }
+object BitsBundleParams {
+  def apply[T <: Data](width: Int, proto: T): BitsBundleParams[T] = new BitsBundleParams[T] { val bitsWidth = width; val protoBits = proto }
 }
 
 
@@ -94,14 +94,14 @@ object DeserialPacketBundle {
 /**
  * Bundle type for codewords from demod/deinterleaver
  */
-class DemodBundle[T<:Data](params: DemodBundleParams[T]) extends Bundle{
+class BitsBundle[T<:Data](params: BitsBundleParams[T]) extends Bundle{
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
-  val bits : Vec[T] = Vec(params.decodeWidth, params.protoBits.cloneType)
+  val bits : Vec[T] = Vec(params.bitsWidth, params.protoBits.cloneType)
 
-  override def cloneType: this.type = DemodBundle(params).asInstanceOf[this.type]
+  override def cloneType: this.type = BitsBundle(params).asInstanceOf[this.type]
 }
-object DemodBundle {
-  def apply[T<:Data](params: DemodBundleParams[T]): DemodBundle[T] = new DemodBundle[T](params)
-  def apply[T<:Data](decodeWidth: Int, protoBits: T): DemodBundle[T] = new DemodBundle[T](DemodBundleParams[T](decodeWidth, protoBits))
+object BitsBundle {
+  def apply[T<:Data](params: BitsBundleParams[T]): BitsBundle[T] = new BitsBundle[T](params)
+  def apply[T<:Data](bitsWidth: Int, protoBits: T): BitsBundle[T] = new BitsBundle[T](BitsBundleParams[T](bitsWidth, protoBits))
 }

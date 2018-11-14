@@ -33,12 +33,13 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   val equalizerParams: EqualizerParams[T],
   val cfoParams: CFOParams[T],
   val fftParams: FFTParams[T],
+  val bitsBundleParams: BitsBundleParams[U],
   val demodParams: DemodulationParams[U],
   val viterbiParams: ViterbiParams[U],
 ) extends Module {
   val io = IO(new Bundle{
-    val in = Flipped(Decoupled(IQBundle(params)))
-    val out = Decoupled(DecodeBitsBundle(params))
+    val in = Flipped(Decoupled(IQBundle(iqBundleParams)))
+    val out = Decoupled(BitsBundle(bitsBundleParams))
   })
 
   val phaseRotator = Module( new PhaseRotator(cfoParams) )
