@@ -83,8 +83,8 @@ class EqualizerSpec extends FlatSpec with Matchers {
 }
 
 class ChannelInverterSpec extends FlatSpec with Matchers {
-  val input = Seq(Complex(1,0), Complex(-1,0), Complex(0,1), Complex(0,-1), Complex(0.5, 0), Complex(2, 0), Complex(0.5, 0.5), Complex(2, 2))
-  val output = Seq(Complex(1,0), Complex(-1,0), Complex(0,-1), Complex(0,1), Complex(2, 0), Complex(0.5, 0), Complex(1, -1), Complex(0.25, -0.25))
+  val input = Seq(Complex(1,0), Complex(-1,0), Complex(0,1), Complex(0,-1), Complex(0.5, 0), Complex(2, 0), Complex(0.5, 0.5), Complex(1.5, 1.5))
+  val output = Seq(Complex(1,0), Complex(-1,0), Complex(0,-1), Complex(0,1), Complex(2, 0), Complex(0.5, 0), Complex(1, -1), Complex(1.0/3, -1.0/3))
   behavior of "ChannelInverter"
 
   val params = FixedEqualizerParams(

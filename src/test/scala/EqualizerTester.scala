@@ -1,6 +1,7 @@
 package modem
 
 import breeze.math.Complex
+import scala.math
 import dsptools.DspTester
 
 /**
@@ -22,7 +23,7 @@ case class IQNarrow(
   *
   * Run each trial in @trials
   */
-class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], tolLSBs: Int = 2) extends DspTester(c) {
+class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide]) extends DspTester(c) {
   def peekIQ(c: Equalizer[T], v: Vector[Vector[Complex]]): Vector[Vector[Complex]] = {
     var vout = v
     if (peek(c.io.out.valid)) {
@@ -41,6 +42,11 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
     }
     poke(c.io.in.bits.pktStart, pktStart)
     poke(c.io.in.bits.pktEnd, pktEnd)
+  }
+
+  def compareComplexTol(v1: Complex, v2: Complex, tol: Double): Boolean = {
+    val truth = math.abs(v1.real - v2.real) < tol && math.abs(v1.imag - v2.imag) < tol
+    truth
   }
 
   val maxCyclesWait = 2 * c.nLTFCarriers
@@ -73,18 +79,17 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
     // wait for remaining output after pushing in IQ data
     iqOut = peekIQ(c, iqOut)
     // set desired tolerance
-    // in this case, it's pretty loose (2 bits)
-    // can you get tolerance of 1 bit? 0? what makes the most sense?
-    fixTolLSBs.withValue(tolLSBs) {
-      // check every output where we have an expected value
-      if (trial.iqout.isEmpty) {
-        assert(iqOut.isEmpty, "No IQ should have been passed through")
-      } else {
-        val iqRef = trial.iqout.get
-        assert(iqOut.length == iqRef.length,
-               s"The packet length was ${iqOut.length} but should have been ${iqRef.length}")
-        iqOut.indices.foreach {
-         i => assert(iqOut(i) == iqRef(i), s"iq mismatch: ref ${iqRef(i)} != ${iqOut(i)} @$i")}
+    val absTol = 5e-4
+    // check every output where we have an expected value
+    if (trial.iqout.isEmpty) {
+      assert(iqOut.isEmpty, "No IQ should have been passed through")
+    } else {
+      val iqRef = trial.iqout.get
+      assert(iqOut.length == iqRef.length,
+              s"The packet length was ${iqOut.length} but should have been ${iqRef.length}")
+      iqRef.indices.foreach {
+        i => assert(iqOut(i) zip iqRef(i) map { case (v1,v2) => compareComplexTol(v1, v2, absTol) } reduce (_ && _),
+                    s"iq mismatch: ref ${iqRef(i)} != ${iqOut(i)} @$i")
       }
     }
   }
@@ -96,7 +101,7 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide], t
   *
   * Run each trial in @trials
   */
-class ChannelInverterTester[T <: chisel3.Data](c: ChannelInverter[T], trials: Seq[IQNarrow], tolLSBs: Int = 2) extends DspTester(c) {
+class ChannelInverterTester[T <: chisel3.Data](c: ChannelInverter[T], trials: Seq[IQNarrow], tolLSBs: Int = 3) extends DspTester(c) {
   def peekIQ(c: ChannelInverter[T], v: Vector[Complex]): Vector[Complex] = {
     var vout = v
     if (peek(c.io.out.valid)) {
@@ -105,7 +110,18 @@ class ChannelInverterTester[T <: chisel3.Data](c: ChannelInverter[T], trials: Se
     vout
   }
 
-  val maxCyclesWait = 20
+  def expectIQ(c: ChannelInverter[T], v: Vector[Complex], ref: Option[Seq[Complex]]): Vector[Complex] = {
+    val n = v.length
+    if (!ref.isEmpty && peek(c.io.out.valid)) {
+      val vref = ref.get
+      fixTolLSBs.withValue(tolLSBs) {
+        expect(c.io.out.bits.iq, vref(n))
+      }
+    }
+    peekIQ(c, v)
+  }
+
+  val maxCyclesWait = 50
 
   for (trial <- trials) {
     var iqOut = Vector[Complex]()
@@ -113,31 +129,23 @@ class ChannelInverterTester[T <: chisel3.Data](c: ChannelInverter[T], trials: Se
     poke(c.io.in.valid, 1)
     for (iq <- trial.iqin) {
       poke(c.io.in.bits.iq, iq)
-      iqOut = peekIQ(c, iqOut)
+      iqOut = expectIQ(c, iqOut, trial.iqout)
       step(1)
     }
     // wait for remaining output after pushing in IQ data
     poke(c.io.in.valid, 0)
     var cyclesWaiting = 0
     while(cyclesWaiting < maxCyclesWait) {
-      iqOut = peekIQ(c, iqOut)
+      iqOut = expectIQ(c, iqOut, trial.iqout)
       step(1)
       cyclesWaiting += 1
     }
     // compare output
     // set desired tolerance
-    // in this case, it's pretty loose (2 bits)
-    // can you get tolerance of 1 bit? 0? what makes the most sense?
     fixTolLSBs.withValue(tolLSBs) {
       // check every output where we have an expected value
       if (trial.iqout.isEmpty) {
         assert(iqOut.isEmpty, "No IQ should have been passed through")
-      } else {
-        val iqRef = trial.iqout.get
-        assert(iqOut.length == iqRef.length,
-               s"The packet length was ${iqOut.length} but should have been ${iqRef.length}")
-        iqOut.indices.foreach {
-         i => assert(iqOut(i) == iqRef(i), s"iq mismatch: ref ${iqRef(i)} != ${iqOut(i)} @$i")}
       }
     }
   }

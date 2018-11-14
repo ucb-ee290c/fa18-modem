@@ -65,8 +65,6 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
     n += 1
   }
   val nCordicStages = n
-  println(s"stages cordic $nCordicStages")
-  // val cordicParams = new FixedCordicParams(xyWidth=params.protoIQ.real.getWidth, zWidth=params.protoIQ.real.getWidth + 4, correctGain=true, stagesPerCycle=4)
   val cordicParams = new CordicParams[T]{
     val protoXY=params.protoIQ.real
     val protoZ=params.protoIQ.real
@@ -77,7 +75,6 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
   val toPolar = Module(new IterativeCordic(cordicParams))
   val toCartesian = Module(new IterativeCordic(cordicParams))
   val cordicDelay = toPolar.cycles
-  println(s"delay cordic $cordicDelay")
 
   val dividerWidth = params.protoIQ.real.getWidth * 2  // Want this to be bigger to handle divisor < dividend case
   val dividerConversionDelay = 2
@@ -100,10 +97,8 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
   toPolar.io.in.bits.z := Real[T].zero
   toPolar.io.out.ready := true.B
 
-  printf("cordic1 valid %d\n", toPolar.io.out.valid)
-  printf("polar x %d\n", toPolar.io.in.bits.x.asUInt())
-  printf("polar y %d\n", toPolar.io.in.bits.y.asUInt())
-  printf("polar angle %d\n", toPolar.io.out.bits.z.asUInt())
+  // printf("cordic1 valid %d\n", toPolar.io.out.valid)
+  // printf("polar angle %d\n", toPolar.io.out.bits.z.asUInt())
 
   val phaseDelay = ShiftRegister(in=toPolar.io.out.bits.z, n=dividerDelay)
 
@@ -111,17 +106,22 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
   divider.io.in.bits.num   := Real[T].fromDouble(1.0).asUInt() << params.protoIQ.real.getWidth - 4 //TODO: make this not hardcoded
   divider.io.in.bits.denom := toPolar.io.out.bits.x.asUInt()
 
-  printf("divider num %d\n", divider.io.in.bits.num)
-  printf("divider denom %d\n", divider.io.in.bits.denom)
-  printf("divider out %d\n", divider.io.out.bits)
-  printf("division valid %d\n", divider.io.out.valid)
+  // printf("divider denom %d\n", divider.io.in.bits.denom)
+  // printf("divider out %d\n", divider.io.out.bits)
+  // printf("division valid %d\n", divider.io.out.valid)
+
+  // printf("cordic2 angle %d\n", phaseDelay.asUInt())
 
   toCartesian.io.in.valid  := divider.io.out.valid
-  toCartesian.io.in.bits.x := divider.io.out.bits.asFixedPoint(params.protoIQ.real.getWidth.BP)
+  toCartesian.io.in.bits.x := divider.io.out.bits.asFixedPoint((params.protoIQ.real.getWidth - 3).BP) //TODO: make this not hardcoded
   toCartesian.io.in.bits.y := Real[T].zero
   toCartesian.io.in.bits.z := -phaseDelay
   toCartesian.io.in.bits.vectoring := false.B
   toCartesian.io.out.ready := true.B
+
+  // printf("cordic2 valid %d\n", toCartesian.io.out.valid)
+  // printf("cordic2 x %d\n", toCartesian.io.out.bits.x.asUInt())
+  // printf("cordic2 y %d\n", toCartesian.io.out.bits.y.asUInt())
 
   io.out.valid := toCartesian.io.out.valid
   io.out.bits.iq.real := toCartesian.io.out.bits.x
