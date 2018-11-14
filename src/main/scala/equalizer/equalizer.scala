@@ -98,22 +98,11 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
   toPolar.io.in.bits.z := Real[T].zero
   toPolar.io.out.ready := true.B
 
-  // printf("cordic1 valid %d\n", toPolar.io.out.valid)
-  // printf("polar x %d\n", toPolar.io.in.bits.x.asUInt())
-  // printf("polar y %d\n", toPolar.io.in.bits.y.asUInt())
-  // printf("polar angle %d\n", toPolar.io.out.bits.z.asUInt())
-
   val phaseDelay = ShiftRegister(in=toPolar.io.out.bits.z, n=dividerDelay)
 
   divider.io.in.valid      := toPolar.io.out.valid
   divider.io.in.bits.num   := Real[T].fromDouble(1.0).asUInt() << params.protoIQ.real.getWidth - 4 //TODO: make this not hardcoded
   divider.io.in.bits.denom := toPolar.io.out.bits.x.asUInt()
-
-  // printf("divider denom %d\n", divider.io.in.bits.denom)
-  // printf("divider out %d\n", divider.io.out.bits)
-  // printf("division valid %d\n", divider.io.out.valid)
-
-  // printf("cordic2 angle %d\n", phaseDelay.asUInt())
 
   toCartesian.io.in.valid  := divider.io.out.valid
   toCartesian.io.in.bits.x := divider.io.out.bits.asFixedPoint((params.protoIQ.real.getWidth - 3).BP) //TODO: make this not hardcoded
@@ -121,10 +110,6 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
   toCartesian.io.in.bits.z := -phaseDelay
   toCartesian.io.in.bits.vectoring := false.B
   toCartesian.io.out.ready := true.B
-
-  printf("cordic2 valid %d\n", toCartesian.io.out.valid)
-  printf("cordic2 x %d\n", toCartesian.io.out.bits.x.asUInt())
-  printf("cordic2 y %d\n", toCartesian.io.out.bits.y.asUInt())
 
   io.out.valid := toCartesian.io.out.valid
   io.out.bits.iq.real := toCartesian.io.out.bits.x
@@ -170,9 +155,6 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   dspComplexOne.imag := Real[T].fromDouble(0.0)
   val correction = RegInit(VecInit(
     Seq.fill(params.nSubcarriers)(dspComplexOne)
-    // Seq.fill(params.nSubcarriers)(DspComplex.wire(Real[T].fromDouble(1.0),
-    //                                               Real[T].fromDouble(0.0))
-    //                               )
   ))
   correction := correction // Stays the same except during occasional updates
 
@@ -185,11 +167,10 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
 
   // Body
   val dataBuf = Reg(Vec(params.nSubcarriers, params.protoIQ))
-  dataBuf := dataBuf//io.in.bits.iq
+  dataBuf := dataBuf
   switch(state) {
     is(sLTS1) {
-      // correction foreach (iq => printf("correction %d + %dj\n", iq.real.asUInt(), iq.imag.asUInt()))
-      printf("LTS1 STATE\n")
+      // printf("LTS1 STATE\n")
       io.in.ready := true.B
       nextState := Mux(io.in.fire(),
                        Mux(io.in.bits.pktStart, sLTS2, sError), // This better be the start of a new packet
@@ -197,7 +178,7 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
       dataBuf := io.in.bits.iq
     }
     is(sLTS2) {
-      printf("LTS2 STATE\n")
+      // printf("LTS2 STATE\n")
       io.in.ready := true.B
       nextState := Mux(io.in.fire(), sInvert, sLTS2)
       // Make sure we have the correct sign by multiplying by the table entries (assumes LTF is either 0, 1, or -1)
@@ -213,29 +194,22 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
       invertOutCounter := 0.U
     }
     is(sInvert) {
-      printf("INVERT STATE\n")
+      // printf("INVERT STATE\n")
       io.in.ready := false.B
       invertInCounter := invertInCounter + 1.U
-      // printf("pushing %d\n", ltfIdxs(invertInCounter))
+
       val ciBundle = Wire(Valid(IQBundle(params.protoIQ)))
       ciBundle.bits.iq := dataBuf(ltfIdxs(invertInCounter))
       ciBundle.valid := invertInCounter < nLTFCarriers.U && state === sInvert
 
-      // printf("inverter in %d: %d + %dj\n", invertInCounter,
-      //         dataBuf(ltfIdxs(invertInCounter)).real.asUInt(), dataBuf(ltfIdxs(invertInCounter)).imag.asUInt())
-
       val inverter = ChannelInverter(ciBundle, params)
       invertOutCounter := invertOutCounter + inverter.valid
-      printf("invert out counter %d(%d): %d + %dj\n", invertOutCounter, inverter.valid,
-             inverter.bits.iq.real.asUInt(), inverter.bits.iq.imag.asUInt())
-      // printf("pulling %d\n", ltfIdxs(invertOutCounter))
       correction(ltfIdxs(invertOutCounter)) := inverter.bits.iq
       pktStartReg := true.B
       nextState := Mux((invertOutCounter >= (nLTFCarriers - 1).U) && inverter.valid, sCorrect, sInvert)
     }
     is(sCorrect) {
       // printf("CORRECTION STATE\n")
-      correction foreach (iq => printf("correction %d + %dj\n", iq.real.asUInt(), iq.imag.asUInt()))
       io.in.ready := true.B
       nextState := Mux(io.in.fire() && io.in.bits.pktEnd, sLTS1, sCorrect)
       // Should probably check for io.out.ready and handle it? Right now the sample will just be dropped.
