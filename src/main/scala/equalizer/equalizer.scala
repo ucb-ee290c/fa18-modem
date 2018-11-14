@@ -20,7 +20,7 @@ case class FixedEqualizerParams(
   mu: Double = 0.25,
   pilots: Seq[Int] = Seq(5, 21, 43, 59),
   // Default to non-fft-shifted output from fft block, 802.11a mask
-  carrierMask: Seq[Boolean] = Seq.fill(1)(false) ++ Seq.fill(27)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(5)(false) ++ Seq.fill(27)(true),
+  carrierMask: Seq[Boolean] = Seq.fill(1)(false) ++ Seq.fill(26)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(6)(false) ++ Seq.fill(27)(true),
   nSubcarriers: Int = 64
 ) extends EqualizerParams[FixedPoint] {
   val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
@@ -98,6 +98,8 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
   toPolar.io.out.ready := true.B
 
   // printf("cordic1 valid %d\n", toPolar.io.out.valid)
+  // printf("polar x %d\n", toPolar.io.in.bits.x.asUInt())
+  // printf("polar y %d\n", toPolar.io.in.bits.y.asUInt())
   // printf("polar angle %d\n", toPolar.io.out.bits.z.asUInt())
 
   val phaseDelay = ShiftRegister(in=toPolar.io.out.bits.z, n=dividerDelay)
@@ -153,8 +155,10 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   state := nextState
   nextState := state
   // Counters for inversion state
-  val invertInCounter = Reg(UInt(log2Ceil(params.nSubcarriers).W))
-  val invertOutCounter = Reg(UInt(log2Ceil(params.nSubcarriers).W))
+  // val invertInCounter = Reg(UInt(log2Ceil(params.nSubcarriers).W))
+  val invertInCounter = Reg(UInt(32.W))
+  // val invertOutCounter = Reg(UInt(log2Ceil(params.nSubcarriers).W))
+  val invertOutCounter = Reg(UInt(32.W))
   invertInCounter := 0.U; invertOutCounter := 0.U
   // Register for tracking start of packets
   val pktStartReg = Reg(Bool())
@@ -176,9 +180,10 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
 
   // Body
   val dataBuf = Reg(Vec(params.nSubcarriers, params.protoIQ))
-  dataBuf := io.in.bits.iq
+  dataBuf := dataBuf//io.in.bits.iq
   switch(state) {
     is(sLTS1) {
+      // correction foreach (iq => printf("correction %d + %dj\n", iq.real.asUInt(), iq.imag.asUInt()))
       printf("LTS1 STATE\n")
       io.in.ready := true.B
       nextState := Mux(io.in.fire(),
@@ -192,10 +197,9 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
       nextState := Mux(io.in.fire(), sInvert, sLTS2)
       // Make sure we have the correct sign by multiplying by the table entries (assumes LTF is either 0, 1, or -1)
       val ltsAverage = (0 until params.nSubcarriers).map(i => Mux(ltfTable(i).real > Real[T].zero,
-                                                                  dataBuf(i).div2(1) + io.in.bits.iq(i).div2(1),
-                                                                  -(dataBuf(i).div2(1) + io.in.bits.iq(i).div2(1))))
-      // dataBuf := Mux(!io.in.fire(), VecInit(ltsAverage), dataBuf)
-      when(!io.in.fire()) {
+                                                                  (dataBuf(i) + io.in.bits.iq(i)).div2(1),
+                                                                  -(dataBuf(i) + io.in.bits.iq(i)).div2(1)))
+      when(io.in.fire()) {  // Can't use a Mux here because ltsAverage and dataBuf are different types
         dataBuf := ltsAverage
       }.otherwise {
         dataBuf := dataBuf
@@ -208,20 +212,27 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
       io.in.ready := false.B
       nextState := Mux(invertOutCounter < nLTFCarriers.U, sInvert, sCorrect)
       invertInCounter := invertInCounter + 1.U
+      // printf("pushing %d\n", ltfIdxs(invertInCounter))
       val ciBundle = Wire(Valid(IQBundle(params.protoIQ)))
       ciBundle.bits.iq := dataBuf(ltfIdxs(invertInCounter))
-      ciBundle.valid := invertInCounter < nLTFCarriers.U
+      ciBundle.valid := invertInCounter < nLTFCarriers.U && state === sInvert
 
-      printf("inverter in %d\n", dataBuf(ltfIdxs(invertInCounter)).asUInt())
+      // printf("inverter in %d: %d + %dj\n", invertInCounter,
+      //         dataBuf(ltfIdxs(invertInCounter)).real.asUInt(), dataBuf(ltfIdxs(invertInCounter)).imag.asUInt())
 
       val inverter = ChannelInverter(ciBundle, params)
       invertOutCounter := invertOutCounter + inverter.valid
-      printf("invert out counter %d\n", invertOutCounter)
-      correction(invertOutCounter) := inverter.bits.iq
+      // printf("invert out counter %d: %d + %dj\n", invertOutCounter,
+      //        inverter.bits.iq.real.asUInt(), inverter.bits.iq.imag.asUInt())
+      // printf("pulling %d\n", ltfIdxs(invertOutCounter))
+      correction(ltfIdxs(invertOutCounter)) := inverter.bits.iq
       pktStartReg := true.B
     }
     is(sCorrect) {
-      printf("CORRECTION STATE\n")
+      // printf("CORRECTION STATE\n")
+      // for (i <- 0 until 64){
+      //   printf("channel inversion %d: %d + %dj\n", i.U, correction(i).real.asUInt(), correction(i).imag.asUInt())
+      // }
       io.in.ready := true.B
       nextState := Mux(io.in.fire() && io.in.bits.pktEnd, sLTS1, sCorrect)
       // Should probably check for io.out.ready and handle it? Right now the sample will just be dropped.

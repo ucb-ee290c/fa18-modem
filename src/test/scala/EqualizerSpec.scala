@@ -37,6 +37,16 @@ case class EqualizerTestVectors() {
           c1, -c1,  c1, -c1, -c1,  c1, -c1,
           c1, -c1,  c1,  c1,  c1, -c1, -c1,
           c1)),
+        // Seq( c0,  c1,  c1, -c1, -c1,  c1, -c1,
+        //   c1,  c1, -c1,  c1,  c1,  c1,  c1,
+        //   c1,  c1,  c1, -c1,  c1,  c1,  c1,
+        //   c1, -c1, -c1,  c1,  c1, -c1,  c0,
+        //   c0,  c0,  c0,  c0,  c0,  c0,  c0,
+        //   c0,  c0,  c0, -c1,  c1, -c1,  c1,
+        //  -c1, -c1, -c1, -c1, -c1,  c1, -c1,
+        //   c1, -c1,  c1, -c1, -c1,  c1, -c1,
+        //   c1, -c1,  c1,  c1,  c1, -c1, -c1,
+        //   c1)),
     Seq(Seq( c0,  c1,  c1, -c1, -c1,  c1, -c1,
           c1,  c1, -c1,  c1,  c1,  c1,  c1,
           c1,  c1,  c1, -c1,  c1,  c1,  c1,
@@ -47,6 +57,16 @@ case class EqualizerTestVectors() {
           c1, -c1,  c1, -c1, -c1,  c1, -c1,
           c1, -c1,  c1,  c1,  c1, -c1, -c1,
           c1)))
+        // Seq( c0,  c1,  c1, -c1, -c1,  c1, -c1,
+        //   c1,  c1, -c1,  c1,  c1,  c1,  c1,
+        //   c1,  c1,  c1, -c1,  c1,  c1,  c1,
+        //   c1, -c1, -c1,  c1,  c1, -c1,  c0,
+        //   c0,  c0,  c0,  c0,  c0,  c0,  c0,
+        //   c0,  c0,  c0, -c1,  c1, -c1,  c1,
+        //  -c1, -c1, -c1, -c1, -c1,  c1, -c1,
+        //   c1, -c1,  c1, -c1, -c1,  c1, -c1,
+        //   c1, -c1,  c1,  c1,  c1, -c1, -c1,
+        //   c1)))
 
 }
 
@@ -58,7 +78,7 @@ class EqualizerSpec extends FlatSpec with Matchers {
     width=16,
     mu=0.25,
     pilots=Seq(5, 21, 43, 59),
-    carrierMask=Seq.fill(1)(false) ++ Seq.fill(27)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(5)(false) ++ Seq.fill(27)(true),
+    carrierMask=Seq.fill(1)(false) ++ Seq.fill(26)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(6)(false) ++ Seq.fill(27)(true),
     nSubcarriers=64
   )
   it should "pass data" in {

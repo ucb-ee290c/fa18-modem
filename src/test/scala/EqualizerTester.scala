@@ -79,7 +79,7 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide]) e
     // wait for remaining output after pushing in IQ data
     iqOut = peekIQ(c, iqOut)
     // set desired tolerance
-    val absTol = 5e-4
+    val absTol = 5e-3
     // check every output where we have an expected value
     if (trial.iqout.isEmpty) {
       assert(iqOut.isEmpty, "No IQ should have been passed through")
@@ -88,8 +88,11 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide]) e
       assert(iqOut.length == iqRef.length,
               s"The packet length was ${iqOut.length} but should have been ${iqRef.length}")
       iqRef.indices.foreach {
-        i => assert(iqOut(i) zip iqRef(i) map { case (v1,v2) => compareComplexTol(v1, v2, absTol) } reduce (_ && _),
-                    s"iq mismatch: ref ${iqRef(i)} != ${iqOut(i)} @$i")
+        i => {
+          iqRef(i).indices.foreach {
+            j => expect(compareComplexTol(iqOut(i)(j), iqRef(i)(j), absTol), s"iq @ $i, $j comparison: ${iqOut(i)(j)} == ${iqRef(i)(j)}")
+          }
+        }
       }
     }
   }
