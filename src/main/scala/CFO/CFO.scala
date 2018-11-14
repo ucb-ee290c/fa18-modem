@@ -3,15 +3,6 @@ package modem
 import chisel3._
 import dsptools.numbers._
 
-
-trait CordicParams[T<:Data] extends PacketBundleParams[T]{
-  val protoXY: T
-  val protoZ: T
-  val nStages: Int
-  val correctGain: Boolean
-  val stagesPerCycle: Int
-}
-
 trait CFOParams[T <: Data] extends CordicParams[T]{
   val stLength: Int
   val ltLength: Int
@@ -28,8 +19,8 @@ object SerialPacketBundle {
 }
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(IQBundle(params)))
-  val out = Decoupled(IQBundle(params))
+  val in = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
