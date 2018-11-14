@@ -10,15 +10,6 @@ trait CFOParams[T <: Data] extends CordicParams[T]{
   val preamble: Boolean
 }
 
-class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val pktStart: Bool = Bool()
-  val pktEnd: Bool = Bool()
-  val iq: DspComplex[T] = params.protoIQ
-}
-object SerialPacketBundle {
-  def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
-}
-
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val in = Flipped(Decoupled(SerialPacketBundle(params)))
   val out = Decoupled(SerialPacketBundle(params))
