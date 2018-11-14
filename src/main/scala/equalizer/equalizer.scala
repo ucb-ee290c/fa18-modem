@@ -215,7 +215,6 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
     is(sInvert) {
       printf("INVERT STATE\n")
       io.in.ready := false.B
-      nextState := Mux(invertOutCounter < nLTFCarriers.U, sInvert, sCorrect)
       invertInCounter := invertInCounter + 1.U
       // printf("pushing %d\n", ltfIdxs(invertInCounter))
       val ciBundle = Wire(Valid(IQBundle(params.protoIQ)))
@@ -232,6 +231,7 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
       // printf("pulling %d\n", ltfIdxs(invertOutCounter))
       correction(ltfIdxs(invertOutCounter)) := inverter.bits.iq
       pktStartReg := true.B
+      nextState := Mux((invertOutCounter >= (nLTFCarriers - 1).U) && inverter.valid, sCorrect, sInvert)
     }
     is(sCorrect) {
       // printf("CORRECTION STATE\n")
