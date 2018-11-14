@@ -1,4 +1,4 @@
-package cfo
+package modem
 
 import chisel3._
 import chisel3.experimental.FixedPoint
@@ -14,27 +14,27 @@ import freechips.rocketchip.subsystem.BaseSubsystem
  * These are type generic
  */
 
- trait IQBundleParams[T <: Data] {
-   val protoIQ: DspComplex[T]
- }
- object IQBundleParams {
-   def apply[T <: Data](proto: DspComplex[T]): IQBundleParams[T] = new IQBundleParams[T] { val protoIQ = proto }
- }
-
- class IQBundle[T <: Data](params: IQBundleParams[T]) extends Bundle {
-   val iq: DspComplex[T] = params.protoIQ.cloneType
-
-   override def cloneType: this.type = IQBundle(params).asInstanceOf[this.type]
- }
- object IQBundle {
-   def apply[T <: Data](params: IQBundleParams[T]): IQBundle[T] = new IQBundle[T](params)
-   def apply[T <: Data](proto: DspComplex[T]): IQBundle[T] = new IQBundle[T](IQBundleParams[T](proto))
- }
-
-trait PacketBundleParams[T <: Data] extends IQBundleParams {
-  val width: Int
-  // val protoIQ: DspComplex[T]
-}
+//  trait IQBundleParams[T <: Data] {
+//    val protoIQ: DspComplex[T]
+//  }
+//  object IQBundleParams {
+//    def apply[T <: Data](proto: DspComplex[T]): IQBundleParams[T] = new IQBundleParams[T] { val protoIQ = proto }
+//  }
+//
+//  class IQBundle[T <: Data](params: IQBundleParams[T]) extends Bundle {
+//    val iq: DspComplex[T] = params.protoIQ.cloneType
+//
+//    override def cloneType: this.type = IQBundle(params).asInstanceOf[this.type]
+//  }
+//  object IQBundle {
+//    def apply[T <: Data](params: IQBundleParams[T]): IQBundle[T] = new IQBundle[T](params)
+//    def apply[T <: Data](proto: DspComplex[T]): IQBundle[T] = new IQBundle[T](IQBundleParams[T](proto))
+//  }
+//
+// trait PacketBundleParams[T <: Data] extends IQBundleParams {
+//   val width: Int
+//   // val protoIQ: DspComplex[T]
+// }
 
 trait CordicParams[T<:Data] extends PacketBundleParams[T]{
   val protoXY: T
@@ -50,24 +50,37 @@ trait CFOParams[T <: Data] extends CordicParams[T]{
   val preamble: Boolean
 }
 
-class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val pktStart: Bool = Bool()
-  val pktEnd: Bool = Bool()
-  val iq: DspComplex[T] = params.protoIQ
-}
-object SerialPacketBundle {
-  def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
-}
+// class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
+//   val pktStart: Bool = Bool()
+//   val pktEnd: Bool = Bool()
+//   val iq: DspComplex[T] = params.protoIQ
+// }
+// object SerialPacketBundle {
+//   def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
+// }
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(IQBundle(params)))
-  val out = Decoupled(IQBundle(params))
+  val in = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
 object CFOIO {
   def apply[T <: Data](params: PacketBundleParams[T]): CFOIO[T] =
     new CFOIO(params)
+}
+
+class CFOEIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
+  val in = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
+
+  val pErr = Output(params.protoZ)
+
+  override def cloneType: this.type = CFOEIO(params).asInstanceOf[this.type]
+}
+object CFOEIO {
+  def apply[T <: Data](params: PacketBundleParams[T]): CFOIO[T] =
+    new CFOEIO(params)
 }
 
 
@@ -102,6 +115,114 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
 //   pbus.toVariableWidthSlave(Some("cordicWrite")) { cordicChain.writeQueue.mem.get }
 //   pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
 // }
+
+class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params: CFOParams[T]) extends Module {
+  // requireIsChiselType(params.protoIn)
+  val io = IO(CFOEIO(params))
+
+  val cordic = Module ( new IterativeCordic(params))
+
+
+
+  if(params.preamble == true){
+    // val sm = Module( new PreambleStateMachine(params.stLength, params.ltLength) )
+    val stDelay = 16
+    val ltDelay = 64
+
+    val curState = Reg(UInt(2.W))
+    val coarseOffset = RegInit(params.protoZ, ConvertableTo[T].fromDouble(0))
+    val fineOffset = RegInit(params.protoZ, ConvertableTo[T].fromDouble(0))
+
+    val stMul = Wire(params.protoIQ)
+    val stAcc = Reg(params.protoIQ)
+    val ltMul = Wire(params.protoIQ)
+    val ltAcc = Reg(params.protoIQ)
+    val stCounter = Counter(params.stLength)
+    val ltCounter = Counter(params.ltLength)
+
+    val estimatorReady = Wire(Bool())
+
+    val delayIQByST = (0 until stDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
+    val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits.iq){(prev, curr) => RegNext(prev)}
+    val delayValidByST = (0 until stDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
+    val delayValidByLT = (0 until ltDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
+
+    val idle::st::lt::data::Nil = Enum(4)
+
+    io.in.ready := estimatorReady
+    io.out.valid := cordic.io.out.valid
+    io.pErr := coarseOffset + fineOffset
+
+    switch(curState){
+      is(idle){
+        when(io.in.bits.pktStart && io.in.fire()){
+          curState := st
+        }.otherwise{
+          curState := idle
+          // stAcc := DspComplex[T](0,0)
+        }
+      }
+      is(st){
+        when(stCounter.inc()){
+          cordic.io.in.bits.x := stAcc.real
+          cordic.io.in.bits.y := stAcc.imag
+          cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
+          cordic.io.in.bits.vectoring := true.B
+          cordic.io.in.valid := true.B
+          estimatorReady := false.B
+          cordic.io.out.ready := true.B
+        }.elsewhen(io.in.fire()){
+          curState := st
+          when(delayValidByST){
+            stMul := (io.in.bits.iq * delayIQByST.conj())
+            stAcc := stAcc + stMul
+          }
+        }.otherwise{
+          cordic.io.in.valid := false.B
+          when(cordic.io.out.valid){
+            coarseOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/stDelay)
+            estimatorReady := true.B
+            curState := lt
+          }
+        }
+      }
+      is(lt){
+        when(ltCounter.inc()){
+          cordic.io.in.bits.x := ltAcc.real
+          cordic.io.in.bits.y := ltAcc.imag
+          cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
+          cordic.io.in.bits.vectoring := true.B
+          cordic.io.in.valid := true.B
+          estimatorReady := false.B
+          cordic.io.out.ready := true.B
+        }.elsewhen(io.in.fire()){
+          curState := lt
+          when(delayValidByLT){
+            ltMul := (io.in.bits.iq * delayIQByLT.conj())
+            ltAcc := stAcc + stMul
+          }
+        }
+        .otherwise{
+          cordic.io.in.valid := false.B
+          when(cordic.io.out.valid){
+            fineOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/ltDelay)
+            estimatorReady := true.B
+            curState := data
+          }
+        }
+      }
+      is(data){
+        when(io.in.bits.pktEnd){
+          curState := idle
+        }.otherwise{
+          curState := data
+        }
+      }
+    }
+
+  }
+
+}
 
 class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params: CFOParams[T]) extends Module {
   // requireIsChiselType(params.protoIn)
