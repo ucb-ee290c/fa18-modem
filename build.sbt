@@ -20,6 +20,8 @@ resolvers ++= Seq(
   Resolver.sonatypeRepo("releases")
 )
 
+parallelExecution in Test := false
+
 name := "ee290c"
 organization := "edu.berkeley.cs"
 version := "0.1-SNAPSHOT"
