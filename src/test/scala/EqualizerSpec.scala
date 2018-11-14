@@ -1,11 +1,16 @@
 package modem
 
 import breeze.math.Complex
+import scala.math
 import org.scalatest.{FlatSpec, Matchers}
 
 case class EqualizerTestVectors() {
   val c1 = Complex.one
+  val c01 = Complex(0,1)
   val c0 = Complex.zero
+  val cHalf = c1 / 2
+  val cRoot2 = Complex(1/math.sqrt(2), 1/math.sqrt(2))
+  val cRoot2H = cRoot2.conjugate
   val tvClean = Seq(
     Seq(Seq( c0,  c1, -c1, -c1,  c1,  c1, -c1,
           c1, -c1,  c1, -c1, -c1, -c1, -c1,
@@ -36,17 +41,17 @@ case class EqualizerTestVectors() {
          -c1, -c1, -c1, -c1, -c1,  c1, -c1,
           c1, -c1,  c1, -c1, -c1,  c1, -c1,
           c1, -c1,  c1,  c1,  c1, -c1, -c1,
+          c1),
+        Seq( c0,  c1,  c1, -c1, -c1,  c1, -c1,
+          c1,  c1, -c1,  c1,  c1,  c1,  c1,
+          c1,  c1,  c1, -c1,  c1,  c1,  c1,
+          c1, -c1, -c1,  c1,  c1, -c1,  c0,
+          c0,  c0,  c0,  c0,  c0,  c0,  c0,
+          c0,  c0,  c0, -c1,  c1, -c1,  c1,
+         -c1, -c1, -c1, -c1, -c1,  c1, -c1,
+          c1, -c1,  c1, -c1, -c1,  c1, -c1,
+          c1, -c1,  c1,  c1,  c1, -c1, -c1,
           c1)),
-        // Seq( c0,  c1,  c1, -c1, -c1,  c1, -c1,
-        //   c1,  c1, -c1,  c1,  c1,  c1,  c1,
-        //   c1,  c1,  c1, -c1,  c1,  c1,  c1,
-        //   c1, -c1, -c1,  c1,  c1, -c1,  c0,
-        //   c0,  c0,  c0,  c0,  c0,  c0,  c0,
-        //   c0,  c0,  c0, -c1,  c1, -c1,  c1,
-        //  -c1, -c1, -c1, -c1, -c1,  c1, -c1,
-        //   c1, -c1,  c1, -c1, -c1,  c1, -c1,
-        //   c1, -c1,  c1,  c1,  c1, -c1, -c1,
-        //   c1)),
     Seq(Seq( c0,  c1,  c1, -c1, -c1,  c1, -c1,
           c1,  c1, -c1,  c1,  c1,  c1,  c1,
           c1,  c1,  c1, -c1,  c1,  c1,  c1,
@@ -56,17 +61,159 @@ case class EqualizerTestVectors() {
          -c1, -c1, -c1, -c1, -c1,  c1, -c1,
           c1, -c1,  c1, -c1, -c1,  c1, -c1,
           c1, -c1,  c1,  c1,  c1, -c1, -c1,
+          c1),
+        Seq( c0,  c1,  c1, -c1, -c1,  c1, -c1,
+          c1,  c1, -c1,  c1,  c1,  c1,  c1,
+          c1,  c1,  c1, -c1,  c1,  c1,  c1,
+          c1, -c1, -c1,  c1,  c1, -c1,  c0,
+          c0,  c0,  c0,  c0,  c0,  c0,  c0,
+          c0,  c0,  c0, -c1,  c1, -c1,  c1,
+         -c1, -c1, -c1, -c1, -c1,  c1, -c1,
+          c1, -c1,  c1, -c1, -c1,  c1, -c1,
+          c1, -c1,  c1,  c1,  c1, -c1, -c1,
           c1)))
-        // Seq( c0,  c1,  c1, -c1, -c1,  c1, -c1,
-        //   c1,  c1, -c1,  c1,  c1,  c1,  c1,
-        //   c1,  c1,  c1, -c1,  c1,  c1,  c1,
-        //   c1, -c1, -c1,  c1,  c1, -c1,  c0,
-        //   c0,  c0,  c0,  c0,  c0,  c0,  c0,
-        //   c0,  c0,  c0, -c1,  c1, -c1,  c1,
-        //  -c1, -c1, -c1, -c1, -c1,  c1, -c1,
-        //   c1, -c1,  c1, -c1, -c1,  c1, -c1,
-        //   c1, -c1,  c1,  c1,  c1, -c1, -c1,
-        //   c1)))
+
+  val tvHalfGain = Seq(Seq(Seq(c0,  cHalf, -cHalf, -cHalf,  cHalf,  cHalf,
+         -cHalf,  cHalf, -cHalf,  cHalf, -cHalf, -cHalf,
+         -cHalf, -cHalf, -cHalf,  cHalf,  cHalf, -cHalf,
+         -cHalf,  cHalf, -cHalf,  cHalf, -cHalf,  cHalf,
+          cHalf,  cHalf,  cHalf,  c0,  c0,  c0,
+          c0,  c0,  c0,  c0,  c0,  c0,
+          c0,  c0,  cHalf,  cHalf, -cHalf, -cHalf,
+          cHalf,  cHalf, -cHalf,  cHalf, -cHalf,  cHalf,
+          cHalf,  cHalf,  cHalf,  cHalf,  cHalf, -cHalf,
+         -cHalf,  cHalf,  cHalf, -cHalf,  cHalf, -cHalf,
+          cHalf,  cHalf,  cHalf,  cHalf),
+        Seq( c0,  cHalf, -cHalf, -cHalf,  cHalf,  cHalf,
+         -cHalf,  cHalf, -cHalf,  cHalf, -cHalf, -cHalf,
+         -cHalf, -cHalf, -cHalf,  cHalf,  cHalf, -cHalf,
+         -cHalf,  cHalf, -cHalf,  cHalf, -cHalf,  cHalf,
+          cHalf,  cHalf,  cHalf,  c0,  c0,  c0,
+          c0,  c0,  c0,  c0,  c0,  c0,
+          c0,  c0,  cHalf,  cHalf, -cHalf, -cHalf,
+          cHalf,  cHalf, -cHalf,  cHalf, -cHalf,  cHalf,
+          cHalf,  cHalf,  cHalf,  cHalf,  cHalf, -cHalf,
+         -cHalf,  cHalf,  cHalf, -cHalf,  cHalf, -cHalf,
+          cHalf,  cHalf,  cHalf,  cHalf),
+        Seq( c0,  cHalf, -cHalf, -cHalf, -cHalf, -cHalf,
+         -cHalf,  cHalf,  cHalf,  cHalf,  cHalf, -cHalf,
+          cHalf, -cHalf, -cHalf,  cHalf, -cHalf, -cHalf,
+          cHalf, -cHalf,  cHalf, -cHalf,  cHalf,  cHalf,
+          cHalf,  cHalf, -cHalf,  c0,  c0,  c0,
+          c0,  c0,  c0,  c0,  c0,  c0,
+          c0,  c0,  cHalf, -cHalf, -cHalf,  cHalf,
+          cHalf,  cHalf, -cHalf, -cHalf,  cHalf,  cHalf,
+         -cHalf, -cHalf,  cHalf,  cHalf, -cHalf, -cHalf,
+          cHalf, -cHalf,  cHalf,  cHalf,  cHalf,  cHalf,
+          cHalf, -cHalf,  cHalf,  cHalf),
+        Seq( c0, -cHalf,  cHalf, -cHalf, -cHalf, -cHalf,
+         -cHalf,  cHalf,  cHalf,  cHalf, -cHalf,  cHalf,
+          cHalf,  cHalf,  cHalf,  cHalf, -cHalf, -cHalf,
+         -cHalf, -cHalf, -cHalf,  cHalf, -cHalf, -cHalf,
+          cHalf, -cHalf, -cHalf,  c0,  c0,  c0,
+          c0,  c0,  c0,  c0,  c0,  c0,
+          c0,  c0, -cHalf, -cHalf,  cHalf,  cHalf,
+         -cHalf, -cHalf,  cHalf,  cHalf,  cHalf, -cHalf,
+          cHalf, -cHalf, -cHalf, -cHalf, -cHalf,  cHalf,
+          cHalf,  cHalf,  cHalf, -cHalf, -cHalf,  cHalf,
+          cHalf,  cHalf,  cHalf, -cHalf)),
+    Seq(Seq( c0,  c1, -c1, -c1, -c1, -c1, -c1,
+          c1,  c1,  c1,  c1, -c1,  c1, -c1,
+         -c1,  c1, -c1, -c1,  c1, -c1,  c1,
+         -c1,  c1,  c1,  c1,  c1, -c1,  c0,
+          c0,  c0,  c0,  c0,  c0,  c0,  c0,
+          c0,  c0,  c0,  c1, -c1, -c1,  c1,
+          c1,  c1, -c1, -c1,  c1,  c1, -c1,
+         -c1,  c1,  c1, -c1, -c1,  c1, -c1,
+          c1,  c1,  c1,  c1,  c1, -c1,  c1,
+          c1),
+        Seq( c0, -c1,  c1, -c1, -c1, -c1, -c1,
+          c1,  c1,  c1, -c1,  c1,  c1,  c1,
+          c1,  c1, -c1, -c1, -c1, -c1, -c1,
+          c1, -c1, -c1,  c1, -c1, -c1,  c0,
+          c0,  c0,  c0,  c0,  c0,  c0,  c0,
+          c0,  c0,  c0, -c1, -c1,  c1,  c1,
+         -c1, -c1,  c1,  c1,  c1, -c1,  c1,
+         -c1, -c1, -c1, -c1,  c1,  c1,  c1,
+          c1, -c1, -c1,  c1,  c1,  c1,  c1,
+         -c1)))
+
+  val tvRotate = Seq(Seq(Seq( c0, cRoot2,  -c01,
+        cRoot2H, -c1, -cRoot2,
+         c01, cRoot2H, -c1,
+        cRoot2,  -c01, cRoot2H,
+        c1, cRoot2,  c01,
+        cRoot2H, c1, -cRoot2,
+         -c01, -cRoot2H, c1,
+        -cRoot2,  c01, cRoot2H,
+        c1, cRoot2,  c01,
+         c0,  c0,  c0,
+         c0,  c0,  c0,
+         c0,  c0,  c0,
+         c0,  c0,  -c01,
+        cRoot2H, -c1, -cRoot2,
+         c01, -cRoot2H, c1,
+        -cRoot2,  c01, cRoot2H,
+        c1, cRoot2,  c01,
+        -cRoot2H, -c1, cRoot2,
+         c01, cRoot2H, c1,
+        -cRoot2,  c01, cRoot2H,
+        -c1, -cRoot2,  -c01,
+        cRoot2H),
+       Seq( c0, cRoot2,  -c01,
+        cRoot2H, -c1, -cRoot2,
+         c01, cRoot2H, -c1,
+        cRoot2,  -c01, cRoot2H,
+        c1, cRoot2,  c01,
+        cRoot2H, c1, -cRoot2,
+         -c01, -cRoot2H, c1,
+        -cRoot2,  c01, cRoot2H,
+        c1, cRoot2,  c01,
+         c0,  c0,  c0,
+         c0,  c0,  c0,
+         c0,  c0,  c0,
+         c0,  c0,  -c01,
+        cRoot2H, -c1, -cRoot2,
+         c01, -cRoot2H, c1,
+        -cRoot2,  c01, cRoot2H,
+        c1, cRoot2,  c01,
+        -cRoot2H, -c1, cRoot2,
+         c01, cRoot2H, c1,
+        -cRoot2,  c01, cRoot2H,
+        -c1, -cRoot2,  -c01,
+        cRoot2H),
+       Seq( c0, -cRoot2,  -c01,
+        -cRoot2H, c1, -cRoot2,
+         c01, -cRoot2H, c1,
+        cRoot2,  -c01, cRoot2H,
+        -c1, cRoot2,  -c01,
+        -cRoot2H, c1, -cRoot2,
+         -c01, -cRoot2H, -c1,
+        cRoot2,  c01, cRoot2H,
+        c1, -cRoot2,  c01,
+         c0,  c0,  c0,
+         c0,  c0,  c0,
+         c0,  c0,  c0,
+         c0,  c0,  c01,
+        -cRoot2H, -c1, cRoot2,
+         -c01, cRoot2H, c1,
+        -cRoot2,  -c01, cRoot2H,
+        -c1, -cRoot2,  c01,
+        cRoot2H, -c1, -cRoot2,
+         c01, cRoot2H, -c1,
+        cRoot2,  c01, -cRoot2H,
+        -c1, cRoot2,  -c01,
+        cRoot2H)),
+    Seq(Seq( c0,  c1, -c1, -c1, -c1, -c1, -c1,
+          c1,  c1,  c1,  c1, -c1,  c1, -c1,
+         -c1,  c1, -c1, -c1,  c1, -c1,  c1,
+         -c1,  c1,  c1,  c1,  c1, -c1,  c0,
+          c0,  c0,  c0,  c0,  c0,  c0,  c0,
+          c0,  c0,  c0,  c1, -c1, -c1,  c1,
+          c1,  c1, -c1, -c1,  c1,  c1, -c1,
+         -c1,  c1,  c1, -c1, -c1,  c1, -c1,
+          c1,  c1,  c1,  c1,  c1, -c1,  c1,
+          c1)))
 
 }
 
@@ -86,20 +233,16 @@ class EqualizerSpec extends FlatSpec with Matchers {
     FixedEqualizerTester(eqParams, trials) should be (true)
   }
 
-  // it should "correct gain" in {
-  //   val trials = Seq(IQWide(vecs.tvHalfGain(0), Option(vecs.tvHalfGain(1))))
-  //   FixedEqualizerTester(eqParams, trials) should be (true)
-  // }
+  it should "correct gain" in {
+    val trials = Seq(IQWide(vecs.tvHalfGain(0), Option(vecs.tvHalfGain(1))))
+    FixedEqualizerTester(eqParams, trials) should be (true)
+  }
 
-  // it should "correct phase" in {
-  //   val trials = Seq(IQWide(vecs.tvRotate(0), Option(vecs.tvRotate(1))))
-  //   FixedEqualizerTester(eqParams, trials) should be (true)
-  // }
+  it should "correct phase" in {
+    val trials = Seq(IQWide(vecs.tvRotate(0), Option(vecs.tvRotate(1))))
+    FixedEqualizerTester(eqParams, trials) should be (true)
+  }
 
-  // it should "correct fading" in {
-  //   val trials = Seq(IQWide(vecs.tvFade(0), Option(vecs.tvFade(1))))
-  //   FixedEqualizerTester(eqParams, trials) should be (true)
-  // }
 }
 
 class ChannelInverterSpec extends FlatSpec with Matchers {

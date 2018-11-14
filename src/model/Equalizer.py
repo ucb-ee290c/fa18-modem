@@ -8,7 +8,7 @@ class TestVectors:
         tvClean1 = self.buildPacket(1, [1+0j]*64)
         tvClean2 = self.buildPacket(2, [1+0j]*64)
         tvHalfGain = self.buildPacket(2, [0.5+0j]*64)
-        tvRotate = self.buildPacket(2, [np.exp(2*np.pi*1j*1)]*64)
+        tvRotate = self.buildPacket(2, np.exp(2*np.pi*1j*0.125*np.arange(64)))
         tvFade = self.buildPacket(2, self.fadingChannel(20, 0.25+0.25j))
         self.tvList = [tvClean1, tvClean2, tvHalfGain, tvRotate, tvFade]
         for tv in self.tvList:
