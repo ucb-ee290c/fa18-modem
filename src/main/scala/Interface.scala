@@ -89,7 +89,7 @@ class DeserialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bun
 }
 object DeserialPacketBundle {
   def apply[T <: Data](params: PacketBundleParams[T]): PacketBundle[T] = new PacketBundle[T](params)
-  def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundle[T] = new PacketBundle[T](PacketBundleParams[T](size, proto))
+  def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundle[T] = new PacketBundle[T](PacketBundleParams[T](64, proto))
 }
 /**
  * Bundle type for codewords from demod/deinterleaver
