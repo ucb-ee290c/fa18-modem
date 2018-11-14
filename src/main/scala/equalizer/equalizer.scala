@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.experimental.FixedPoint
 import chisel3.util._
 import dsptools.numbers._
+import breeze.math.Complex
 
 
 trait EqualizerParams[T <: Data] {
@@ -121,9 +122,9 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
   toCartesian.io.in.bits.vectoring := false.B
   toCartesian.io.out.ready := true.B
 
-  // printf("cordic2 valid %d\n", toCartesian.io.out.valid)
-  // printf("cordic2 x %d\n", toCartesian.io.out.bits.x.asUInt())
-  // printf("cordic2 y %d\n", toCartesian.io.out.bits.y.asUInt())
+  printf("cordic2 valid %d\n", toCartesian.io.out.valid)
+  printf("cordic2 x %d\n", toCartesian.io.out.bits.x.asUInt())
+  printf("cordic2 y %d\n", toCartesian.io.out.bits.y.asUInt())
 
   io.out.valid := toCartesian.io.out.valid
   io.out.bits.iq.real := toCartesian.io.out.bits.x
@@ -164,10 +165,14 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   val pktStartReg = Reg(Bool())
   pktStartReg := false.B
   // Storage for channel weights
+  val dspComplexOne = Wire(params.protoIQ)
+  dspComplexOne.real := Real[T].fromDouble(1.0)
+  dspComplexOne.imag := Real[T].fromDouble(0.0)
   val correction = RegInit(VecInit(
-    Seq.fill(params.nSubcarriers)(DspComplex.wire(Real[T].fromDouble(1.0),
-                                                  Real[T].fromDouble(0.0))
-                                  )
+    Seq.fill(params.nSubcarriers)(dspComplexOne)
+    // Seq.fill(params.nSubcarriers)(DspComplex.wire(Real[T].fromDouble(1.0),
+    //                                               Real[T].fromDouble(0.0))
+    //                               )
   ))
   correction := correction // Stays the same except during occasional updates
 
@@ -222,17 +227,15 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
 
       val inverter = ChannelInverter(ciBundle, params)
       invertOutCounter := invertOutCounter + inverter.valid
-      // printf("invert out counter %d: %d + %dj\n", invertOutCounter,
-      //        inverter.bits.iq.real.asUInt(), inverter.bits.iq.imag.asUInt())
+      printf("invert out counter %d(%d): %d + %dj\n", invertOutCounter, inverter.valid,
+             inverter.bits.iq.real.asUInt(), inverter.bits.iq.imag.asUInt())
       // printf("pulling %d\n", ltfIdxs(invertOutCounter))
       correction(ltfIdxs(invertOutCounter)) := inverter.bits.iq
       pktStartReg := true.B
     }
     is(sCorrect) {
       // printf("CORRECTION STATE\n")
-      // for (i <- 0 until 64){
-      //   printf("channel inversion %d: %d + %dj\n", i.U, correction(i).real.asUInt(), correction(i).imag.asUInt())
-      // }
+      correction foreach (iq => printf("correction %d + %dj\n", iq.real.asUInt(), iq.imag.asUInt()))
       io.in.ready := true.B
       nextState := Mux(io.in.fire() && io.in.bits.pktEnd, sLTS1, sCorrect)
       // Should probably check for io.out.ready and handle it? Right now the sample will just be dropped.
