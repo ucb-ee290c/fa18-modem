@@ -49,7 +49,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   val eq = Module( new Equalizer(equalizerParams) )
   // val cfoPilot = Module( new CFOPilot(cfoParams) )
   val demod = Module( new Demodulator(demodParams) )
-  val decode = Module( new Decoder(viterbiParams) )
+  val decode = Module( new ViterbiDecoder(viterbiParams) )
 
   // Phase Rotation Block
   phaseRotator.io.inIQ := io.in
