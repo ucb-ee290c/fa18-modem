@@ -27,7 +27,7 @@ class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Mod
   val io = IO(???)
 }
 
-class RX[T<:Data:Real:BinaryRepresentation:ConvertableTo, U<:Data](
+class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   val iqBundleParams: IQBundleParams[T],
   val pktDetectParams: PacketDetectParams[T],
   val equalizerParams: EqualizerParams[T],

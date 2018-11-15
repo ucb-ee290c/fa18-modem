@@ -72,7 +72,7 @@ object FFTDeserIO {
     new FFTDeserIO(params)
 }
 
-class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
+class FFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   val io = IO(FFTIO(params))
   val deser = Module(new Deserializer(DeserializerParams(params.protoIQ.cloneType, params.numPoints)))
   val fft = Module(new FFTDeser(params))
@@ -82,7 +82,7 @@ class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val p
   io.out <> fft.io.out
 }
 
-class FFTDeser[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
+class FFTDeser[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   val io = IO(FFTDeserIO(params))
   io.in.ready := true.B
   val fft_stage = {
@@ -91,7 +91,7 @@ class FFTDeser[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](
     }
     else {
       Module(new FFTStage(params))
-    } 
+    }
   }
   fft_stage.io.in.bits  := io.in.bits
   fft_stage.io.in.valid := io.in.fire()
@@ -216,7 +216,7 @@ class IFFTStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T
   io.out.valid         := fft.io.out.valid
 }
 
-class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
+class RaderFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   require(FFTUtil.is_prime(params.numPoints), "number of points must be prime")
   val io = IO(FFTStageIO(params))
 
@@ -283,7 +283,7 @@ class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](
 
 // single radix-2 butterfly
 object Butterfly {
-  def apply[T <: Data : Real](in: Seq[DspComplex[T]], twiddle: DspComplex[T]): Seq[DspComplex[T]] = 
+  def apply[T <: Data : Real](in: Seq[DspComplex[T]], twiddle: DspComplex[T]): Seq[DspComplex[T]] =
   {
     require(in.length == 2, "Butterfly requires two data inputs")
     val product = in(1) * twiddle
