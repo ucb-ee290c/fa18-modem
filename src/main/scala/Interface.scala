@@ -28,7 +28,7 @@ object PacketBundleParams {
   }
 }
 
-trait BitsBundleParams[T<:Data]{
+trait BitsBundleParams[T<:Data] extends PacketBundleParams{
   val bitsWidth: Int
   val protoBits: T
 }
