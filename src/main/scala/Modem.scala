@@ -79,8 +79,11 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   io.out := decode.io.out
 }
 
-class Modem[T<:Data:Real:BinaryRepresentation](val params: ModemParams[T]) extends Module{
-  val io = IO(???)
+trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
+  val foo: Int
+}
 
+class Modem[T<:Data:Real:BinaryRepresentation, U<:Data](val params: ModemParams[T,U]) extends Module{
+  val io = IO(???)
 
 }
