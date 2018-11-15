@@ -42,9 +42,9 @@ object CyclicPrefixIO {
     state := nextState
     nextState := state
 
-    val rmCount = RegInit(0.U(32))
-    val addCount = RegInit(0.U(32))
-    val keepCount = RegInit(0.U(32))
+    val rmCount = RegInit(0.U(32.W))
+    val addCount = RegInit(0.U(32.W))
+    val keepCount = RegInit(0.U(32.W))
 
     val pktStart = Reg(Bool())
     pktStart := pktStart
@@ -56,23 +56,27 @@ object CyclicPrefixIO {
 
     switch(state) {
       is(sIdle) {
+        // printf("IDLE\n")
         io.in.ready := true.B
-        rmCount := 0.U
+        rmCount := 1.U
         addCount := 0.U
-        keepCount := 0.U
+        keepCount := 1.U
         pktStart := true.B
         pktEnd := false.B
+        buffer(0) := io.in.bits.iq(0)
         nextState := Mux(!io.in.fire(), sIdle,
                           Mux(io.add, sFill, sRemove))
       }
       is(sRemove) {
+        // printf("REMOVE %d\n", rmCount)
         io.in.ready := true.B
         io.out.valid := false.B
         rmCount := rmCount + io.in.fire()
         keepCount := 0.U
-        nextState := Mux(rmCount < params.prefixLength.U - 1.U, sRemove, sKeep)
+        nextState := Mux(rmCount < (params.prefixLength-1).U, sRemove, sKeep)
       }
       is(sKeep) {
+        // printf("KEEP\n")
         // Output logic
         io.in.ready := io.out.ready
         io.out.valid := io.in.valid
@@ -84,10 +88,11 @@ object CyclicPrefixIO {
         // Transition logic
         rmCount := 0.U
         keepCount := keepCount + io.in.fire()
-        nextState := Mux(keepCount < params.symbolLength.U - 1.U, sKeep,
+        nextState := Mux(keepCount < (params.symbolLength-1).U, sKeep,
                          Mux(io.in.bits.pktEnd, sIdle, sRemove))
       }
       is(sFill) {
+        // printf("FILL %d\n", keepCount)
         // If we really want to be efficient, we could immediately start sending
         // the prefix once the last n samples start to arrive, but that's overkill
         // for such a low latency block
@@ -98,9 +103,10 @@ object CyclicPrefixIO {
         rmCount := 0.U
         keepCount := keepCount + io.in.fire()
         buffer(keepCount) := io.in.bits.iq(0)
-        nextState := Mux(keepCount < params.symbolLength.U - 1.U, sKeep, sAdd)
+        nextState := Mux(keepCount < (params.symbolLength-1).U, sFill, sAdd)
       }
       is(sAdd) {
+        // printf("ADD %d\n", addCount)
         // Push out prefix now
         io.in.ready := false.B
         io.out.valid := true.B
@@ -111,9 +117,10 @@ object CyclicPrefixIO {
         io.out.bits.pktStart := pktStart
         pktStart := false.B
         io.out.bits.pktEnd := false.B
-        nextState := Mux(addCount < (params.prefixLength.U - 1.U), sAdd, sDrain)
+        nextState := Mux(addCount < (params.prefixLength-1).U, sAdd, sDrain)
       }
       is(sDrain) {
+        // printf("DRAIN %d\n", rmCount)
         // Push out iq buffer now
         io.in.ready := false.B
         io.out.valid := true.B
@@ -124,7 +131,7 @@ object CyclicPrefixIO {
         io.out.bits.pktStart := false.B
         io.out.bits.pktEnd := pktEnd && nextState =!= sDrain // Wait until last sample for pktEnd
         pktEnd := Mux(nextState =!= sDrain, false.B, pktEnd)
-        nextState := Mux(rmCount < (params.symbolLength.U - 1.U), sDrain,
+        nextState := Mux(rmCount < (params.symbolLength-1).U, sDrain,
                           Mux(pktEnd, sIdle, sFill))
       }
     }
