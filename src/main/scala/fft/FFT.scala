@@ -17,10 +17,11 @@ import scala.math._
  *
  * These are type generic
  */
-trait FFTParams[T <: Data] extends IQBundleParams[T] {
+trait FFTParams[T <: Data] extends PacketBundleParams[T] {
   val numPoints: Int
   val protoTwiddle: DspComplex[T]
   val pipeline: Boolean
+  lazy val width = numPoints
 }
 object FFTParams {
   def apply[T <: Data](old_params: FFTParams[T], new_num_points: Int): FFTParams[T] = new FFTParams[T] {
@@ -51,8 +52,8 @@ case class FixedFFTParams(
  * Bundle type as IO for FFT modules
  */
 class FFTIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ.cloneType)))
-  val out = Decoupled(PacketBundle(params.numPoints, params.protoIQ.cloneType))
+  val in = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(DeserialPacketBundle(params))
 
   override def cloneType: this.type = FFTIO(params).asInstanceOf[this.type]
 }
@@ -62,8 +63,8 @@ object FFTIO {
 }
 
 class FFTDeserIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(PacketBundle(params.numPoints, params.protoIQ.cloneType)))
-  val out = Decoupled(PacketBundle(params.numPoints, params.protoIQ.cloneType))
+  val in = Flipped(Decoupled(DeserialPacketBundle(params)))
+  val out = Decoupled(DeserialPacketBundle(params))
 
   override def cloneType: this.type = FFTDeserIO(params).asInstanceOf[this.type]
 }
@@ -114,8 +115,8 @@ class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) ex
 
 
 class FFTStageIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Valid(PacketBundle(params.numPoints, params.protoIQ.cloneType)))
-  val out = Valid(PacketBundle(params.numPoints, params.protoIQ.cloneType))
+  val in = Flipped(Valid(DeserialPacketBundle(params)))
+  val out = Valid(DeserialPacketBundle(params))
 
   override def cloneType: this.type = FFTStageIO(params).asInstanceOf[this.type]
 }
@@ -297,8 +298,8 @@ object Butterfly {
 }
 
 class SDFStageIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Input(PacketBundle(1, params.protoIQ.cloneType))
-  val out = Output(PacketBundle(1, params.protoIQ.cloneType))
+  val in = Input(SerialPacketBundle(params))
+  val out = Output(SerialPacketBundle(params))
   val twiddles_rom = Input(Vec(params.numPoints / 2, params.protoTwiddle.cloneType))
   val cntr = Input(UInt(log2Up(params.numPoints).W))
 
@@ -326,17 +327,17 @@ class SDFStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
     // Issue: using `inp := Mux(use_twiddle, io.in.iq(0) * twiddle, io.in.iq(0))` causes the following error:
     // can't create Mux with non-equivalent types dsptools.numbers.DspComplex@________ and dsptools.numbers.DspComplex@________
     when (use_twiddle) {
-      inp := io.in.iq(0) * twiddle
+      inp := io.in.iq * twiddle
     } .otherwise {
-      inp := io.in.iq(0)
+      inp := io.in.iq
     }
-    io.out.iq(0) := out
+    io.out.iq := out
   } else {
-    inp := io.in.iq(0)
+    inp := io.in.iq
     when (use_twiddle) {
-      io.out.iq(0) := out * twiddle
+      io.out.iq := out * twiddle
     } .otherwise {
-      io.out.iq(0) := out
+      io.out.iq := out
     }
   }
 
@@ -357,8 +358,8 @@ class SDFStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
 }
 
 class FFTUnscramblerIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ.cloneType)))
-  val out = Decoupled(PacketBundle(1, params.protoIQ.cloneType))
+  val in = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = new FFTUnscramblerIO(params).asInstanceOf[this.type]
 }
@@ -389,8 +390,8 @@ class FFTUnscrambler[T <: Data : Real : BinaryRepresentation](val params: FFTPar
 }
 
 class SDFFFTIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ.cloneType)))
-  val out = Decoupled(PacketBundle(1, params.protoIQ.cloneType))
+  val in = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = SDFFFTIO(params).asInstanceOf[this.type]
 }
@@ -428,7 +429,7 @@ class SDFFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], 
   val cntr = RegInit(0.U(log2Up(params.numPoints).W))
   val cntr_next = Wire(cntr.cloneType)
 
-  val out_fifo = Module(new Queue(PacketBundle(1, params.protoIQ.cloneType), params.numPoints))
+  val out_fifo = Module(new Queue(SerialPacketBundle(params), params.numPoints))
 
   val sdf_stages = (0 until numStages).map(i => {
     val stage = Module(new SDFStage(params, delayLog2s(i), numStages - 1 - i, true))
