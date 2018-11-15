@@ -40,7 +40,7 @@ class DeserializerTester[T <: chisel3.Data](c: Deserializer[T], inp: Seq[Complex
   poke(c.io.in.valid, 1)
   
   inp.zipWithIndex.foreach { case (value, index) =>
-    poke(c.io.in.bits.iq(0), value)
+    poke(c.io.in.bits.iq, value)
     poke(c.io.in.bits.pktStart, (index == 0))
     poke(c.io.in.bits.pktEnd  , (index == inp.length - 1))
     wait_for_assert(c.io.in.ready, maxCyclesWait)
@@ -86,7 +86,7 @@ class SerializerTester[T <: chisel3.Data](c: Serializer[T], inp: Seq[Complex], t
       wait_for_assert(c.io.out.valid, maxCyclesWait)
       expect(c.io.out.bits.pktStart, (out_idx == 0))
       expect(c.io.out.bits.pktEnd  , (out_idx == inp.length - 1))
-      fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq(0), inp(out_idx)) }
+      fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq, inp(out_idx)) }
       out_idx += 1
       step(1)
     }
@@ -96,9 +96,9 @@ class SerializerTester[T <: chisel3.Data](c: Serializer[T], inp: Seq[Complex], t
 
 class DesSerTestModule[T <: Data : Real : BinaryRepresentation](val params: SerDesParams[T]) extends Module {
   val io = IO(new Bundle {
-    val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ.cloneType)))
-    val out = Decoupled(PacketBundle(1, params.protoIQ.cloneType))
-    val debug = Output(PacketBundle(params.ratio, params.protoIQ.cloneType))
+    val in = Flipped(Decoupled(SerialPacketBundle(params)))
+    val out = Decoupled(SerialPacketBundle(params))
+    val debug = Output(DeserialPacketBundle(params))
     val debug_valid = Output(Bool())
     val debug_ready = Output(Bool())
   })
@@ -128,7 +128,7 @@ class DesSerTester[T <: chisel3.Data](c: DesSerTestModule[T], inp: Seq[Complex],
   var out_idx = 0
   
   inp.zipWithIndex.foreach { case (value, index) =>
-    poke(c.io.in.bits.iq(0), value)
+    poke(c.io.in.bits.iq, value)
     poke(c.io.in.bits.pktStart, (index == 0))
     poke(c.io.in.bits.pktEnd  , (index == inp.length - 1))
     wait_for_assert(c.io.in.ready, maxCyclesWait)
@@ -137,13 +137,9 @@ class DesSerTester[T <: chisel3.Data](c: DesSerTestModule[T], inp: Seq[Complex],
       poke(c.io.in.valid, 0)
       while (out_idx <= index) {
         wait_for_assert(c.io.out.valid, maxCyclesWait)
-        peek(c.io.debug.iq(0))
-        peek(c.io.debug.iq(1))
-        peek(c.io.debug_valid)
-        peek(c.io.debug_ready)
         expect(c.io.out.bits.pktStart, (out_idx == 0))
         expect(c.io.out.bits.pktEnd  , (out_idx == inp.length - 1))
-        fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq(0), inp(out_idx)) }
+        fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq, inp(out_idx)) }
         out_idx += 1
         step(1)
       }

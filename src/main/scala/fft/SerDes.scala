@@ -13,8 +13,9 @@ import scala.math._
  *
  * These are type generic
  */
-trait SerDesParams[T <: Data] extends IQBundleParams[T] {
+trait SerDesParams[T <: Data] extends PacketBundleParams[T] {
   val ratio: Int
+  lazy val width = ratio
 }
 object SerDesParams {
   def apply[T <: Data](proto: DspComplex[T], serdesRatio: Int): SerDesParams[T] = new SerDesParams[T] {
@@ -39,8 +40,8 @@ case class FixedSerDesParams(
  * Bundle type as IO for Deserializer modules
  */
 class DeserializerIO[T <: Data : Ring](params: SerDesParams[T]) extends Bundle {
-  val in  = Flipped(Decoupled(PacketBundle(1, params.protoIQ.cloneType)))
-  val out = Decoupled(PacketBundle(params.ratio, params.protoIQ.cloneType))
+  val in  = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(DeserialPacketBundle(params))
 
   override def cloneType: this.type = DeserializerIO(params).asInstanceOf[this.type]
 }
@@ -91,7 +92,7 @@ class Deserializer[T <: Data : Real : BinaryRepresentation](val params: SerDesPa
   }
 
   // Shift register
-  deser.iq.foldRight(io.in.bits.iq(0)) {
+  deser.iq.foldRight(io.in.bits.iq) {
     case (reg, inp) => {
       when (io.in.fire()) { reg := inp }
       reg
@@ -107,8 +108,8 @@ class Deserializer[T <: Data : Real : BinaryRepresentation](val params: SerDesPa
  * Bundle type as IO for Serializer modules
  */
 class SerializerIO[T <: Data : Ring](params: SerDesParams[T]) extends Bundle {
-  val in  = Flipped(Decoupled(PacketBundle(params.ratio, params.protoIQ.cloneType)))
-  val out = Decoupled(PacketBundle(1, params.protoIQ.cloneType))
+  val in  = Flipped(Decoupled(DeserialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = SerializerIO(params).asInstanceOf[this.type]
 }
@@ -153,7 +154,7 @@ class Serializer[T <: Data : Real : BinaryRepresentation](val params: SerDesPara
 
   cntr := cntr_next
 
-  io.out.bits.iq(0) := in_flopped.iq(cntr)
+  io.out.bits.iq := in_flopped.iq(cntr)
   io.out.bits.pktStart := in_flopped.pktStart && (cntr === 0.U)
   io.out.bits.pktEnd := in_flopped.pktEnd && serLast
   io.out.valid := state === sComp
