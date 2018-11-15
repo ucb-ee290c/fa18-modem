@@ -33,6 +33,9 @@ TODOS:
 - CFAR power-based detection
 - Correlation-based threshold and synchronization
 
+### Cyclic Prefix
+The cyclic prefix block can add or remove a cyclic prefix from symbols in a packet. The length of the previx and size of an OFDM symbol are parameterized in the generator, and addition/removal is controlled with a bool input.
+
 ### FFT
 - Fixed 2^n FFT
 - ? Fixed 2^n IFFT
