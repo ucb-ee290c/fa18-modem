@@ -1,35 +1,18 @@
 package modem
 
 import chisel3._
+import chisel3.util._
 import dsptools.numbers._
 
-
-trait CordicParams[T<:Data] extends PacketBundleParams[T]{
-  val protoXY: T
-  val protoZ: T
-  val nStages: Int
-  val correctGain: Boolean
-  val stagesPerCycle: Int
-}
-
-trait CFOParams[T <: Data] extends CordicParams[T]{
+trait CFOParams[T <: Data] extends CordicParams[T] with PacketBundleParams[T] {
   val stLength: Int
   val ltLength: Int
   val preamble: Boolean
 }
 
-class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val pktStart: Bool = Bool()
-  val pktEnd: Bool = Bool()
-  val iq: DspComplex[T] = params.protoIQ
-}
-object SerialPacketBundle {
-  def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
-}
-
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(IQBundle(params)))
-  val out = Decoupled(IQBundle(params))
+  val in = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
@@ -48,7 +31,7 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
 
   val cordic = Module( new IterativeCordic(params))
 
-  io.outIQ = io.inIQ
+  io.outIQ := io.inIQ
   // cordic.io.in.bits.x := io.inIQ.bits.iq.real
   // cordic.io.in.bits.y := io.inIQ.bits.iq.imag
   // cordic.io.in.bits.z := io.phiCorrect

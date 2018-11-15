@@ -1,12 +1,7 @@
 package modem
 
 import chisel3._
-import chisel3.experimental.FixedPoint
-import chisel3.util.{Decoupled, log2Ceil, log2Floor}
-
 import dsptools.numbers._
-
-import scala.math._
 
 /**
  * Base class for ShiftReg parameters

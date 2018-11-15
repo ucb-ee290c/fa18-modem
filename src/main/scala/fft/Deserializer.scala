@@ -6,8 +6,6 @@ import chisel3.util.{Decoupled, log2Ceil, log2Floor}
 
 import dsptools.numbers._
 
-import scala.math._
-
 /**
  * Base class for Deserializer parameters
  *
@@ -49,7 +47,7 @@ object DeserializerIO {
     new DeserializerIO(params)
 }
 
-class Deserializer[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: DeserializerParams[T]) extends Module {
+class Deserializer[T <: Data : Real : BinaryRepresentation](val params: DeserializerParams[T]) extends Module {
   val io = IO(DeserializerIO(params))
 
   val cntr = RegInit(0.U((log2Floor(params.deserRatio) + 1).W))

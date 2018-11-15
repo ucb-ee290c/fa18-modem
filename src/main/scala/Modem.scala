@@ -1,12 +1,12 @@
 package modem
 
 import chisel3._
-import chisel3.experimental.FixedPoint
+// import chisel3.experimental.FixedPoint
 import chisel3.util._
 
 import dsptools.numbers._
-import freechips.rocketchip.diplomacy.LazyModule
-import freechips.rocketchip.subsystem.BaseSubsystem
+// import freechips.rocketchip.diplomacy.LazyModule
+// import freechips.rocketchip.subsystem.BaseSubsystem
 
 /**
   * Mixin for top-level rocket to add a modem
@@ -27,18 +27,19 @@ class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Mod
   val io = IO(???)
 }
 
-class RX[T<:Data:Real:BinaryRepresentation, U:<Data](
+class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   val iqBundleParams: IQBundleParams[T],
   val pktDetectParams: PacketDetectParams[T],
   val equalizerParams: EqualizerParams[T],
   val cfoParams: CFOParams[T],
   val fftParams: FFTParams[T],
-  val demodParams: DemodulationParams[U],
+  val bitsBundleParams: BitsBundleParams[U],
+  val demodParams: DemodulationParams[T,U],
   val viterbiParams: ViterbiParams[U],
 ) extends Module {
   val io = IO(new Bundle{
-    val in = Flipped(Decoupled(IQBundle(params)))
-    val out = Decoupled(DecodeBitsBundle(params))
+    val in = Flipped(Decoupled(IQBundle(iqBundleParams)))
+    val out = Decoupled(BitsBundle(bitsBundleParams))
   })
 
   val phaseRotator = Module( new PhaseRotator(cfoParams) )
@@ -48,7 +49,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U:<Data](
   val eq = Module( new Equalizer(equalizerParams) )
   // val cfoPilot = Module( new CFOPilot(cfoParams) )
   val demod = Module( new Demodulator(demodParams) )
-  val decode = Module( new Decoder(viterbiParams) )
+  val decode = Module( new ViterbiDecoder(viterbiParams) )
 
   // Phase Rotation Block
   phaseRotator.io.inIQ := io.in
@@ -78,8 +79,11 @@ class RX[T<:Data:Real:BinaryRepresentation, U:<Data](
   io.out := decode.io.out
 }
 
-class Modem[T<:Data:Real:BinaryRepresentation](val params: ModemParams[T]) extends Module{
-  val io = IO(???)
+trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
+  val foo: Int
+}
 
+class Modem[T<:Data:Real:BinaryRepresentation, U<:Data](val params: ModemParams[T,U]) extends Module{
+  val io = IO(???)
 
 }
