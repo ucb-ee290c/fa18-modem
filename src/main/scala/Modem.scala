@@ -27,14 +27,14 @@ class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Mod
   val io = IO(???)
 }
 
-class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
+class RX[T<:Data:Real:BinaryRepresentation:ConvertableTo, U<:Data](
   val iqBundleParams: IQBundleParams[T],
   val pktDetectParams: PacketDetectParams[T],
   val equalizerParams: EqualizerParams[T],
   val cfoParams: CFOParams[T],
   val fftParams: FFTParams[T],
   val bitsBundleParams: BitsBundleParams[U],
-  val demodParams: DemodulationParams[U],
+  val demodParams: DemodulationParams[T,U],
   val viterbiParams: ViterbiParams[U],
 ) extends Module {
   val io = IO(new Bundle{
