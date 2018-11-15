@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 import dsptools.numbers._
 
-trait CFOParams[T <: Data] extends CordicParams[T]{
+trait CFOParams[T <: Data] extends CordicParams[T] with PacketBundleParams[T] {
   val stLength: Int
   val ltLength: Int
   val preamble: Boolean

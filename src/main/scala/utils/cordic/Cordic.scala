@@ -11,7 +11,7 @@ import dsptools.numbers._
  *
  * These are type generic
  */
-trait CordicParams[T<:Data] extends PacketBundleParams[T]{
+trait CordicParams[T<:Data] {
   val protoXY: T
   val protoZ: T
   val nStages: Int
