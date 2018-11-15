@@ -1,10 +1,9 @@
 package modem
 
 import breeze.math.Complex
-import dsptools.numbers._
 import org.scalatest.{FlatSpec, Matchers}
 
-case class TestVectors() {
+case class PacketDetectTestVectors() {
   def alternateHighPwr(n: Int): Seq[Complex] = {
     var out = Seq[Complex]()
     for (i <- 0 until n) {
@@ -36,7 +35,7 @@ case class TestVectors() {
 
 
 class PacketDetectSpec extends FlatSpec with Matchers {
-  val vecs = TestVectors()
+  val vecs = PacketDetectTestVectors()
   behavior of "FixedPacketDetect"
 
   val noCorrParams = FixedPacketDetectParams(

@@ -72,7 +72,7 @@ object FFTDeserIO {
     new FFTDeserIO(params)
 }
 
-class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
+class FFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   val io = IO(FFTIO(params))
   val deser = Module(new Deserializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
   val fft = Module(new FFTDeser(params))
@@ -82,7 +82,7 @@ class FFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val p
   io.out <> fft.io.out
 }
 
-class FFTDeser[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
+class FFTDeser[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   val io = IO(FFTDeserIO(params))
   io.in.ready := true.B
   val fft_stage = {
@@ -91,7 +91,7 @@ class FFTDeser[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](
     }
     else {
       Module(new FFTStage(params))
-    } 
+    }
   }
   fft_stage.io.in.bits  := io.in.bits
   fft_stage.io.in.valid := io.in.fire()
@@ -216,7 +216,7 @@ class IFFTStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T
   io.out.valid         := fft.io.out.valid
 }
 
-class RaderFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
+class RaderFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   require(FFTUtil.is_prime(params.numPoints), "number of points must be prime")
   val io = IO(FFTStageIO(params))
 
@@ -288,7 +288,7 @@ object Butterfly {
     require(in.length == 2, "Butterfly requires two data inputs")
     Seq(in(0) + in(1), in(0) - in(1))
   }
-  def apply[T <: Data : Real](in: Seq[DspComplex[T]], twiddle: DspComplex[T]): Seq[DspComplex[T]] = 
+  def apply[T <: Data : Real](in: Seq[DspComplex[T]], twiddle: DspComplex[T]): Seq[DspComplex[T]] =
   {
     require(in.length == 2, "Butterfly requires two data inputs")
     val product = in(1) * twiddle
@@ -308,7 +308,7 @@ object SDFStageIO {
   def apply[T <: Data : Ring](params: FFTParams[T]): SDFStageIO[T] =
     new SDFStageIO(params)
 }
-class SDFStage[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T], val delayLog2: Int, val rom_shift: Int = 0, val dit: Boolean = true) extends Module {
+class SDFStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val delayLog2: Int, val rom_shift: Int = 0, val dit: Boolean = true) extends Module {
   require(isPow2(params.numPoints), "number of points must be a power of 2")
   require(delayLog2 >= 0, "delay (log-2) must be non-negative")
 
@@ -362,7 +362,7 @@ class FFTUnscramblerIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
 
   override def cloneType: this.type = new FFTUnscramblerIO(params).asInstanceOf[this.type]
 }
-class FFTUnscrambler[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T]) extends Module {
+class FFTUnscrambler[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   val io = IO(new FFTUnscramblerIO(params))
 
   val serdes_params = SerDesParams(params.protoIQ.cloneType, params.numPoints)
@@ -398,7 +398,7 @@ object SDFFFTIO {
   def apply[T <: Data : Ring](params: FFTParams[T]): SDFFFTIO[T] =
     new SDFFFTIO(params)
 }
-class SDFFFT[T <: Data : Real : BinaryRepresentation : ChiselConvertableFrom](val params: FFTParams[T], val dit: Boolean = true) extends Module {
+class SDFFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val dit: Boolean = true) extends Module {
   require(isPow2(params.numPoints), "number of points must be a power of 2")
 
   val io = IO(SDFFFTIO(params))

@@ -1,4 +1,4 @@
-package ieee80211
+package modem
 
 /**
  * Sourced from https://github.com/grebe/ofdm/src/main/scala/ieee80211/IEEE80211.scala
@@ -7,7 +7,7 @@ package ieee80211
 import breeze.linalg.DenseVector
 import breeze.math.Complex
 import breeze.numerics.{cos, sin, sqrt}
-import breeze.signal.{iFourierShift, iFourierTr}
+import breeze.signal.iFourierTr
 
 object IEEE80211 {
   val zero = Complex(0, 0)
