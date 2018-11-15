@@ -2,7 +2,7 @@ package modem
 
 import chisel3._
 import chisel3.experimental.FixedPoint
-import chisel3.util.{Decoupled, Valid, isPow2, log2Ceil}
+import chisel3.util._
 
 import dsptools.numbers._
 
@@ -74,7 +74,7 @@ object FFTDeserIO {
 
 class FFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   val io = IO(FFTIO(params))
-  val deser = Module(new Deserializer(DeserializerParams(params.protoIQ.cloneType, params.numPoints)))
+  val deser = Module(new Deserializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
   val fft = Module(new FFTDeser(params))
 
   deser.io.in <> io.in
@@ -129,10 +129,10 @@ class FFTStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
 
   val numPointsDiv2 = params.numPoints / 2
   // twiddling
-  val twiddles_vec = Wire(Vec(numPointsDiv2, params.protoTwiddle.cloneType))
+  val twiddles_seq = Seq.fill(numPointsDiv2)(Wire(params.protoTwiddle.cloneType))
   (0 until numPointsDiv2).map(n => {
-    twiddles_vec(n).real := Real[T].fromDouble( cos(2 * Pi / params.numPoints * n))
-    twiddles_vec(n).imag := Real[T].fromDouble(-sin(2 * Pi / params.numPoints * n))
+    twiddles_seq(n).real := Real[T].fromDouble( cos(2 * Pi / params.numPoints * n))
+    twiddles_seq(n).imag := Real[T].fromDouble(-sin(2 * Pi / params.numPoints * n))
   })
 
   val butterfly_inputs = Wire(Vec(params.numPoints, params.protoIQ.cloneType))
@@ -178,7 +178,7 @@ class FFTStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
   }
 
   (0 until numPointsDiv2).map(n => {
-    val butterfly_outputs = Butterfly[T](Seq(butterfly_inputs(n), butterfly_inputs(n + numPointsDiv2)), twiddles_vec(n))
+    val butterfly_outputs = Butterfly[T](Seq(butterfly_inputs(n), butterfly_inputs(n + numPointsDiv2)), twiddles_seq(n))
     io.out.bits.iq(n)                 := butterfly_outputs(0)
     io.out.bits.iq(n + numPointsDiv2) := butterfly_outputs(1)
   })
@@ -283,10 +283,227 @@ class RaderFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
 
 // single radix-2 butterfly
 object Butterfly {
+  def apply[T <: Data : Real](in: Seq[DspComplex[T]]): Seq[DspComplex[T]] = 
+  {
+    require(in.length == 2, "Butterfly requires two data inputs")
+    Seq(in(0) + in(1), in(0) - in(1))
+  }
   def apply[T <: Data : Real](in: Seq[DspComplex[T]], twiddle: DspComplex[T]): Seq[DspComplex[T]] =
   {
     require(in.length == 2, "Butterfly requires two data inputs")
     val product = in(1) * twiddle
     Seq(in(0) + product, in(0) - product)
+  }
+}
+
+class SDFStageIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
+  val in = Input(PacketBundle(1, params.protoIQ.cloneType))
+  val out = Output(PacketBundle(1, params.protoIQ.cloneType))
+  val twiddles_rom = Input(Vec(params.numPoints / 2, params.protoTwiddle.cloneType))
+  val cntr = Input(UInt(log2Up(params.numPoints).W))
+
+  override def cloneType: this.type = SDFStageIO(params).asInstanceOf[this.type]
+}
+object SDFStageIO {
+  def apply[T <: Data : Ring](params: FFTParams[T]): SDFStageIO[T] =
+    new SDFStageIO(params)
+}
+class SDFStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val delayLog2: Int, val rom_shift: Int = 0, val dit: Boolean = true) extends Module {
+  require(isPow2(params.numPoints), "number of points must be a power of 2")
+  require(delayLog2 >= 0, "delay (log-2) must be non-negative")
+
+  val io = IO(SDFStageIO(params))
+
+  val delay = scala.math.pow(2, delayLog2).toInt
+
+  val twiddle = io.twiddles_rom((io.cntr - delay.U) << rom_shift.U)
+  val use_twiddle = io.cntr > delay.U
+  val inp = Wire(params.protoIQ.cloneType)
+  val out = Wire(params.protoIQ.cloneType)
+
+  // Apply twiddle factor at the input or output, depending on whether it's decimation-in-time or decimation-in-frequency
+  if (dit) {
+    // Issue: using `inp := Mux(use_twiddle, io.in.iq(0) * twiddle, io.in.iq(0))` causes the following error:
+    // can't create Mux with non-equivalent types dsptools.numbers.DspComplex@________ and dsptools.numbers.DspComplex@________
+    when (use_twiddle) {
+      inp := io.in.iq(0) * twiddle
+    } .otherwise {
+      inp := io.in.iq(0)
+    }
+    io.out.iq(0) := out
+  } else {
+    inp := io.in.iq(0)
+    when (use_twiddle) {
+      io.out.iq(0) := out * twiddle
+    } .otherwise {
+      io.out.iq(0) := out
+    }
+  }
+
+  val butterfly_outputs = Seq.fill(2)(Wire(params.protoIQ.cloneType))
+
+  val load_input = io.cntr < delay.U
+  val shift_in = Mux(load_input, inp, butterfly_outputs(1))
+  val shift_out = ShiftRegister(shift_in, delay)
+
+  Butterfly[T](Seq(shift_out, inp)).zip(butterfly_outputs).foreach {
+    case (out_val, out_wire) => out_wire := out_val
+  }
+
+  out := Mux(load_input, shift_out, butterfly_outputs(0))
+
+  io.out.pktStart := ShiftRegister(io.in.pktStart, delay)
+  io.out.pktEnd   := ShiftRegister(io.in.pktEnd  , delay)
+}
+
+class FFTUnscramblerIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
+  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ.cloneType)))
+  val out = Decoupled(PacketBundle(1, params.protoIQ.cloneType))
+
+  override def cloneType: this.type = new FFTUnscramblerIO(params).asInstanceOf[this.type]
+}
+class FFTUnscrambler[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
+  val io = IO(new FFTUnscramblerIO(params))
+
+  val serdes_params = SerDesParams(params.protoIQ.cloneType, params.numPoints)
+
+  val des = Module(new Deserializer(serdes_params))
+  val ser = Module(new Serializer(serdes_params))
+
+  des.io.in <> io.in
+
+  ser.io.in.valid         := des.io.out.valid
+  des.io.out.ready        := ser.io.in.ready
+  ser.io.in.bits.pktStart := des.io.out.bits.pktStart
+  ser.io.in.bits.pktEnd   := des.io.out.bits.pktEnd
+
+  (0 until params.numPoints).foreach {
+    case (index) => {
+      val index_bits = (0 until log2Up(params.numPoints - 1)).map(scala.math.pow(2, _).toInt).map(i => (index % (2 * i)) / i).reverse
+      val reversed_index = index_bits.foldRight(0)(_ + 2 * _)
+      ser.io.in.bits.iq(reversed_index.U) := des.io.out.bits.iq(index.U)
+    }
+  }
+
+  io.out <> ser.io.out
+}
+
+class SDFFFTIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
+  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ.cloneType)))
+  val out = Decoupled(PacketBundle(1, params.protoIQ.cloneType))
+
+  override def cloneType: this.type = SDFFFTIO(params).asInstanceOf[this.type]
+}
+object SDFFFTIO {
+  def apply[T <: Data : Ring](params: FFTParams[T]): SDFFFTIO[T] =
+    new SDFFFTIO(params)
+}
+class SDFFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val dit: Boolean = true) extends Module {
+  require(isPow2(params.numPoints), "number of points must be a power of 2")
+
+  val io = IO(SDFFFTIO(params))
+
+  val numPointsDiv2 = params.numPoints / 2
+
+  val twiddles_rom = Wire(Vec(numPointsDiv2, params.protoTwiddle.cloneType))
+  (0 until numPointsDiv2).map(n => {
+    twiddles_rom(n).real := Real[T].fromDouble( cos(2 * Pi / params.numPoints * n))
+    twiddles_rom(n).imag := Real[T].fromDouble(-sin(2 * Pi / params.numPoints * n))
+  })
+
+  val unscrambler = Module(new FFTUnscrambler(params))
+
+  unscrambler.io.in <> io.in
+
+  val numStages = log2Up(params.numPoints)
+
+  val delayLog2s = (0 until numStages)
+  val delays = delayLog2s.map(d => scala.math.pow(2, d).toInt)
+  val cumulative_delays = delays.scanLeft(0)(_ + _)
+
+  val sIdle :: sComp :: sDone :: Nil = Enum(3)
+  val state = RegInit(sIdle)
+  val state_next = Wire(state.cloneType)
+
+  val cntr = RegInit(0.U(log2Up(params.numPoints).W))
+  val cntr_next = Wire(cntr.cloneType)
+
+  val out_fifo = Module(new Queue(PacketBundle(1, params.protoIQ.cloneType), params.numPoints))
+
+  val sdf_stages = (0 until numStages).map(i => {
+    val stage = Module(new SDFStage(params, delayLog2s(i), numStages - 1 - i, true))
+    stage.io.twiddles_rom := twiddles_rom
+    stage.io.cntr := (cntr - cumulative_delays(i).U)(i, 0)
+    stage
+  })
+
+  sdf_stages.map(_.io).foldLeft(RegNext(unscrambler.io.out.bits))((stg_in, stg_io) => {
+    stg_io.in := stg_in
+    stg_io.out
+  })
+
+  out_fifo.io.enq.bits := sdf_stages.last.io.out
+  out_fifo.io.enq.valid := ShiftRegister(unscrambler.io.out.fire(), cumulative_delays.last + 1)
+  unscrambler.io.out.ready := out_fifo.io.enq.ready
+
+  io.out <> out_fifo.io.deq
+
+  cntr_next  := cntr
+  state_next := state
+
+  switch (state) {
+    is (sIdle) {
+      when (unscrambler.io.out.fire()) { state_next := sComp }
+    }
+    is (sComp) {
+      cntr_next := cntr + 1.U
+      when (cntr === (params.numPoints - 2).U) { state_next := sDone }
+    }
+    is (sDone) {
+      when (unscrambler.io.out.fire()) { state_next := sComp }
+      .elsewhen (io.out.fire())        { state_next := sIdle }
+    }
+  }
+
+  when (state_next === sComp && state =/= sComp) {
+    // Reset counter
+    cntr_next := 0.U
+  }
+
+  cntr  := cntr_next
+  state := state_next
+}
+
+// DFT
+object DFT {
+  def apply[T <: Data : Real](in: Seq[DspComplex[T]]): Seq[DspComplex[T]] = 
+  {
+    require(in.length == 2, "2-point DFT only for no defined twiddle type")
+    Seq(in(0) + in(1), in(0) - in(1))
+  }
+  def apply[T <: Data : Real](in: Seq[DspComplex[T]], genTwiddle: DspComplex[T]): Seq[DspComplex[T]] = 
+  {
+    in.length match {
+      case 2 => apply(in)
+      case 3 => {
+        val w = Complex(cos(2 * Pi / 3), -sin(2 * Pi / 3))
+        val w_wire = Wire(genTwiddle.cloneType)
+        w_wire := DspComplex.wire(Real[T].fromDouble(w.real), Real[T].fromDouble(w.imag))
+        val product = (in(1) - in(2)) * w_wire
+        Seq(in.reduce(_ + _), in(0) + product, in(0) - product)
+      }
+      case _ => {
+        val twiddles_seq = Seq.fill(in.length)(Wire(genTwiddle.cloneType))
+        (0 until in.length).map(n => {
+          twiddles_seq(n).real := Real[T].fromDouble( cos(2 * Pi / in.length * n))
+          twiddles_seq(n).imag := Real[T].fromDouble(-sin(2 * Pi / in.length * n))
+        })
+        Seq.tabulate(in.length)(k => {
+          in.zipWithIndex.map {
+            case (inp, n) => inp * twiddles_seq((k * n) % in.length)
+          }.reduce(_ + _)
+        })
+      }
+    }
   }
 }
