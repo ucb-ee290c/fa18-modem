@@ -6,7 +6,8 @@
 ## Authors: Sean Huang, Kunmo Kim, Paul Kwon, Josh Sanz, Meng Wei
 
 ## Dependencies
-See `build.sbt`
+- scala 2.12
+- rocket-dsptools
 
 ## Building
 Not implemented yet.
@@ -24,18 +25,30 @@ Not implemented yet.
 - ? Pilot based correction
 
 ### Packet Detection
-- Fixed threshold power-based detection
-- TODO: CFAR power-based detection
-- TODO: Correlation threshold and synchronization
+The packet detector uses a moving average power estimate to detect the beginning of a packet when average power exceeds a threshold and the end of a packet when the average power falls below a threshold.
+
+The number of samples in the power averaging window and the threshold are both parameterizable, and the generator is generic to the type of IQ real and imaginary parts.
+
+TODOS:
+- CFAR power-based detection
+- Correlation-based threshold and synchronization
 
 ### FFT
 - Fixed 2^n FFT
 - ? Fixed 2^n IFFT
 
 ### Equalizer
-- Preamble based least-squares equalization
-- TODO: Preamble based MMSE equalization
-- TODO: Pilot based equalization
+The equalizer uses preamble-based least-squares equalization to apply a fixed channel correction to a full packet. Pilot-based equalization is not yet supported. Currently, the preamble must be BPSK, but could easily be extended to arbitrary symbols.
+
+The generator parameters are:
+- FFT width, or number of subcarriers in the channel
+- Mask of subcarriers which contain data and should be equalized.
+- Training field symbols
+- Type of IQ real and imaginary parts
+
+TODOS:
+- Preamble based MMSE equalization
+- Pilot based equalization
 
 ### Modulator
 - BPSK modulation/demodulation
