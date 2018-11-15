@@ -12,7 +12,6 @@ trait EqualizerParams[T <: Data] {
   val pilots: Seq[Int]
   val carrierMask: Seq[Boolean]
   val nSubcarriers: Int
-  // val dataCarriers: Seq[Int]
 }
 
 case class FixedEqualizerParams(
@@ -180,7 +179,8 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
       // printf("LTS2 STATE\n")
       io.in.ready := true.B
       nextState := Mux(io.in.fire(), sInvert, sLTS2)
-      // Make sure we have the correct sign by multiplying by the table entries (assumes LTF is either 0, 1, or -1)
+      // Make sure we have the correct sign (assumes LTF is either 0, 1, or -1)
+      // Could be extended to arbitrary symbols by providing the inverse LTF constants in ltfTable and multiplying.
       val ltsAverage = (0 until params.nSubcarriers).map(i => Mux(ltfTable(i).real > Real[T].zero,
                                                                   (dataBuf(i) + io.in.bits.iq(i)).div2(1),
                                                                   -(dataBuf(i) + io.in.bits.iq(i)).div2(1)))
