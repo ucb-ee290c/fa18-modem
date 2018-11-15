@@ -18,17 +18,21 @@ import scala.math._
  * These are type generic
  */
 trait FFTParams[T <: Data] extends PacketBundleParams[T] {
-  val numPoints: Int
-  val protoTwiddle: DspComplex[T]
-  val pipeline: Boolean
+  val numPoints    : Int
+  val protoTwiddle : DspComplex[T]
+  val pipeline     : Boolean
+  val fftType      : String
   lazy val width = numPoints
+
+  final val allowedFftTypes = Seq("direct", "sdf")
 }
 object FFTParams {
   def apply[T <: Data](old_params: FFTParams[T], new_num_points: Int): FFTParams[T] = new FFTParams[T] {
-    val protoIQ = old_params.protoIQ
+    val protoIQ      = old_params.protoIQ
     val protoTwiddle = old_params.protoTwiddle
-    val numPoints = new_num_points
-    val pipeline = old_params.pipeline
+    val numPoints    = new_num_points
+    val pipeline     = old_params.pipeline
+    val fftType      = old_params.fftType
   }
 }
 
@@ -42,75 +46,150 @@ case class FixedFFTParams(
   twiddleWidth: Int,
   maxVal: Int,
   numPoints: Int = 4,
-  pipeline: Boolean = false
+  pipeline: Boolean = false,
+  fftType: String = "direct"
 ) extends FFTParams[FixedPoint] {
   val protoIQ = DspComplex(FixedPoint(dataWidth.W, (dataWidth-2-log2Ceil(maxVal)).BP))
   val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP))
 }
 
+
 /**
- * Bundle type as IO for FFT modules
+ * Bundle type as IO for PacketBundles
  */
-class FFTIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
+
+// serial input, serial output
+class SISOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
+  val in = Flipped(Decoupled(SerialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
+
+  override def cloneType: this.type = SISOIO(params).asInstanceOf[this.type]
+}
+object SISOIO {
+  def apply[T <: Data : Ring](params: PacketBundleParams[T]): SISOIO[T] = new SISOIO(params)
+}
+
+// serial input, deserial output
+class SIDOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
   val in = Flipped(Decoupled(SerialPacketBundle(params)))
   val out = Decoupled(DeserialPacketBundle(params))
 
-  override def cloneType: this.type = FFTIO(params).asInstanceOf[this.type]
+  override def cloneType: this.type = SIDOIO(params).asInstanceOf[this.type]
 }
-object FFTIO {
-  def apply[T <: Data : Ring](params: FFTParams[T]): FFTIO[T] =
-    new FFTIO(params)
+object SIDOIO {
+  def apply[T <: Data : Ring](params: PacketBundleParams[T]): SIDOIO[T] = new SIDOIO(params)
 }
 
-class FFTDeserIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
+// deserial input, serial output
+class DISOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
+  val in = Flipped(Decoupled(DeserialPacketBundle(params)))
+  val out = Decoupled(SerialPacketBundle(params))
+
+  override def cloneType: this.type = DISOIO(params).asInstanceOf[this.type]
+}
+object DISOIO {
+  def apply[T <: Data : Ring](params: PacketBundleParams[T]): DISOIO[T] = new DISOIO(params)
+}
+
+// deserial input, deserial output
+class DIDOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
   val in = Flipped(Decoupled(DeserialPacketBundle(params)))
   val out = Decoupled(DeserialPacketBundle(params))
 
-  override def cloneType: this.type = FFTDeserIO(params).asInstanceOf[this.type]
+  override def cloneType: this.type = DIDOIO(params).asInstanceOf[this.type]
 }
-object FFTDeserIO {
-  def apply[T <: Data : Ring](params: FFTParams[T]): FFTDeserIO[T] =
-    new FFTDeserIO(params)
+object DIDOIO {
+  def apply[T <: Data : Ring](params: PacketBundleParams[T]): DIDOIO[T] = new DIDOIO(params)
 }
 
 class FFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
-  val io = IO(FFTIO(params))
-  val deser = Module(new Deserializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
-  val fft = Module(new FFTDeser(params))
+  val io = IO(SIDOIO(params))
+  require(params.allowedFftTypes.contains(params.fftType), s"""FFT type must be one of the following: ${params.allowedFftTypes.mkString(", ")}""")
 
-  deser.io.in <> io.in
-  fft.io.in <> deser.io.out
-  io.out <> fft.io.out
+  params.fftType match {
+    case "direct" => {
+      val deser = Module(new Deserializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
+      val fft = Module(new DirectFFT(params))
+      deser.io.in <> io.in
+      fft.io.in   <> deser.io.out
+      io.out      <> fft.io.out
+    }
+    case "sdf" => {
+      val deser = Module(new Deserializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
+      val fft = Module(new SDFFFT(params))
+      fft.io.in   <> io.in
+      deser.io.in <> fft.io.out
+      io.out      <> deser.io.out
+    }
+  }
 }
 
-class FFTDeser[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
-  val io = IO(FFTDeserIO(params))
-  io.in.ready := true.B
+class DirectFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
+  val io = IO(DIDOIO(params))
   val fft_stage = {
-    if (params.numPoints != 2 && FFTUtil.is_prime(params.numPoints)) {
-      Module(new RaderFFT(params))
-    }
-    else {
-      Module(new FFTStage(params))
-    }
+    if (params.numPoints != 2 && FFTUtil.is_prime(params.numPoints)) { Module(new RaderFFT(params)) }
+    else                                                             { Module(new FFTStage(params)) }
   }
   fft_stage.io.in.bits  := io.in.bits
   fft_stage.io.in.valid := io.in.fire()
 
-  io.out.bits  := fft_stage.io.out.bits
-  io.out.valid := fft_stage.io.out.valid
+  if (params.pipeline) {
+    // FIXME
+    // val out_fifo = Module(new Queue(SerialPacketBundle(params), params.numPoints))
+    io.in.ready  := io.out.ready
+    io.out.bits  := fft_stage.io.out.bits
+    io.out.valid := fft_stage.io.out.valid
+  } else {
+    io.in.ready  := io.out.ready
+    io.out.bits  := fft_stage.io.out.bits
+    io.out.valid := fft_stage.io.out.valid
+  }
 }
 
-class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
-  val io = IO(FFTDeserIO(params))
-  io.in.ready := true.B
-  val ifft_stage = Module(new IFFTStage(params))
+class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val scale : Boolean = true) extends Module {
+  val io = IO(DISOIO(params))
 
-  ifft_stage.io.in.bits  := io.in.bits
-  ifft_stage.io.in.valid := io.in.fire()
+  require(params.allowedFftTypes.contains(params.fftType), s"""FFT type must be one of the following: ${params.allowedFftTypes.mkString(", ")}""")
 
-  io.out.bits  := ifft_stage.io.out.bits
-  io.out.valid := ifft_stage.io.out.valid
+  val fft_in = Wire(io.in.cloneType)
+  val fft_out = Wire(io.out.cloneType)
+
+  // Bulk connect, but iq will be overridden in a following block of code
+  fft_in  <> io.in
+  fft_out <> io.out
+
+  val scalar = ConvertableTo[T].fromDouble(1.0 / params.numPoints.toDouble)
+
+  io.in.bits.iq.zip(fft_in.bits.iq).foreach {
+    case (io_in, fft_inp) => {
+      fft_inp.real := io_in.imag
+      fft_inp.imag := io_in.real
+    }
+  }
+
+  if (scale) {
+    io.out.bits.iq.real := fft_out.bits.iq.imag * scalar
+    io.out.bits.iq.imag := fft_out.bits.iq.real * scalar
+  } else {
+    io.out.bits.iq := fft_out.bits.iq
+  }
+
+  params.fftType match {
+    case "direct" => {
+      val ser = Module(new Serializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
+      val fft = Module(new DirectFFT(params))
+      fft_in    <> fft.io.in
+      ser.io.in <> fft.io.out
+      fft_out   <> ser.io.out
+    }
+    case "sdf" => {
+      val ser = Module(new Serializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
+      val fft = Module(new SDFFFT(params))
+      ser.io.in <> fft_in
+      fft.io.in <> ser.io.out
+      fft_out   <> fft.io.out
+    }
+  }
 }
 
 
@@ -193,6 +272,10 @@ class IFFTStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T
 
   val scalar = ConvertableTo[T].fromDouble(1.0 / params.numPoints.toDouble)
 
+  // Connect valid, pktStart, and pktEnd signals, but iq will be overridden in the following block of code
+  fft.io.in <> io.in
+  io.out <> fft.io.out
+
   io.in.bits.iq.zip(io.out.bits.iq).zipWithIndex.foreach {
     case ((inp, out), index) => {
       fft.io.in.bits.iq(index).real := inp.imag
@@ -207,14 +290,6 @@ class IFFTStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T
       }
     }
   }
-
-  fft.io.in.bits.pktStart := io.in.bits.pktStart
-  fft.io.in.bits.pktEnd   := io.in.bits.pktEnd
-  fft.io.in.valid         := io.in.valid
-
-  io.out.bits.pktStart := fft.io.out.bits.pktStart
-  io.out.bits.pktEnd   := fft.io.out.bits.pktEnd
-  io.out.valid         := fft.io.out.valid
 }
 
 class RaderFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
@@ -324,7 +399,7 @@ class SDFStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
 
   // Apply twiddle factor at the input or output, depending on whether it's decimation-in-time or decimation-in-frequency
   if (dit) {
-    // Issue: using `inp := Mux(use_twiddle, io.in.iq(0) * twiddle, io.in.iq(0))` causes the following error:
+    // Issue: using `inp := Mux(use_twiddle, io.in.iq * twiddle, io.in.iq` causes the following error:
     // can't create Mux with non-equivalent types dsptools.numbers.DspComplex@________ and dsptools.numbers.DspComplex@________
     when (use_twiddle) {
       inp := io.in.iq * twiddle
