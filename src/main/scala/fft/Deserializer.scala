@@ -6,8 +6,6 @@ import chisel3.util.{Decoupled, log2Ceil, log2Floor}
 
 import dsptools.numbers._
 
-import scala.math._
-
 /**
  * Base class for Deserializer parameters
  *

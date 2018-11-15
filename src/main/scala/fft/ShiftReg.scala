@@ -3,8 +3,6 @@ package modem
 import chisel3._
 import dsptools.numbers._
 
-import scala.math._
-
 /**
  * Base class for ShiftReg parameters
  *

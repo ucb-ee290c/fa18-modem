@@ -4,7 +4,6 @@ import chisel3._
 import chisel3.experimental.FixedPoint
 import chisel3.util._
 import dsptools.numbers._
-import breeze.math.Complex
 
 
 trait EqualizerParams[T <: Data] {

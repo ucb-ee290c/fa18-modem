@@ -1,12 +1,12 @@
 package modem
 
 import chisel3._
-import chisel3.experimental.FixedPoint
+// import chisel3.experimental.FixedPoint
 import chisel3.util._
 
 import dsptools.numbers._
-import freechips.rocketchip.diplomacy.LazyModule
-import freechips.rocketchip.subsystem.BaseSubsystem
+// import freechips.rocketchip.diplomacy.LazyModule
+// import freechips.rocketchip.subsystem.BaseSubsystem
 
 /**
   * Mixin for top-level rocket to add a modem

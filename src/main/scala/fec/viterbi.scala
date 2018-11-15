@@ -2,7 +2,6 @@ package modem
 
 import chisel3._
 import chisel3.util._
-import dsptools.numbers._
 
 trait ViterbiParams[U<: Data] extends BitsBundleParams[U] {
   val udummy: U

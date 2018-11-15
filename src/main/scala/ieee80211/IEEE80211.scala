@@ -7,7 +7,7 @@ package modem
 import breeze.linalg.DenseVector
 import breeze.math.Complex
 import breeze.numerics.{cos, sin, sqrt}
-import breeze.signal.{iFourierShift, iFourierTr}
+import breeze.signal.iFourierTr
 
 object IEEE80211 {
   val zero = Complex(0, 0)
