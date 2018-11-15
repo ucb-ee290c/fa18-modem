@@ -8,6 +8,8 @@ import dsptools.numbers._
 // import freechips.rocketchip.diplomacy.LazyModule
 // import freechips.rocketchip.subsystem.BaseSubsystem
 
+case class
+
 /**
   * Mixin for top-level rocket to add a modem
   *

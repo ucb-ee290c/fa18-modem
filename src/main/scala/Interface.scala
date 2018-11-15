@@ -15,15 +15,13 @@ object IQBundleParams {
 /**
  * Bundle type for packetized IQ data
  */
-trait PacketBundleParams[T <: Data] {
+trait PacketBundleParams[T <: Data] extends IQBundleParams[T]{
   val width: Int
-  val protoIQ: DspComplex[T]
 }
 object PacketBundleParams {
   def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundleParams[T] = {
      new PacketBundleParams[T] {
       val width = size
-      val protoIQ = proto
     }
   }
 }
@@ -104,4 +102,36 @@ class BitsBundle[T<:Data](params: BitsBundleParams[T]) extends Bundle{
 object BitsBundle {
   def apply[T<:Data](params: BitsBundleParams[T]): BitsBundle[T] = new BitsBundle[T](params)
   def apply[T<:Data](bitsWidth: Int, protoBits: T): BitsBundle[T] = new BitsBundle[T](BitsBundleParams[T](bitsWidth, protoBits))
+}
+
+//=======================================================================================================================================================
+/**
+  * Fixed Parameters for IQBundle
+  */
+
+case class FixedIQBundleParams(
+  bitWidth: Int,
+  binPoint: Int
+) extends IQBundleParams[FixedPoint]{
+  protoIQ = DspComplex(FixedPoint(bitWidth.W, binPoint.BP))
+}
+
+case class FixedPacketBundleParams(
+  bitWidth: Int,
+  binPoint: Int
+) extends PacketBundleParams[FixedPoint]{
+  width = 
+}
+
+case class FixedFFTParams(
+  // width of Input and Output
+  dataWidth: Int,
+  // width of twiddle constants
+  twiddleWidth: Int,
+  maxVal: Int,
+  numPoints: Int = 4,
+  pipeline: Boolean = false
+) extends FFTParams[FixedPoint] {
+  val protoIQ = DspComplex(FixedPoint(dataWidth.W, (dataWidth-2-log2Ceil(maxVal)).BP))
+  val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP))
 }
