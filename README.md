@@ -65,18 +65,20 @@ TODOS:
 - TODO: Interleaving/deinterleaving
 - TODO: QPSK, 16QAM, 64QAM
 
-### FEC
+### Convolutional Encoder 
 - Generator configurable
   - Constraint length
   - Generator polynomials
-  - Coding ratio
+  - Coding ratio (k=1 is fixed) 
   - Puncturing
   - Feedback polynomial for recursive systematic coding
   - Tailbiting scheme
-  - Minimum bits per OFDM symbol
-- Viterbi algorithm python model
-- TODO: Chisel Viterbi decoder
+  
 
+### Viterbi Decoder 
+- currently supporting hard-decision only 
+- continuous-time sliding-window Viterbi Decoder 
+ 
 ### Modem
 - Currently just passthrough dummy blocks
 - TODO: replace with actual implementations
