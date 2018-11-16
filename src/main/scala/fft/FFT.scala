@@ -183,10 +183,8 @@ class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], va
       fft_out   <> ser.io.out
     }
     case "sdf" => {
-      val ser = Module(new Serializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
-      val fft = Module(new SDFFFT(params))
-      ser.io.in <> fft_in
-      fft.io.in <> ser.io.out
+      val fft = Module(new SDFFFTDeserIn(params))
+      fft.io.in <> fft_in
       fft_out   <> fft.io.out
     }
   }
@@ -432,52 +430,41 @@ class SDFStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
   io.out.pktEnd   := ShiftRegister(io.in.pktEnd  , delay)
 }
 
-class FFTUnscramblerIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
-
-  override def cloneType: this.type = new FFTUnscramblerIO(params).asInstanceOf[this.type]
-}
-class FFTUnscrambler[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
-  val io = IO(new FFTUnscramblerIO(params))
+class FFTUnscramblerDeserIn[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
+  val io = IO(DISOIO(params))
 
   val serdes_params = SerDesParams(params.protoIQ.cloneType, params.numPoints)
-
-  val des = Module(new Deserializer(serdes_params))
   val ser = Module(new Serializer(serdes_params))
 
-  des.io.in <> io.in
-
-  ser.io.in.valid         := des.io.out.valid
-  des.io.out.ready        := ser.io.in.ready
-  ser.io.in.bits.pktStart := des.io.out.bits.pktStart
-  ser.io.in.bits.pktEnd   := des.io.out.bits.pktEnd
+  // Bulk connect, but iq field will be re-connected in the following block of code
+  ser.io.in <> io.in
 
   (0 until params.numPoints).foreach {
     case (index) => {
       val index_bits = (0 until log2Up(params.numPoints - 1)).map(scala.math.pow(2, _).toInt).map(i => (index % (2 * i)) / i).reverse
       val reversed_index = index_bits.foldRight(0)(_ + 2 * _)
-      ser.io.in.bits.iq(reversed_index.U) := des.io.out.bits.iq(index.U)
+      ser.io.in.bits.iq(reversed_index.U) := io.in.bits.iq(index.U)
     }
   }
 
   io.out <> ser.io.out
 }
+class FFTUnscrambler[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], serialIn: Boolean = true) extends Module {
+  val io = IO(SISOIO(params))
 
-class SDFFFTIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val serdes_params = SerDesParams(params.protoIQ.cloneType, params.numPoints)
+  val des = Module(new Deserializer(serdes_params))
+  val unscrambler_deser = Module(new FFTUnscramblerDeserIn(params))
 
-  override def cloneType: this.type = SDFFFTIO(params).asInstanceOf[this.type]
+  io.in      <> des.io.in
+  des.io.out <> unscrambler_deser.io.in
+  io.out     <> unscrambler_deser.io.out
 }
-object SDFFFTIO {
-  def apply[T <: Data : Ring](params: FFTParams[T]): SDFFFTIO[T] =
-    new SDFFFTIO(params)
-}
-class SDFFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val dit: Boolean = true) extends Module {
+
+class SDFFFTDeserIn[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val dit: Boolean = true) extends Module {
   require(isPow2(params.numPoints), "number of points must be a power of 2")
 
-  val io = IO(SDFFFTIO(params))
+  val io = IO(DISOIO(params))
 
   val numPointsDiv2 = params.numPoints / 2
 
@@ -487,7 +474,7 @@ class SDFFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], 
     twiddles_rom(n).imag := Real[T].fromDouble(-sin(2 * Pi / params.numPoints * n))
   })
 
-  val unscrambler = Module(new FFTUnscrambler(params))
+  val unscrambler = Module(new FFTUnscramblerDeserIn(params))
 
   unscrambler.io.in <> io.in
 
@@ -548,6 +535,20 @@ class SDFFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], 
 
   cntr  := cntr_next
   state := state_next
+}
+class SDFFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val dit: Boolean = true) extends Module {
+  // FIXME: potential issue???
+  require(isPow2(params.numPoints), "number of points must be a power of 2")
+
+  val io = IO(SISOIO(params))
+
+  val serdes_params = SerDesParams(params.protoIQ.cloneType, params.numPoints)
+  val des = Module(new Deserializer(serdes_params))
+  val sdf_fft_deser_in = Module(new SDFFFTDeserIn(params, dit))
+
+  io.in      <> des.io.in
+  des.io.out <> sdf_fft_deser_in.io.in
+  io.out     <> sdf_fft_deser_in.io.out
 }
 
 // DFT

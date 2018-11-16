@@ -14,6 +14,7 @@ class FFTSpec extends FlatSpec with Matchers {
     twiddleWidth = 10,
     numPoints = 2,
     maxVal = 2,
+    fftType = "direct"
   )
 
   for (i <- Seq(2, 4, 8, 16)) {
@@ -21,11 +22,14 @@ class FFTSpec extends FlatSpec with Matchers {
       val inp = DenseVector.fill(i) { Complex(randomDouble() * 2 - 1, randomDouble() * 2 - 1) }
       val out_fft = fourierTr(inp)
       val out_ifft = iFourierTr(inp)
-      val params = base_params.copy(numPoints = i, maxVal = i, pipeline = true)
-      FixedFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      FixedIFFTTester(params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
-      FixedSDFFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      val direct_params = base_params.copy(numPoints = i, maxVal = i, pipeline = true)
+      val sdf_params = direct_params.copy(fftType = "sdf")
+      FixedFFTTester(direct_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      // FixedFFTTester(sdf_params   , inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      // FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      FixedIFFTTester(direct_params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
+      // FixedIFFTTester(sdf_params   , inp.toScalaVector, out_ifft.toScalaVector) should be (true)
+      FixedSDFFFTTester(sdf_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
     }
   }
 
