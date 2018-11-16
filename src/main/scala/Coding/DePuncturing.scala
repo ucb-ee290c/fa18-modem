@@ -1,4 +1,4 @@
-package Coding
+package modem
 
 import chisel3._
 import chisel3.util._
@@ -12,9 +12,8 @@ class DePuncturing[T <: Data](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {
     val in_hard   = Input(Vec(params.O, SInt(2.W)))
 //    val in_soft   = Input(Vec(params.O, DspComplex(FixedPoint(2.W, 30.BP))))
-    val out_hard       = Output(Vec(params.n, SInt(2.W)))
-//    val out_soft       = Output(Vec(params.n, DspComplex(FixedPoint(2.W, 30.BP))))
-
+    val out_hard  = Output(Vec(params.n, SInt(2.W)))
+//    val out_soft  = Output(Vec(params.n, DspComplex(FixedPoint(2.W, 30.BP))))
     val inReady   = Input(UInt(1.W))
 
     val stateIn   = Input(UInt(2.W))
@@ -36,8 +35,8 @@ class DePuncturing[T <: Data](params: CodingParams[T]) extends Module {
 
   // puncListColSum contains summation over rows
   // ex) [1,1,0], [1,0,1] -> [2,1,1]
-  val puncListColSum    = punctureList.map(breeze.linalg.Vector(_)).reduce(_ + _)
-  val puncListColSumWire      = Wire(Vec(puncMatBitWidth, UInt((log2Ceil(params.n+1)).W)))
+  val puncListColSum      = punctureList.map(breeze.linalg.Vector(_)).reduce(_ + _)
+  val puncListColSumWire  = Wire(Vec(puncMatBitWidth, UInt((log2Ceil(params.n+1)).W)))
   (0 until puncMatBitWidth).map(i => { puncListColSumWire(i) := puncListColSum(i).U })
 
   // puncIndices contains buffer address offset

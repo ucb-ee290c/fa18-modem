@@ -1,4 +1,4 @@
-package Coding
+package modem
 
 import chisel3._
 import chisel3.util._
@@ -8,8 +8,7 @@ import dsptools.numbers._
 
 class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {
-    val in        = Input(Vec(params.n, UInt(1.W)))
-//    val in2       = Input(Vec(params.n, T))
+    val in        = Input(Vec(params.n, SInt(2.W)))
     val inReady   = Input(UInt(1.W))
     val outPM       = Output(Vec(params.nStates, UInt(params.pmBits.W)))  // storing Path Metric
     val outSP       = Output(Vec(params.nStates, UInt(params.m.W)))       // storing Survival Path
@@ -33,6 +32,7 @@ class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
   val survivalPath        = RegInit(VecInit(Seq.fill(params.nStates)(0.U(params.m.W))))
   val pmRegs              = RegInit(VecInit(Seq.fill(params.nStates)(0.U(params.pmBits.W))))
   val initVal             = 100.U(params.pmBits.W)
+
   // when pktStart or reset is raised
   when ((inReadyReg =/= io.inReady) && (io.inReady === 1.U)){
     when(params.tailBitingEn.asBool() === true.B) {
@@ -82,14 +82,5 @@ class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
   }
   io.outPM := pmRegs
   io.outSP := survivalPath
-
-  // ******** Memory Configuration ********
-//  val sramModule  = Module(new SRAM[T](params))
-//  val startReading := true.B
-//  sramModule.io.en    := startReading
-//  sramModule.io.push  := true.B
-//  sramModule.io.pop   := false.B
-//  sramModule.io.dataIn := survivalPath
-
 }
 
