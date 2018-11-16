@@ -6,11 +6,14 @@ import chisel3._
 import chisel3.experimental.FixedPoint
 import org.scalatest.{FlatSpec, Matchers}
 
-//case class TestVectors() {
-  //val r = new scala.util.Random
-  //val bigInputVector: Seq[Complex] =
-    //Seq.fill(100)(Complex(2*(r.nextFloat)-1, 2*(r.nextFloat)-1))
-//}
+case class CFOTestVectors() {
+  val stfTV = IEEE80211.stf
+  val ltfTV = IEEE80211.ltf
+
+  val rawTFTV = stfTV ++ ltfTV
+  val cleanTV = addCFO(in = rawTFTV, cfo = 0.0, sampleRate = 20.0e6)
+  val cfoTV = addCFO(in = rawTFTV, cfo = 0.2, sampleRate = 20.0e6)
+}
 
 //case class FixedDecimationParams(
   //// width of I and Q
@@ -25,30 +28,19 @@ import org.scalatest.{FlatSpec, Matchers}
   //val width = 1
 //}
 
-//class DecimationSpec extends FlatSpec with Matchers {
-  //val vecs = TestVectors()
-  //behavior of "DecimatebyN"
+class CFOEstimationSpec extends FlatSpec with Matchers {
+  val vecs = CFOTestVectors()
+  behavior of "Estimate CFO"
 
-  //val decimateBy10Params = FixedDecimationParams(
-    //iqWidth = 16,
-    //nDecimation = 10
-  //)
-  //it should "decimate by 10" in {
-    //val trials = Seq(IQ(vecs.bigInputVector, None))
-    //FixedDecimationTester(decimateBy10Params, trials) should be (true)
-  //}
+  val fixedCFOParams = FixedCFOParams(
+    width = 16
+  )
+  it should "detect no offset" in {
+    val trials = Seq(IQ(vecs.cleanTV, None))
+    FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+  }
 
-  // val corrParams = FixedPacketDetectParams(
-  //   iqWidth = 16,
-  //   powerThreshWindow = 4,
-  //   correlationThresh = true
-  // )
-  // it should "detect power and correlation" in {
-  //   val trials = Seq(IQ(vecs.tvNoPkt, None),
-  //     IQ(vecs.tvPwrOnly, None),
-  //     IQ(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
-  //   FixedPacketDetectTester(corrParams, trials) should be (true)
-  // }
+
 
 //  behavior of "RealPacketDetect"
 //
@@ -84,4 +76,4 @@ import org.scalatest.{FlatSpec, Matchers}
 //    RealPacketDetectTester(realCorrParams, trials) should be (true)
 //  }
 
-//}
+}
