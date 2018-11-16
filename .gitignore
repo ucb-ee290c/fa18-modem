@@ -10,6 +10,6 @@ out/
 verilator/
 simulator-*
 *.vcd
-*.sc 
-.vscode/ 
-
+*.sc
+.vscode/
+.DS_Store
