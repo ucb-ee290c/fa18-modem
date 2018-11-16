@@ -58,32 +58,25 @@ TODOS:
 - TODO: Interleaving/deinterleaving
 - TODO: QPSK, 16QAM, 64QAM
 
+### Encoder 
+- Convolutional Encoding with programmable generator polynomial
+- number of input is fixed to 1 (k=1)
+- programmable number of outputs and constrant length (n and K)
+- Puncturing and tail-biting are supported 
+
 ### FEC
 - Generator configurable
   - Constraint length
   - Generator polynomials
   - Coding ratio
-  - Puncturing
-  - Feedback polynomial for recursive systematic coding
+  - De-Puncturing
+  - currently not supporting RSC (feedback polynomial)
   - Tailbiting scheme
   - Minimum bits per OFDM symbol
-- Viterbi algorithm python model
-- TODO: Chisel Viterbi decoder
+- hard-decision Viterbi is implemented 
+- Currently not supporting tail-biting 
 
 ### Modem
 - Currently just passthrough dummy blocks
 - TODO: replace with actual implementations
 - TODO: write tests
-
-### Encoder 
-- Convolutional code with fixed k=1   
-- n and K are programmable
-- supporting programmable generator & puncturing polynomial  
-- Supporting Tail-biting 
-- Supporting puncturing  
-
-### Decoder 
-- Continuous-time Sliding-Window Viterbi decoder is implemented
-- currently not supporting tail-biting (in progress)
-- currently not supporting soft-decision (in progress)
-- De-puncturing is supported  
