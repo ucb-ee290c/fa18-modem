@@ -42,14 +42,15 @@ object FFTParams {
 case class FixedFFTParams(
   // width of Input and Output
   dataWidth: Int,
+  // Binary point of Input and Output
+  binPoint : Int,
   // width of twiddle constants
   twiddleWidth: Int,
-  maxVal: Int,
-  numPoints: Int = 4,
+  numPoints: Int,
   pipeline: Boolean = false,
   fftType: String = "direct"
 ) extends FFTParams[FixedPoint] {
-  val protoIQ = DspComplex(FixedPoint(dataWidth.W, (dataWidth-2-log2Ceil(maxVal)).BP))
+  val protoIQ = DspComplex(FixedPoint(dataWidth.W, binPoint.BP))
   val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP))
 }
 
