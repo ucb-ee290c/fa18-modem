@@ -22,6 +22,7 @@ object PacketBundleParams {
   def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundleParams[T] = {
      new PacketBundleParams[T] {
       val width = size
+      val protoIQ = proto
     }
   }
 }
