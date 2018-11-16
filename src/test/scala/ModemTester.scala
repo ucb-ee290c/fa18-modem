@@ -30,7 +30,7 @@ object FixedRXTester {
     demodParams: HardDemodParams,
     viterbiParams: FixedCoding,
     trials: Seq[T]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RX(iqParams, pktDetectParams, eqParams, cfoParams, cpParams, fftParams, bitsBundleParams, demodParams, viterbiParams)) {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RX(iqParams = iqParams, pktDetectParams = pktDetectParams, eqParams = eqParams, cfoParams = cfoParams, cpParams = cpParams, fftParams = fftParams, bitsBundleParams = bitsBundleParams, demodParams = demodParams, viterbiParams = viterbiParams)) {
       c => new RXTester(c, trials)
     }
   }
