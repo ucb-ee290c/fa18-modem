@@ -11,8 +11,8 @@ case class CFOTestVectors() {
   val ltfTV = IEEE80211.ltf
 
   val rawTFTV = stfTV ++ ltfTV
-  val cleanTV = addCFO(in = rawTFTV, cfo = 0.0, sampleRate = 20.0e6)
-  val cfoTV = addCFO(in = rawTFTV, cfo = 0.2, sampleRate = 20.0e6)
+  val cleanTV = IEEE80211.addCFO(in = rawTFTV, cfo = 0.0, sampleRate = 20.0e6)
+  val cfoTV = IEEE80211.addCFO(in = rawTFTV, cfo = 0.2, sampleRate = 20.0e6)
 }
 
 //case class FixedDecimationParams(
