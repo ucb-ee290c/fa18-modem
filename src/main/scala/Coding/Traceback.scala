@@ -1,17 +1,22 @@
-package Coding
+package modem
 
 import chisel3._
 import chisel3.util._
+import dsptools.numbers._
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
-class Traceback[T <: Data](params: CodingParams[T]) extends Module {
-//  require(params.D > 4)
+// more comments are available on traceback_backup1.scala file
+// assuming continous Viterbi Decoding
+class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
+  require(params.D >= 4)
 
   val io = IO(new Bundle {
     // ignore very first PM & SP
     val inPM    = Input(Vec(params.nStates, UInt(params.pmBits.W))) // storing Path Metric
     val inSP    = Input(Vec(params.nStates, UInt(params.m.W))) // storing Survival Path
+//    val inPM    = Flipped(Decoupled(Vec(params.nStates, UInt(params.pmBits.W))))
+//    val inSP    = Flipped(Decoupled(Vec(params.nStates, UInt(params.m.W))))
     val inReady = Input(UInt(1.W))
     val out     = Decoupled(Vec(params.D, UInt(params.k.W)))
   })
@@ -24,25 +29,18 @@ class Traceback[T <: Data](params: CodingParams[T]) extends Module {
   val addrSize    = params.nStates * (D+L)
   val addrWidth   = log2Ceil(addrSize) + 2
   val addr        = Wire(UInt(addrWidth.W))
-  val enable      = Wire(Bool())
   val tmpSP       = Wire(Vec(D+L, UInt(m.W)))
   val addrReg     = RegInit(0.U(addrWidth.W))
 
   // setup registers for address
   addr    := addrReg
-  enable  := true.B // TODO: connect this to the input of the module
-  when(addrReg < (addrSize * 2).U){
+  when(addrReg < (addrSize * 2 - params.nStates).U){
     addrReg := addrReg + params.nStates.U
   }.otherwise{
     addrReg := 0.U
   }
 
-  // Store data into memory
-  // TODO: I'm not using SyncReadMem currently due to some syntax + logical errors. I may come back and try to use it later
-//  val mem = SyncReadMem(addrSize * 2, UInt(m.W))
-//  for (i <- 0 until params.nStates) {
-//    mem.write(addrReg + i.U, io.inSP(i))
-//  }
+  // TODO: currently using register file but later I will come back and try to use SyncReadMem instead
   val mem = Reg(Vec(addrSize * 2, UInt(m.W)))
   for (i <- 0 until params.nStates){
     mem(addrReg + i.U) := io.inSP(i)
@@ -69,36 +67,28 @@ class Traceback[T <: Data](params: CodingParams[T]) extends Module {
     tmpPMMin(i)         := Mux(tmpPMMin(i - 1) < io.inPM(i + 1), tmpPMMin(i - 1), io.inPM(i + 1))
     tmpPMMinIndex(i)    := Mux(tmpPMMin(i - 1) < io.inPM(i + 1), tmpPMMinIndex(i - 1), (i + 1).U)
   }
-  // should be clocked at nState * (D+L-1)
+
+  // when the decoding just started, it starts decoding after it receives D+L bits
   when((addrReg % (params.nStates * (D+L)).U === (params.nStates * (D+L-1)).U) && (decodeStart === 0.U)) {
     tmpPMMinReg         := tmpPMMin
     tmpPMMinIndexReg    := tmpPMMinIndex
     tmpSPReg            := io.inSP
-    trackValid(0)       := 1.U
-    decodeStart         := 1.U
-    counterD            := 0.U
-    printf("************************ TEST1 **********************\n")
-    printf(p"addrReg = ${addrReg} \n")
-  }.elsewhen((counterD === (params.D-1).U) && (decodeStart === 1.U)){
+    trackValid(0)       := 1.U                // trackValid is used to raise/lower io.out.valid signal
+    decodeStart         := 1.U                // decodeStart indicates whether this is the first time decoding
+    counterD            := 0.U                // counterD tracks number of received bits (count up to params.D)
+  }.elsewhen((counterD === (params.D-1).U) && (decodeStart === 1.U)){   // decodes every D bits
     tmpPMMinReg         := tmpPMMin
     tmpPMMinIndexReg    := tmpPMMinIndex
     tmpSPReg            := io.inSP
     trackValid(0)       := 1.U
     counterD            := 0.U
-    when(addrReg - (params.nStates * (D+L-1)).U <= ((addrSize*2) - 1).U ){
-      addrOffset := addrReg - (params.nStates * (D+L-1)).U
-    }.otherwise{
-      addrOffset := addrReg - (params.nStates * (D+L-1)).U - (addrSize*2).U
-    }
-    printf("************************ TEST2 **********************\n")
-    printf(p"addrReg = ${addrReg} \n")
+    addrOffset := addrOffset + (params.nStates * D).U
   }.otherwise{
     counterD := counterD + 1.U
   }
   when(trackValid(0) === 1.U){
     (2 to 1 by -1).map(i => {trackValid(i) := trackValid(i-1)})
   }
-
   // Start decoding
   /*  example: D = 5, D = traceback depth of Viterbi decoder
       addrOffset + nState * (D + L - 1)  -> data have been received 'D' times
@@ -116,7 +106,6 @@ class Traceback[T <: Data](params: CodingParams[T]) extends Module {
     }
   }
   for (i <- D+L-2 to 0 by -1) {
-    printf(p"${(addrOffset + (params.nStates * i).U + tmpSP(i + 1))}\n")
     tmpSP(i) := memWire((params.nStates * i).U + tmpSP(i + 1))
     if(i < D) {
       decodeReg(i) := tmpSP(i+1) >> (m-1) // get MSB
@@ -134,34 +123,3 @@ class Traceback[T <: Data](params: CodingParams[T]) extends Module {
   io.out.valid    := outValid
   io.out.bits     := decodeReg    // output is available 3 clk cycles after.
 }
-
-//  ****** Below is appendix for later use ******
-//  TODO: Following is what Paul suggested me to try but currently not working. I need to figure out correct syntax
-//  val readEn  = addrReg === (params.nStates * (D+1)).U
-//  val regEn   = addrReg === (params.nStates * (D+2)).U
-//  tmpSP(D-1)  := tmpSPReg(tmpPMMinIndexReg(params.nStates-2))
-//  when (regEn) {
-//    decodeReg(D-1)  := tmpPMMinIndexReg(params.nStates-2) >> (m-1)
-//  }
-//  for (i <- D-2 to 0 by -1) {
-//    tmpSP(i)        := mem.read((params.nStates * i).U + tmpSP(i + 1), readEn)
-//    when (regEn) {
-//      decodeReg(i)  := tmpSP(i+1) >> (m-1) // get MSB
-//    }
-//  }
-
-//  TODO: memread not working properly -> problem was that values read from memory are not cosistent
-//  tmpSP(D+L-1) := tmpSPReg(tmpPMMinIndexReg(params.nStates-2))    // grab the minimum PM
-//  for (i <- 0 until (params.nStates * (D+L-1))){
-//    memReg(i) := mem(addrOffset + i.U)
-//  }
-//  for (i <- D+L-2 to 0 by -1) {
-//    printf(p"${(addrOffset + (params.nStates * i).U + tmpSP(i + 1))}\n")
-//    when((addrOffset + (params.nStates * i).U + tmpSP(i + 1)) <= ((addrSize*2) - 1).U ){
-//      tmpSP(i) := memReg(addrOffset + (params.nStates * i).U + tmpSP(i + 1))
-//      printf("************************ TEST3 **********************\n")
-//    }.otherwise{
-//      tmpSP(i) := memReg(addrOffset + (params.nStates * i).U + tmpSP(i + 1) - (addrSize*2).U)
-//      printf("************************ TEST4 **********************\n")
-//    }
-//  }

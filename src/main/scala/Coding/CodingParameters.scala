@@ -1,4 +1,4 @@
-package Coding
+package modem
 
 import chisel3._
 import chisel3.util._
@@ -24,7 +24,7 @@ trait CodingParams[T <: Data] {
   val tailBitingScheme: Int         // 0: zero tail-biting. 1: sophisticated tail-biting
   val numInputs: Int
   val pmBits: Int
-//  val softDecision: Boolean       // Does Viterbi decoder take soft-input ?
+  val softDecision: Boolean         // Does Viterbi decoder take soft-input ?
 }
 
 case class FixedCoding(
@@ -42,6 +42,7 @@ case class FixedCoding(
   fbPolynomial: List[Int] = List(0),
   tailBitingEn: Boolean = false,
   tailBitingScheme: Int = 0,
+  softDecision: Boolean = false,
 //  softDecisionBitWidth: Int = 8
 ) extends CodingParams[UInt] {
   val protoInOut = UInt(1.W)

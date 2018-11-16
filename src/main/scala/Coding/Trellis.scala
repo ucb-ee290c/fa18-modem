@@ -1,4 +1,4 @@
-package Coding
+package modem
 
 import chisel3._
 
