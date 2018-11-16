@@ -10,7 +10,6 @@ out/
 verilator/
 simulator-*
 *.vcd
-.vscode/
-__pycache__/
-*.pyc
-.*.swp
+*.sc 
+.vscode/ 
+
