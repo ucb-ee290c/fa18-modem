@@ -24,7 +24,7 @@ object CFOIO {
 
 case class FixedCFOParams(
   width: Int,
-  stLengh: Int = 160,
+  stLength: Int = 160,
   ltLength: Int = 160,
   preamble: Boolean = true,
   stagesPerCycle: Int = 1
