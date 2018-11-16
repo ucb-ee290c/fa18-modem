@@ -360,6 +360,7 @@ object ModFFTParams {
     val protoTwiddle = old_params.protoTwiddle
     val numPoints = new_num_points
     val pipeline = old_params.pipeline
+    val fftType = old_params.fftType
     val Ncbps = old_params.Ncbps
     val Nbpsc = old_params.Nbpsc
   }
@@ -373,13 +374,14 @@ case class FixedModFFTParams(
   dataWidth: Int,
   // width of twiddle constants
   twiddleWidth: Int,
-  maxVal: Int,
   numPoints: Int = 4,
   Ncbps: Int,
   Nbpsc: Int,
+  binPoints : Int,
+  fftType: String = "direct",
   pipeline: Boolean = false
 ) extends ModFFTParams[FixedPoint] {
-  val protoIQ = DspComplex(FixedPoint(dataWidth.W, (dataWidth-2-log2Ceil(maxVal)).BP))
+  val protoIQ = DspComplex(FixedPoint(dataWidth.W, (binPoints).BP))
   val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP))
 }
 
@@ -459,7 +461,7 @@ class QPSKCPModulator[T <: Data :Real:BinaryRepresentation](val params: ModFFTPa
 }
 class QPSKModFFTIO[T <: Data : Ring](params: ModFFTParams[T]) extends Bundle {
   val in = Flipped(Decoupled(ModFFTBundle(params)))
-  val out = Decoupled(PacketBundle(64, params.protoIQ.cloneType))
+  val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = QPSKModFFTIO(params).asInstanceOf[this.type]
 }

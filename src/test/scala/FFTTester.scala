@@ -47,7 +47,7 @@ class DirectFFTTester[T <: chisel3.Data](c: DirectFFT[T], inp: Seq[Complex], out
 }
 
 class IFFTTester[T <: chisel3.Data](c: IFFT[T], inp: Seq[Complex], out: Seq[Complex], pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 2) extends DspTester(c) with HasTesterUtil[IFFT[T]] {
-  val maxCyclesWait = 50
+  val maxCyclesWait = 200
 
   poke(c.io.out.ready, 1)
   poke(c.io.in.valid, 1)

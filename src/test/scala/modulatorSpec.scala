@@ -6,25 +6,17 @@ import org.scalatest.{FlatSpec, Matchers}
 import breeze.math.{Complex}
 import breeze.signal.{fourierTr, iFourierTr}
 import breeze.linalg.{DenseVector, randomDouble}
+import chisel3.util.log2Ceil
+
 
 
 
 
 class modulatorSpec extends FlatSpec with Matchers {
   behavior of "ShiftRegister"
-  val params1 = Uintp2sParams(
-     mwidth = 4,
-     n = 5
-  )
-  ShiftRegisterTester(params1)
-  
+   
 
-  //behavior of "Fir"
-  //val paramsfir = UIntFirParams(
-     //mwidth = 8,
-     //length = 4
-  //)
-  //MFirTester(paramsfir)
+  
   
   behavior of "Interleaver"
   val paramsinter = UintInterleavParams(
@@ -130,7 +122,7 @@ class modulatorSpec extends FlatSpec with Matchers {
   
   val trial1s = List(IQG(3.0, 0.316, -0.949), IQG(6.0, -0.316, 0.949))
   //= anglesq.map {qn1 => baseTrial.copy(qn = qn1)}
-  MapperTester(paramsmap,trial1s)
+  //MapperTester(paramsmap,trial1s)
  behavior of " QPSK modulator + FFT"
  val base_qmparams = FixedModFFTParams(
     dataWidth = 16,
@@ -138,21 +130,25 @@ class modulatorSpec extends FlatSpec with Matchers {
     Nbpsc = 2,
     twiddleWidth = 10,
     numPoints = 2,
-    maxVal = 2,
+    binPoints = 2,
+    fftType = "direct"
   )
   //val inp = DenseVector.fill(1)(Complex(0, 0))++DenseVector.fill(6)(Complex(0.707, 0.707)) ++ DenseVector.fill(1)(Complex(0, 0))++
   //DenseVector.fill(13)(Complex(0.707, 0.707)) ++ DenseVector.fill(1)(Complex(0, 0))++ DenseVector.fill(5)(Complex(0.707, 0.707))++
   //DenseVector.fill(11)(Complex(0, 0))++DenseVector.fill(5)(Complex(0.707, 0.707))++DenseVector.fill(1)(Complex(0, 0))++
   //DenseVector.fill(13)(Complex(0.707, 0.707))++ DenseVector.fill(1)(Complex(0, 0))++DenseVector.fill(6)(Complex(0.707, 0.707))
   val inp0 = DenseVector.fill(1)(Complex(0, 0))
+  val inp00 = DenseVector.fill(11)(Complex(0, 0))
   val inpa = DenseVector.fill(6)(Complex(0.707, 0.707))
   val inpb = DenseVector.fill(13)(Complex(0.707, 0.707))
   val inpc = DenseVector.fill(5)(Complex(0.707, 0.707))
-  val inp = DenseVector.vertcat(inp0,inpa,inp0,inpb,inp0,inpc,inp0,inpc,inp0,inpb,inp0,inpa)
+  val inp = DenseVector.vertcat(inp0,inpa,inp0,inpb,inp0,inpc,inp00,inpc,inp0,inpb,inp0,inpa)
  
   val out_ifft = iFourierTr(inp)
-  val params = base_qmparams.copy(numPoints = 64, maxVal = 64, pipeline = true)
-  //FixedQPSKModFFTTester(params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
+  val binPoint = base_qmparams.dataWidth-2-log2Ceil(64)
+  val params = base_qmparams.copy(numPoints = 64, binPoints = binPoint, pipeline = true)
+  val sdf_params = params.copy(fftType="sdf")
+  FixedQPSKModFFTTester(params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
  
  behavior of "Modulatorm"
   val paramsmodm = FixedMapParams(
@@ -167,7 +163,7 @@ class modulatorSpec extends FlatSpec with Matchers {
 //,IQGM(0 ,1, 0.707, -0.707),IQGM(1 ,1, 0.707, 0.707))
 //IQGM(0 ,1, 0.707, -0.707))
   //= anglesq.map {qn1 => baseTrial.copy(qn = qn1)}
-  ModulatormTester(paramsmodm,base_params, trialmodm)
+  //ModulatormTester(paramsmodm,base_params, trialmodm)
 
  //behavior of "Modulator"
   val paramsmod = FixedMapParams(

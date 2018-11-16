@@ -1,3 +1,4 @@
+
 package modem
 
 import dsptools.numbers._
@@ -11,38 +12,45 @@ class FFTSpec extends FlatSpec with Matchers {
   behavior of "FixedFFT"
 
   val base_params = FixedFFTParams(
-    dataWidth = 10,
+    dataWidth = 16,
     twiddleWidth = 10,
     numPoints = 2,
     binPoint = 2,
     fftType = "direct"
   )
 
-  for (i <- Seq(2, 4, 8, 16)) {
-    it should f"compute $i-point FFT/IFFT" in {
-      val inp = DenseVector.fill(i) { Complex(randomDouble() * 2 - 1, randomDouble() * 2 - 1) }
+  //for (i <- Seq(2, 4, 8, 16)) {
+    //it should f"compute $i-point FFT/IFFT" in {
+      //val inp = DenseVector.fill(64) { Complex(randomDouble() * 2 - 1, randomDouble() * 2 - 1) }
+       val inp0 = DenseVector.fill(1)(Complex(0, 0))
+       val inp00 = DenseVector.fill(11)(Complex(0, 0))
+       val inpa = DenseVector.fill(6)(Complex(0.707, 0.707))
+       val inpb = DenseVector.fill(13)(Complex(0.707, 0.707))
+      val inpc = DenseVector.fill(5)(Complex(0.707, 0.707))
+      val inp = DenseVector.vertcat(inp0,inpa,inp0,inpb,inp0,inpc,inp00,inpc,inp0,inpb,inp0,inpa)
+
       val out_fft = fourierTr(inp)
       val out_ifft = iFourierTr(inp)
-      val binPoint = base_params.dataWidth-2-log2Ceil(i)
-      val direct_params = base_params.copy(numPoints = i, binPoint = binPoint, pipeline = true)
+      val binPoint = base_params.dataWidth-2-log2Ceil(64)
+      val direct_params = base_params.copy(numPoints = 64, binPoint = binPoint, pipeline = true)
       val sdf_params = direct_params.copy(fftType = "sdf")
-      FixedFFTTester(direct_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      //FixedFFTTester(direct_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
       // FixedFFTTester(sdf_params   , inp.toScalaVector, out_fft.toScalaVector) should be (true)
       // FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      FixedIFFTTester(direct_params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
-      // FixedIFFTTester(sdf_params   , inp.toScalaVector, out_ifft.toScalaVector) should be (true)
-      FixedSDFFFTTester(sdf_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-    }
-  }
+     //FixedIFFTTester(direct_params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
+       FixedIFFTTester(sdf_params   , inp.toScalaVector, out_ifft.toScalaVector) should be (true)
+      //FixedSDFFFTTester(sdf_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+   // }
+ // }
 
   for (i <- Seq(5, 7)) {
     it should f"compute $i-point FFT" in {
       val inp = DenseVector.fill(i) { Complex(randomDouble() * 2 - 1, randomDouble() * 2 - 1) }
       val out_fft = fourierTr(inp)
-      val binPoint = base_params.dataWidth-2-log2Ceil(i)
-      val params = base_params.copy(numPoints = i, binPoint = binPoint, pipeline = false)
-      FixedFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      //val binPoint = base_params.dataWidth-2-log2Ceil(i)
+      //val params = base_params.copy(numPoints = i, binPoint = binPoint, pipeline = false)
+     // FixedFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      //FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
     }
   }
 
