@@ -45,6 +45,16 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   it should "receive ofdm" in {
     val trials = Seq(1)
-    FixedRXTester(fixedIQParams, fixedPktDetectParams, fixedEqualizerParams, fixedCFOParams, fixedCPParams, fixedFFTParams, hardBitsBundleParams, hardDemodParams, hardViterbiParams, trials) should be (true)
+    FixedRXTester(
+      fixedIQParams,
+      fixedPktDetectParams,
+      fixedEqualizerParams,
+      fixedCFOParams,
+      fixedCPParams, 
+      fixedFFTParams,
+      hardBitsBundleParams,
+      hardDemodParams,
+      hardViterbiParams,
+      trials) should be (true)
   }
 }

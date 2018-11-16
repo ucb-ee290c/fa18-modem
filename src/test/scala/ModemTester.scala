@@ -21,12 +21,13 @@ object FixedRXTester {
     pktDetectParams: FixedPacketDetectParams,
     eqParams: FixedEqualizerParams,
     cfoParams: FixedCFOParams,
+    cpParams: CyclicPrefixParams[FixedPoint]
     fftParams: FixedFFTParams,
     bitsBundleParams: BitsBundleParams[Bool()],
     demodParams: HardDemodParams,
     viterbiParams: FixedCoding,
     trials: Seq(1)): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RX(iqParams, pktDetectParams, eqParams, cfoParams, fftParams, bitsBundleParams, demodParams, viterbiParams) {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RX(iqParams, pktDetectParams, eqParams, cfoParams, cpParams, fftParams, bitsBundleParams, demodParams, viterbiParams) {
       c => new RXTester(c, trials)
     }
   }
