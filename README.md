@@ -20,9 +20,13 @@ Not implemented yet.
 
 ## Current Standard Support
 ### CFO
-- Preamble based coarse correction
-- Preamble based fine correction
-- ? Pilot based correction
+The CFO Estimation and Correction estimates the carrier frequency offset using the short and long training fields of the OFDM packet. The training samples are cross correlated to determine the phase offset of each sample, then the error is sent to a CORDIC phase correction to rotate the input IQ vectors accordingly.
+
+The length of the training fields and the pipeline depth of the estimator/CORDIC are parameterizable. The generator is type-generic with regard to the IQ representation.
+
+TODOs:
+- Non-preamble based CFO Estimation
+- Pilot tracking
 
 ### Packet Detection
 The packet detector uses a moving average power estimate to detect the beginning of a packet when average power exceeds a threshold and the end of a packet when the average power falls below a threshold.
