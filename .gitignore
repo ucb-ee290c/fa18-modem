@@ -12,4 +12,5 @@ simulator-*
 *.vcd
 *.sc
 .vscode/
-.DS_Store
+*.DS_Store
+*.swp
