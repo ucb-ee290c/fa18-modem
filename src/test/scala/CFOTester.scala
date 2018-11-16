@@ -68,7 +68,7 @@ class CFOEstimationTester[T <: chisel3.Data](c: CFOEstimation[T], trials: Seq[IQ
 object FixedCFOEstimationTester {
   def apply(params: FixedCFOParams, trials: Seq[IQ]): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new CFOEstimation(params)) {
-      c => new CFOEstimationTester(c, params.nDecimation, trials)
+      c => new CFOEstimationTester(c, trials)
     }
   }
 }
