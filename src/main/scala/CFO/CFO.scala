@@ -25,7 +25,7 @@ case class FixedCFOParams(
   width: Int,
   stLengh: Int = 160,
   ltLength: Int = 160,
-  preamble: Boolean = true
+  preamble: Boolean = true,
   stagesPerCycle: Int = 1
 ) extends CFOParams[FixedPoint] {
   val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
