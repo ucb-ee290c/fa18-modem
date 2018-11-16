@@ -38,9 +38,9 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val fixedFFTParams = FixedFFTParams(dataWidth = iqWidth, binPoint = binPoint, numPoints = numPoints, twiddleWidth = iqWidth)
 
-  val hardBitsBundleParams = new BitsBundleParams[Bool]{
+  val hardBitsBundleParams = new BitsBundleParams[UInt]{
     val bitsWidth: Int = bitsWidth
-    val protoBits: Bool = Bool()
+    val protoBits: UInt = UInt(1.W)
   }
 
   val hardDemodParams = HardDemodParams(width = iqWidth, bitsWidth = bitsWidth)
@@ -48,7 +48,7 @@ class FixedRXSpec extends FlatSpec with Matchers {
   val hardViterbiParams = FixedCoding()
 
   it should "receive ofdm" in {
-    val trials = Seq(1)
+    //val trials = Seq(1)
     FixedRXTester(
       fixedIQParams,
       fixedPktDetectParams,

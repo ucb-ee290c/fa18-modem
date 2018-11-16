@@ -7,7 +7,7 @@ import breeze.math.Complex
 import scala.math
 import dsptools.DspTester
 
-class RXTester[T <: Data, U <: Data](c: RX[T,U], trials: Seq[T]) extends DspTester(c) {
+class RXTester[T <: Data, U <: Data](c: RX[T,U], trials: Seq[DspComplex[UInt]]) extends DspTester(c) {
   val maxCyclesWait = 1000 //Whatever numnber
 
   poke(c.io.in.valid, 1)
@@ -26,11 +26,11 @@ object FixedRXTester {
     cfoParams: FixedCFOParams,
     cpParams: CyclicPrefixParams[FixedPoint],
     fftParams: FixedFFTParams,
-    bitsBundleParams: BitsBundleParams[Bool],
+    bitsBundleParams: BitsBundleParams[UInt],
     demodParams: HardDemodParams,
     viterbiParams: FixedCoding,
-    trials: Seq[T]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RX(iqParams = iqParams, pktDetectParams = pktDetectParams, eqParams = eqParams, cfoParams = cfoParams, cpParams = cpParams, fftParams = fftParams, bitsBundleParams = bitsBundleParams, demodParams = demodParams, viterbiParams = viterbiParams)) {
+    trials: Seq[DspComplex[UInt]]): Boolean = {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RX(iqBundleParams = iqParams, pktDetectParams = pktDetectParams, equalizerParams = eqParams, cfoParams = cfoParams, cyclicPrefixParams = cpParams, fftParams = fftParams, bitsBundleParams = bitsBundleParams, demodParams = demodParams, viterbiParams = viterbiParams)) {
       c => new RXTester(c, trials)
     }
   }

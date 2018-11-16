@@ -13,11 +13,11 @@ trait DemodulationParams[T<: Data, U<: Data] extends PacketBundleParams[T] with 
 case class HardDemodParams(
   val width: Int,
   val bitsWidth: Int
-) extends DemodulationParams[FixedPoint, Bool]{
+) extends DemodulationParams[FixedPoint, UInt]{
   val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
-  val protoBits = Bool()
+  val protoBits = UInt(1.W)
   val tdummy = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
-  val udummy = Bool()
+  val udummy = UInt(1.W)
 }
 
 
