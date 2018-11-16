@@ -37,7 +37,7 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val hardBitsBundleParams = new BitsBundleParams[Bool]{
     val bitsWidth: Int = bitsWidth
-    val protoBits: Bool() = Bool()
+    val protoBits: Bool = Bool()
   }
 
   val hardDemodParams = HardDemodParams(width = iqWidth, bitsWidth = bitsWidth)
