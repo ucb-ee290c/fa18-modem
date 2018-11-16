@@ -6,11 +6,11 @@ import dsptools.DspTester
 /**
   * Case class holding information needed to run an individual test
   */
-case class IQ(
-  // input iq vectors
-  iqin: Seq[Complex],
-  iqout: Option[Seq[Complex]] = None
-)
+//case class DecimIQ(
+  //// input iq vectors
+  //iqin: Seq[Complex],
+  //iqout: Option[Seq[Complex]] = None
+//)
 
 /**
   * DspTester for CFO
@@ -55,4 +55,5 @@ object FixedDecimationTester {
 //       c => new CFOTester(c, trials)
 //     }
 //   }
+
 // }

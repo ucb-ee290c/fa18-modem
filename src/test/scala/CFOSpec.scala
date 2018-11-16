@@ -6,37 +6,37 @@ import chisel3._
 import chisel3.experimental.FixedPoint
 import org.scalatest.{FlatSpec, Matchers}
 
-case class TestVectors() {
-  val r = new scala.util.Random
-  val bigInputVector: Seq[Complex] =
-    Seq.fill(100)(Complex(2*(r.nextFloat)-1, 2*(r.nextFloat)-1))
-}
+//case class TestVectors() {
+  //val r = new scala.util.Random
+  //val bigInputVector: Seq[Complex] =
+    //Seq.fill(100)(Complex(2*(r.nextFloat)-1, 2*(r.nextFloat)-1))
+//}
 
-case class FixedDecimationParams(
-  // width of I and Q
-  iqWidth: Int,
-  // Amount to decimate by
-  nDecimation: Int
-) extends DecimatorParams[FixedPoint] {
-  //PacketBundleParams fields
-  // prototype for iq
-  // binary point is iqWidth-3 to allow for some inflation
-  val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP))
-  val width = 1
-}
+//case class FixedDecimationParams(
+  //// width of I and Q
+  //iqWidth: Int,
+  //// Amount to decimate by
+  //nDecimation: Int
+//) extends DecimatorParams[FixedPoint] {
+  ////PacketBundleParams fields
+  //// prototype for iq
+  //// binary point is iqWidth-3 to allow for some inflation
+  //val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP))
+  //val width = 1
+//}
 
-class DecimationSpec extends FlatSpec with Matchers {
-  val vecs = TestVectors()
-  behavior of "DecimatebyN"
+//class DecimationSpec extends FlatSpec with Matchers {
+  //val vecs = TestVectors()
+  //behavior of "DecimatebyN"
 
-  val decimateBy10Params = FixedDecimationParams(
-    iqWidth = 16,
-    nDecimation = 10
-  )
-  it should "decimate by 10" in {
-    val trials = Seq(IQ(vecs.bigInputVector, None))
-    FixedDecimationTester(decimateBy10Params, trials) should be (true)
-  }
+  //val decimateBy10Params = FixedDecimationParams(
+    //iqWidth = 16,
+    //nDecimation = 10
+  //)
+  //it should "decimate by 10" in {
+    //val trials = Seq(IQ(vecs.bigInputVector, None))
+    //FixedDecimationTester(decimateBy10Params, trials) should be (true)
+  //}
 
   // val corrParams = FixedPacketDetectParams(
   //   iqWidth = 16,
@@ -84,4 +84,4 @@ class DecimationSpec extends FlatSpec with Matchers {
 //    RealPacketDetectTester(realCorrParams, trials) should be (true)
 //  }
 
-}
+//}

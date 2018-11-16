@@ -6,7 +6,7 @@ import chisel3._
 import chisel3.experimental.FixedPoint
 import org.scalatest.{FlatSpec, Matchers}
 
-case class TestVectors() {
+case class DecimatorTestVectors() {
   val r = new scala.util.Random
   val bigInputVector: Seq[Complex] =
     Seq.fill(100)(Complex(2*(r.nextFloat)-1, 2*(r.nextFloat)-1))
@@ -26,7 +26,7 @@ case class FixedDecimationParams(
 }
 
 class DecimationSpec extends FlatSpec with Matchers {
-  val vecs = TestVectors()
+  val vecs = DecimatorTestVectors()
   behavior of "DecimatebyN"
 
   val decimateBy10Params = FixedDecimationParams(

@@ -6,7 +6,7 @@ import dsptools.DspTester
 /**
   * Case class holding information needed to run an individual test
   */
-case class IQ(
+case class CFOIQ(
   // input iq vectors
   iqin: Seq[Complex],
   iqout: Option[Seq[Complex]] = None
@@ -65,7 +65,7 @@ class CFOEstimationTester[T <: chisel3.Data](c: CFOEstimation[T], trials: Seq[IQ
 /**
   * Convenience function for running tests
   */
-object FixedDecimationTester {
+object FixedCFOEstimationTester {
   def apply(params: FixedDecimationParams, trials: Seq[IQ]): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new DecimateByN(params)) {
       c => new DecimatorTester(c, params.nDecimation, trials)

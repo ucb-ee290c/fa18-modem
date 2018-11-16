@@ -26,13 +26,14 @@ class CFOEIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val in = Flipped(Decoupled(SerialPacketBundle(params)))
   val out = Decoupled(SerialPacketBundle(params))
 
-  val pErr = Output(params.protoZ)
+  val pErr = Output(params.protoIQ.real.cloneType)
 
   override def cloneType: this.type = CFOEIO(params).asInstanceOf[this.type]
 }
 object CFOEIO {
-  def apply[T <: Data](params: PacketBundleParams[T]): CFOIO[T] =
+  def apply[T <: Data](params: PacketBundleParams[T]): CFOEIO[T] =
     new CFOEIO(params)
+}
 
 case class FixedCFOParams(
   width: Int,
@@ -52,27 +53,6 @@ case class FixedCFOParams(
     n += 1
   }
   val nStages = n
-}
-
-class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
-  val io = IO(new Bundle{
-    val inIQ = Flipped(Decoupled(SerialPacketBundle(params)))
-    val outIQ = Decoupled(SerialPacketBundle(params))
-    val phiCorrect = Input(params.protoZ)
-  })
-
-  val cordic = Module( new IterativeCordic(params))
-
-  io.outIQ <> io.inIQ
-  // cordic.io.in.bits.x := io.inIQ.bits.iq.real
-  // cordic.io.in.bits.y := io.inIQ.bits.iq.imag
-  // cordic.io.in.bits.z := io.phiCorrect
-  // cordic.io.in.bits.vectoring := false.B
-  // cordic.io.in.valid := true.B
-  // io.inIQ.ready := cordic.io.in.ready
-  // io.outIQ.bits.iq.real := cordic.io.out.bits.x
-  // io.outIQ.bits.iq.imag := cordic.io.out.bits.y
-  // io.outIQ.valid := cordic.io.out.valid
 }
 
 class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
