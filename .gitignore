@@ -11,3 +11,5 @@ verilator/
 simulator-*
 *.vcd
 .vscode/
+*.DS_Store
+*.swp
