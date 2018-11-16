@@ -6,7 +6,7 @@ import chisel3.experimental.FixedPoint
 import dsptools.numbers._
 
 trait DemodulationParams[T<: Data, U<: Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
-  val tdummy: T
+  val tdummy: DspComplex[T]
   val udummy: U
 }
 
