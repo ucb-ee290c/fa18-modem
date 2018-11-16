@@ -24,7 +24,7 @@ class FixedModemSpec extends FlatSpec with Matchers {
 
   val fixedCFOParams = FixedCFOParams(width = iqWidth, stagesPerCycle = 5)
 
-  val fixedFFTParams = FixedFFTParams(dataWidth = iqWidth, twiddleWidth = 3)
+  val fixedFFTParams = FixedFFTParams(dataWidth = iqWidth, binPoint = binPoint, twiddleWidth = iqWidth)
 
   val hardBitsBundleParams = new BitsBundleParams[Bool()](
     val bitsWidth: Int = bitsWidth
