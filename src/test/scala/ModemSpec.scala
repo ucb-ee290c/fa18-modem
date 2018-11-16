@@ -16,9 +16,9 @@ class FixedRXSpec extends FlatSpec with Matchers {
   val prefixLength = 16
   val symbolLength = 64
 
-  val fixedIQParams = new IQBundleParams[FixedPoint](
-      val protoIQ: DspComplex[T] = DspComplex(FixedPoint(iqWidth.W, binPoint.BP))
-  )
+  val fixedIQParams = new IQBundleParams[FixedPoint]{
+    val protoIQ: DspComplex[T] = DspComplex(FixedPoint(iqWidth.W, binPoint.BP))
+  }
 
   val fixedPktDetectParams = FixedPacketDetectParams(iqWidth = iqWidth)
 
@@ -26,18 +26,18 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val fixedCFOParams = FixedCFOParams(width = iqWidth, stagesPerCycle = 5)
 
-  val fixedCPParams = new CyclicPrefixParams[FixedPoint](
+  val fixedCPParams = new CyclicPrefixParams[FixedPoint]{
     val protoIQ = DspComplex(FixedPoint(iqWidth.W, binPoint.BP))
     val prefixLength = prefixLength
     val symbolLength = symbolLength
-  )
+  }
 
   val fixedFFTParams = FixedFFTParams(dataWidth = iqWidth, binPoint = binPoint, twiddleWidth = iqWidth)
 
-  val hardBitsBundleParams = new BitsBundleParams[Bool()](
+  val hardBitsBundleParams = new BitsBundleParams[Bool]{
     val bitsWidth: Int = bitsWidth
     val protoBits: Bool() = Bool()
-  )
+  }
 
   val hardDemodParams = HardDemodParams(width = iqWidth, bitsWidth = bitsWidth)
 
@@ -50,7 +50,7 @@ class FixedRXSpec extends FlatSpec with Matchers {
       fixedPktDetectParams,
       fixedEqualizerParams,
       fixedCFOParams,
-      fixedCPParams, 
+      fixedCPParams,
       fixedFFTParams,
       hardBitsBundleParams,
       hardDemodParams,
