@@ -68,7 +68,7 @@ object PacketBundle {
 class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
-  val iq: DspComplex[T] = params.protoIQ
+  val iq: DspComplex[T] = params.protoIQ.cloneType
 
   override def cloneType: this.type = SerialPacketBundle(params).asInstanceOf[this.type]
 }
@@ -92,7 +92,7 @@ object DeserialPacketBundle {
 /**
  * Bundle type for codewords from demod/deinterleaver
  */
-class BitsBundle[T<:Data](params: BitsBundleParams[T]) extends Bundle{
+class BitsBundle[T<:Data](params: BitsBundleParams[T]) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
   val bits : Vec[T] = Vec(params.bitsWidth, params.protoBits.cloneType)

@@ -16,7 +16,7 @@ class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Comple
   poke(c.io.in.valid, 1)
 
   inp.zipWithIndex.foreach { case (value, index) =>
-    poke(c.io.in.bits.iq(0), value)
+    poke(c.io.in.bits.iq, value)
     poke(c.io.in.bits.pktStart, (pktStart && (index == 0)))
     poke(c.io.in.bits.pktEnd  , (pktEnd && (index == inp.length - 1)))
     wait_for_assert(c.io.in.ready, maxCyclesWait)
@@ -29,7 +29,7 @@ class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Comple
   fixTolLSBs.withValue(tolLSBs) { expect_seq(c.io.out.bits.iq, out) }
 }
 
-class FFTDeserTester[T <: chisel3.Data](c: FFTDeser[T], inp: Seq[Complex], out: Seq[Complex], pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 5) extends DspTester(c) with HasTesterUtil[FFTDeser[T]] {
+class DirectFFTTester[T <: chisel3.Data](c: DirectFFT[T], inp: Seq[Complex], out: Seq[Complex], pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 5) extends DspTester(c) with HasTesterUtil[DirectFFT[T]] {
   val maxCyclesWait = 50
 
   poke(c.io.out.ready, 1)
@@ -57,10 +57,18 @@ class IFFTTester[T <: chisel3.Data](c: IFFT[T], inp: Seq[Complex], out: Seq[Comp
   poke(c.io.in.bits.pktEnd  , pktEnd)
   wait_for_assert(c.io.in.ready, maxCyclesWait)
 
-  wait_for_assert(c.io.out.valid, maxCyclesWait)
-  expect(c.io.out.bits.pktStart, pktStart)
-  expect(c.io.out.bits.pktEnd  , pktEnd)
-  fixTolLSBs.withValue(tolLSBs) { expect_seq(c.io.out.bits.iq, out) }
+  // wait_for_assert(c.io.out.valid, maxCyclesWait)
+  // expect(c.io.out.bits.pktStart, pktStart)
+  // expect(c.io.out.bits.pktEnd  , pktEnd)
+  // fixTolLSBs.withValue(tolLSBs) { expect_seq(c.io.out.bits.iq, out) }
+
+  out.zipWithIndex.foreach { case (value, index) =>
+    wait_for_assert(c.io.out.valid, maxCyclesWait)
+    expect(c.io.out.bits.pktStart, (pktStart && (index == 0)))
+    expect(c.io.out.bits.pktEnd  , (pktEnd && (index == inp.length - 1)))
+    fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq, value) }
+    step(1)
+  }
 }
 
 class SDFFFTTester[T <: chisel3.Data](c: SDFFFT[T], inp: Seq[Complex], out: Seq[Complex], pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 5) extends DspTester(c) with HasTesterUtil[SDFFFT[T]] {
@@ -70,7 +78,7 @@ class SDFFFTTester[T <: chisel3.Data](c: SDFFFT[T], inp: Seq[Complex], out: Seq[
   poke(c.io.in.valid, 1)
 
   inp.zipWithIndex.foreach { case (value, index) =>
-    poke(c.io.in.bits.iq(0), value)
+    poke(c.io.in.bits.iq, value)
     poke(c.io.in.bits.pktStart, (pktStart && (index == 0)))
     poke(c.io.in.bits.pktEnd  , (pktEnd && (index == inp.length - 1)))
     wait_for_assert(c.io.in.ready, maxCyclesWait)
@@ -81,7 +89,7 @@ class SDFFFTTester[T <: chisel3.Data](c: SDFFFT[T], inp: Seq[Complex], out: Seq[
     wait_for_assert(c.io.out.valid, maxCyclesWait)
     expect(c.io.out.bits.pktStart, (pktStart && (index == 0)))
     expect(c.io.out.bits.pktEnd  , (pktEnd && (index == inp.length - 1)))
-    fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq(0), value) }
+    fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq, value) }
     step(1)
   }
 }
@@ -94,9 +102,9 @@ object FixedFFTTester {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new FFT(params)) { c => new FFTTester(c, inp, out) }
   }
 }
-object FixedFFTDeserTester {
+object FixedDirectFFTTester {
   def apply(params: FixedFFTParams, inp: Seq[Complex], out: Seq[Complex]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new FFTDeser(params)) { c => new FFTDeserTester(c, inp, out) }
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new DirectFFT(params)) { c => new DirectFFTTester(c, inp, out) }
   }
 }
 object FixedIFFTTester {

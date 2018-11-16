@@ -32,6 +32,7 @@ class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Mod
 class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   val iqBundleParams: IQBundleParams[T],
   val pktDetectParams: PacketDetectParams[T],
+  val cyclicPrefixParams: CyclicPrefixParams[T],
   val equalizerParams: EqualizerParams[T],
   val cfoParams: CFOParams[T],
   val fftParams: FFTParams[T],
@@ -47,6 +48,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   val phaseRotator = Module( new PhaseRotator(cfoParams) )
   val pktDetect = Module( new PacketDetect(pktDetectParams) )
   val cfoEstimator = Module( new CFOCorrection(cfoParams) )
+  val cyclicPrefix = Module( new CyclicPrefix(cyclicPrefixParams) )
   val fft = Module( new FFT(fftParams) )
   val eq = Module( new Equalizer(equalizerParams) )
   // val cfoPilot = Module( new CFOPilot(cfoParams) )
@@ -63,8 +65,12 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   // CFO Estimation
   cfoEstimator.io.in := pktDetect.io.out
 
+  // CP Removal
+  cyclicPrefix.io.in := cfoEstimator.io.out
+  cyclicPrefix.io.add := false.B
+
   // FFT
-  fft.io.in := cfoEstimator.io.out
+  fft.io.in := cyclicPrefix.io.out
 
   // EQ
   eq.io.in := fft.io.out
@@ -87,5 +93,6 @@ trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundl
 
 class Modem[T<:Data:Real:BinaryRepresentation, U<:Data](val params: ModemParams[T,U]) extends Module{
   val io = IO(???)
+
 
 }
