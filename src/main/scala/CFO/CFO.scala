@@ -21,6 +21,25 @@ object CFOIO {
     new CFOIO(params)
 }
 
+case class FixedCFOParams(
+  width: Int,
+  stLengh: Int = 160,
+  ltLength: Int = 160,
+  preamble: Boolean = true
+  stagesPerCycle: Int = 1
+) extends CFOParams[FixedPoint] {
+  val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
+  val protoXY = FixedPoint(width.W, (width-3).BP).cloneType
+  val protoZ = FixedPoint(width.W, (width-3).BP).cloneType
+  val correctGain = true
+  val minNumber = math.pow(2.0, -(width-3))
+  // number of cordic stages
+  private var n = 0
+  while (breeze.numerics.tan(math.pow(2.0, -n)) >= minNumber) {
+    n += 1
+  }
+  val nStages = n
+}
 
 class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
   val io = IO(new Bundle{

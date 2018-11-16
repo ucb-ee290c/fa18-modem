@@ -1,4 +1,4 @@
-package modemRead
+package modem
 
 import dsptools.numbers._
 import org.scalatest.{FlatSpec, Matchers}
@@ -10,24 +10,28 @@ class FixedModemSpec extends FlatSpec with Matchers {
   behavior of "FixedModem"
 
   // These are  bogus placeholder numbers
-  val dataWidth = 5
-  val binPoint = 2
+  val iqWidth = 5
+  val binPoint = iqWidth - 3
+  val bitsWidth = 48
 
   val fixedIQParams = new IQBundleParams[FixedPoint](
-      val protoIQ: DspComplex[T] = DspComplex(FixedPoint(dataWidth.W, binPoint.BP))
+      val protoIQ: DspComplex[T] = DspComplex(FixedPoint(iqWidth.W, binPoint.BP))
   )
 
-  val fixedPktDetectParams
+  val fixedPktDetectParams = FixedPacketDetectParams(iqWidth = iqWidth)
 
-  val fixedEqualizerParams
+  val fixedEqualizerParams = FixedEqualizerParams(width = iqWidth)
 
-  val fixedCFOParams
+  val fixedCFOParams = FixedCFOParams(width = iqWidth, stagesPerCycle = 5)
 
-  val fixedFFTParams = FixedFFTParams(dataWidth = 5, twiddleWidth = 3)
+  val fixedFFTParams = FixedFFTParams(dataWidth = iqWidth, twiddleWidth = 3)
 
-  val fixedBitsBundleParams
+  val hardBitsBundleParams = new BitsBundleParams[Bool()](
+    val bitsWidth: Int = bitsWidth
+    val protoBits: Bool() = Bool()
+  )
 
-  val fixedDemondParams
+  val hardDemodParams = HardDemodParams(width = iqWidth, bitsWidth = bitsWidth)
 
-  val fixedViterbiParams
+  val hardViterbiParams = FixedCoding()
 }
