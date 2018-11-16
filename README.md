@@ -37,8 +37,11 @@ TODOS:
 The cyclic prefix block can add or remove a cyclic prefix from symbols in a packet. The length of the previx and size of an OFDM symbol are parameterized in the generator, and addition/removal is controlled with a bool input.
 
 ### FFT
-- Fixed 2^n FFT
-- ? Fixed 2^n IFFT
+The FFT uses the radix-2 Cooley-Tukey decimation-in-time (DIT) algorithm to compute the fast Fourier transform. The IFFT reuses the FFT, but swaps the real and imaginary components at the input to the FFT and scales the output by 1/N for an N-point IFFT. Currently, the supported FFT sizes are powers of 2, and sizes are fixed. FFTs with reconfigurable sizes are not yet supported.
+
+The following FFT architectures are implemented:
+- Direct: simplest to implement
+- Single-path delay feedback (SDF): more hardware-efficient (through reuse) at the cost of increased latency
 
 ### Equalizer
 The equalizer uses preamble-based least-squares equalization to apply a fixed channel correction to a full packet. Pilot-based equalization is not yet supported. Currently, the preamble must be BPSK, but could easily be extended to arbitrary symbols.
