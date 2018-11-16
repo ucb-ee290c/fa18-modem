@@ -5,6 +5,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import breeze.math.{Complex}
 import breeze.signal.{fourierTr, iFourierTr}
 import breeze.linalg.{DenseVector, randomDouble}
+import chisel3.util.log2Ceil
 
 class FFTSpec extends FlatSpec with Matchers {
   behavior of "FixedFFT"
@@ -13,7 +14,8 @@ class FFTSpec extends FlatSpec with Matchers {
     dataWidth = 10,
     twiddleWidth = 10,
     numPoints = 2,
-    maxVal = 2,
+    binPoint = 2,
+    fftType = "direct"
   )
 
   for (i <- Seq(2, 4, 8, 16)) {
@@ -21,11 +23,15 @@ class FFTSpec extends FlatSpec with Matchers {
       val inp = DenseVector.fill(i) { Complex(randomDouble() * 2 - 1, randomDouble() * 2 - 1) }
       val out_fft = fourierTr(inp)
       val out_ifft = iFourierTr(inp)
-      val params = base_params.copy(numPoints = i, maxVal = i, pipeline = true)
-      FixedFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      FixedIFFTTester(params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
-      FixedSDFFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      val binPoint = base_params.dataWidth-2-log2Ceil(i)
+      val direct_params = base_params.copy(numPoints = i, binPoint = binPoint, pipeline = true)
+      val sdf_params = direct_params.copy(fftType = "sdf")
+      FixedFFTTester(direct_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      // FixedFFTTester(sdf_params   , inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      // FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+      FixedIFFTTester(direct_params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
+      // FixedIFFTTester(sdf_params   , inp.toScalaVector, out_ifft.toScalaVector) should be (true)
+      FixedSDFFFTTester(sdf_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
     }
   }
 
@@ -33,7 +39,8 @@ class FFTSpec extends FlatSpec with Matchers {
     it should f"compute $i-point FFT" in {
       val inp = DenseVector.fill(i) { Complex(randomDouble() * 2 - 1, randomDouble() * 2 - 1) }
       val out_fft = fourierTr(inp)
-      val params = base_params.copy(numPoints = i, maxVal = i, pipeline = false)
+      val binPoint = base_params.dataWidth-2-log2Ceil(i)
+      val params = base_params.copy(numPoints = i, binPoint = binPoint, pipeline = false)
       FixedFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
       FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
     }
