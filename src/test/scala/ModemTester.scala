@@ -1,5 +1,8 @@
 package modem
 
+import chisel3._
+import chisel3.experimental.FixedPoint
+import dsptools.numbers._
 import breeze.math.Complex
 import scala.math
 import dsptools.DspTester
