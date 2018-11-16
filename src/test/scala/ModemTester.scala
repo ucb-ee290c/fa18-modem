@@ -23,7 +23,7 @@ object FixedRXTester {
     cfoParams: FixedCFOParams,
     cpParams: CyclicPrefixParams[FixedPoint],
     fftParams: FixedFFTParams,
-    bitsBundleParams: BitsBundleParams[Bool()],
+    bitsBundleParams: BitsBundleParams[Bool],
     demodParams: HardDemodParams,
     viterbiParams: FixedCoding,
     trials: Seq): Boolean = {
