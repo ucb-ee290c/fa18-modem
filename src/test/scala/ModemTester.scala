@@ -29,8 +29,8 @@ object FixedRXTester {
     bitsBundleParams: BitsBundleParams[Bool],
     demodParams: HardDemodParams,
     viterbiParams: FixedCoding,
-    trials: Seq[T]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RX(iqParams = iqParams, pktDetectParams = pktDetectParams, eqParams = eqParams, cfoParams = cfoParams, cpParams = cpParams, fftParams = fftParams, bitsBundleParams = bitsBundleParams, demodParams = demodParams, viterbiParams = viterbiParams)) {
+    trials: Seq[DspComplex[UInt]]): Boolean = {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RX(iqParams = iqParams, pktDetectParams = pktDetectParams, equalizerParams = eqParams, cfoParams = cfoParams, cyclicPrefixParams = cpParams, fftParams = fftParams, bitsBundleParams = bitsBundleParams, demodParams = demodParams, viterbiParams = viterbiParams)) {
       c => new RXTester(c, trials)
     }
   }

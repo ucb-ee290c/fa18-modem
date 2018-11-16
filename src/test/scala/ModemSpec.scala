@@ -48,7 +48,7 @@ class FixedRXSpec extends FlatSpec with Matchers {
   val hardViterbiParams = FixedCoding()
 
   it should "receive ofdm" in {
-    val trials = Seq(1)
+    //val trials = Seq(1)
     FixedRXTester(
       fixedIQParams,
       fixedPktDetectParams,
