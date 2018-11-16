@@ -1,63 +1,15 @@
 package modem
 
 import chisel3._
-import chisel3.experimental.FixedPoint
 import chisel3.util._
-
+import chisel3.experimental.FixedPoint
 import dsptools.numbers._
-import freechips.rocketchip.diplomacy.LazyModule
-import freechips.rocketchip.subsystem.BaseSubsystem
 
-/**
- * Base class for CORDIC parameters
- *
- * These are type generic
- */
-
-//  trait IQBundleParams[T <: Data] {
-//    val protoIQ: DspComplex[T]
-//  }
-//  object IQBundleParams {
-//    def apply[T <: Data](proto: DspComplex[T]): IQBundleParams[T] = new IQBundleParams[T] { val protoIQ = proto }
-//  }
-//
-//  class IQBundle[T <: Data](params: IQBundleParams[T]) extends Bundle {
-//    val iq: DspComplex[T] = params.protoIQ.cloneType
-//
-//    override def cloneType: this.type = IQBundle(params).asInstanceOf[this.type]
-//  }
-//  object IQBundle {
-//    def apply[T <: Data](params: IQBundleParams[T]): IQBundle[T] = new IQBundle[T](params)
-//    def apply[T <: Data](proto: DspComplex[T]): IQBundle[T] = new IQBundle[T](IQBundleParams[T](proto))
-//  }
-//
-// trait PacketBundleParams[T <: Data] extends IQBundleParams {
-//   val width: Int
-//   // val protoIQ: DspComplex[T]
-// }
-
-trait CordicParams[T<:Data] extends PacketBundleParams[T]{
-  val protoXY: T
-  val protoZ: T
-  val nStages: Int
-  val correctGain: Boolean
-  val stagesPerCycle: Int
-}
-
-trait CFOParams[T <: Data] extends CordicParams[T]{
+trait CFOParams[T <: Data] extends CordicParams[T] with PacketBundleParams[T] {
   val stLength: Int
   val ltLength: Int
   val preamble: Boolean
 }
-
-// class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-//   val pktStart: Bool = Bool()
-//   val pktEnd: Bool = Bool()
-//   val iq: DspComplex[T] = params.protoIQ
-// }
-// object SerialPacketBundle {
-//   def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
-// }
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   val in = Flipped(Decoupled(SerialPacketBundle(params)))
@@ -81,8 +33,47 @@ class CFOEIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
 object CFOEIO {
   def apply[T <: Data](params: PacketBundleParams[T]): CFOIO[T] =
     new CFOEIO(params)
+
+case class FixedCFOParams(
+  width: Int,
+  stLength: Int = 160,
+  ltLength: Int = 160,
+  preamble: Boolean = true,
+  stagesPerCycle: Int = 1
+) extends CFOParams[FixedPoint] {
+  val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
+  val protoXY = FixedPoint(width.W, (width-3).BP).cloneType
+  val protoZ = FixedPoint(width.W, (width-3).BP).cloneType
+  val correctGain = true
+  val minNumber = math.pow(2.0, -(width-3))
+  // number of cordic stages
+  private var n = 0
+  while (breeze.numerics.tan(math.pow(2.0, -n)) >= minNumber) {
+    n += 1
+  }
+  val nStages = n
 }
 
+class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
+  val io = IO(new Bundle{
+    val inIQ = Flipped(Decoupled(SerialPacketBundle(params)))
+    val outIQ = Decoupled(SerialPacketBundle(params))
+    val phiCorrect = Input(params.protoZ)
+  })
+
+  val cordic = Module( new IterativeCordic(params))
+
+  io.outIQ <> io.inIQ
+  // cordic.io.in.bits.x := io.inIQ.bits.iq.real
+  // cordic.io.in.bits.y := io.inIQ.bits.iq.imag
+  // cordic.io.in.bits.z := io.phiCorrect
+  // cordic.io.in.bits.vectoring := false.B
+  // cordic.io.in.valid := true.B
+  // io.inIQ.ready := cordic.io.in.ready
+  // io.outIQ.bits.iq.real := cordic.io.out.bits.x
+  // io.outIQ.bits.iq.imag := cordic.io.out.bits.y
+  // io.outIQ.valid := cordic.io.out.valid
+}
 
 class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
   val io = IO(new Bundle{
@@ -333,7 +324,5 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
     }
-
-  }
-
+}
 }
