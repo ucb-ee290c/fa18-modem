@@ -7,9 +7,6 @@ import chisel3.util._
 import dsptools.numbers._
 // import freechips.rocketchip.diplomacy.LazyModule
 // import freechips.rocketchip.subsystem.BaseSubsystem
-
-case class
-
 /**
   * Mixin for top-level rocket to add a modem
   *
@@ -87,12 +84,12 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   io.out := decode.io.out
 }
 
-trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
-  val foo: Int
-}
-
-class Modem[T<:Data:Real:BinaryRepresentation, U<:Data](val params: ModemParams[T,U]) extends Module{
-  val io = IO(???)
-
-
-}
+// trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
+//   val foo: Int
+// }
+//
+// class Modem[T<:Data:Real:BinaryRepresentation, U<:Data](val params: ModemParams[T,U]) extends Module{
+//   val io = IO(???)
+//
+//
+// }
