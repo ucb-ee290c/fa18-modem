@@ -7,6 +7,7 @@ import dsptools.numbers._
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
+// Written by Kunmo Kim : kunmok@berkeley.edu
 // TODO: zero-flush bufInterleaver when all the packets are properly received
 class DePuncturing[T <: Data](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {

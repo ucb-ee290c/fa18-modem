@@ -12,14 +12,14 @@ trait CodingParams[T <: Data] {
   val m: Int                        // number of memory elements. Constraint length is defined as K=m+1
   val K: Int                        // Constraint length
   val L: Int                        // Survivor path memory length. 6*K for hard-decision, 12*K for soft-decision
-  val O: Int                        // OFDM bit / symbol. 48, 96, 192 can be used
+  val O: Int                        // Coded bits per OFDM symbol: 48, 96, 192, 288
   val D: Int                        // Viterbi decoder traceback depth.
   val nStates: Int                  // number of states
   val genPolynomial: List[Int]      // Matrix contains the generator polynomial
   val punctureEnable: Boolean       // enable/disable puncturing
   val punctureMatrix: List[Int]     // puncturing matrix
   val CodingScheme: Int             // 0: Convolutional Coding, 1: Turbo Coding, 2: LDPC
-  val fbPolynomial: List[Int]       // feedback generator polynomial for Recursive Systematic Coding (Turbo Code)
+  val fbPolynomial: List[Int]       // feedback generator polynomial for Recursive Systematic Coding (Turbo Code) -> currently not supporting
   val tailBitingEn: Boolean         // 0: disable tail-biting, 1: enable tail-biting
   val tailBitingScheme: Int         // 0: zero tail-biting. 1: sophisticated tail-biting
   val numInputs: Int

@@ -6,6 +6,7 @@ import dsptools.numbers._
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
+// Written by Kunmo Kim : kunmok@berkeley.edu
 class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
   require(params.m > 1)
   require(params.k > 0)

@@ -6,6 +6,7 @@ import dsptools.numbers._
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
+// Written by Kunmo Kim : kunmok@berkeley.edu
 // more comments are available on traceback_backup1.scala file
 // assuming continous Viterbi Decoding
 class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {

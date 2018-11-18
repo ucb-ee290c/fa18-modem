@@ -5,6 +5,7 @@ import chisel3.util._
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
+// Written by Kunmo Kim : kunmok@berkeley.edu
 class BranchMetric[T <: Data](params: CodingParams[T]) extends Module {
   require(params.m > 1)
   require(params.k > 0)

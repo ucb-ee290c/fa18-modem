@@ -6,6 +6,7 @@ import dsptools.numbers._
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
+// Written by Kunmo Kim : kunmok@berkeley.edu
 class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {
     val in        = Input(Vec(params.n, SInt(2.W)))

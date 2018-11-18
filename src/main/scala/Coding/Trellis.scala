@@ -2,6 +2,7 @@ package modem
 
 import chisel3._
 
+// Written by Kunmo Kim : kunmok@berkeley.edu
 class Trellis[T <: Data](params: CodingParams[T]){
   require(params.m > 1)
   require(params.k > 0)
