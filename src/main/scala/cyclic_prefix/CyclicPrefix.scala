@@ -15,7 +15,7 @@ trait CyclicPrefixParams[T<:Data] {
   */
 class CyclicPrefixIO[T <: Data](params: CyclicPrefixParams[T]) extends Bundle {
   val in = Flipped(Decoupled(PacketBundle(PacketBundleParams(1, params.protoIQ))))
-  val out = Decoupled(SerialPacketBundle(PacketBundleParams(1, params.protoIQ)))
+  val out = Decoupled(PacketBundle(PacketBundleParams(1, params.protoIQ)))
   val add = Input(Bool())
 
   override def cloneType: this.type = CyclicPrefixIO(params).asInstanceOf[this.type]
@@ -34,7 +34,7 @@ object CyclicPrefixIO {
     val io = IO(CyclicPrefixIO(params))
     io.in.ready := false.B // For safety
     io.out.valid := false.B
-    io.out.bits := io.in.bits(1)
+    io.out.bits := io.in.bits
 
     val sRemove :: sKeep :: sFill :: sAdd :: sDrain :: sIdle :: Nil = Enum(6)
     val state = RegInit(sIdle)
