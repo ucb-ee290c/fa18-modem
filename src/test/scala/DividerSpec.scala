@@ -40,7 +40,7 @@ class DividerSpec extends FlatSpec with Matchers {
 
   it should "divide all pairs of 8 bit numbers" in {
     // chisel3.iotesters.Driver.execute(Array("-tbn", "verilator", "-fiwv"), () => new PipelinedDivider(8)) {
-    dsptools.Driver.execute(() => new PipelinedDivider(params), TestSetup.dspTesterOptions) {
+    dsptools.Driver.execute(() => new PipelinedDivider(8), TestSetup.dspTesterOptions) {
       c => new PipelinedDividerTester(c) {
         // trials(Seq( (12, 3), (12, 4), (12, 6), (1, 1), (2,1), (3,1), (0, 1) )).foreach(x => println(BigInt(x).toString(16)))
 
