@@ -66,15 +66,17 @@ object PacketBundle {
 /**
  * Bundle type for serialized PacketBundle
  */
-class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val pktStart: Bool = Bool()
-  val pktEnd: Bool = Bool()
-  val iq: DspComplex[T] = params.protoIQ.cloneType
-
-  override def cloneType: this.type = SerialPacketBundle(params).asInstanceOf[this.type]
-}
+// class SerialPacketBundle[T <: Data](params: PacketBundleParams[T]) extends Bundle {
+//   val pktStart: Bool = Bool()
+//   val pktEnd: Bool = Bool()
+//   val iq: DspComplex[T] = params.protoIQ.cloneType
+//
+//   override def cloneType: this.type = SerialPacketBundle(params).asInstanceOf[this.type]
+// }
 object SerialPacketBundle {
-  def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
+  // def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
+  def apply[T <: Data](params: PacketBundleParams[T]): PacketBundle[T] = new PacketBundle[T](params)
+  def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundle[T] = new SerialPacketBundle[T](PacketBundleParams[T](1, proto))
 }
 /**
  * Bundle type for deserialized PacketBundle
@@ -121,7 +123,7 @@ object BitsBundle {
   //bitWidth: Int,
   //binPoint: Int
 //) extends PacketBundleParams[FixedPoint]{
-  //width = 
+  //width =
 //}
 
 //case class FixedFFTParams(
