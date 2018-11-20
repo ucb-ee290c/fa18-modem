@@ -53,7 +53,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real](
   val decode = Module( new ViterbiDecoder(viterbiParams) )
 
   // Phase Rotation Block
-  phaseRotator.io.inIQ := io.in
+  phaseRotator.io.inIQ <> io.in
   phaseRotator.io.phiCorrect := ConvertableTo[T].fromDouble(0) //cfoEstimator.phiCorrect
 
   // Packet Detector Block
@@ -81,7 +81,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real](
   // Decoder
   decode.io.in := demod.io.out
 
-  io.out := decode.io.out
+  io.out <> decode.io.out
 }
 
 // trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
