@@ -11,7 +11,7 @@ import breeze.linalg.{randomDouble}
 class FixedRXSpec extends FlatSpec with Matchers {
   behavior of "FixedRX"
 
-  val trials = Seq(DspComplex(1.U))
+  val trials = Seq(DspComplex(1.U,0.U))
   // These are  bogus placeholder numbers
   val iqWidth = 5
   val binPoint = iqWidth - 3
