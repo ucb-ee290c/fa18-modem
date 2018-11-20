@@ -11,19 +11,20 @@ trait DemodulationParams[T<: Data, U<: Data] extends PacketBundleParams[T] with 
 }
 
 case class HardDemodParams(
+  val iqWidth: Int,
   val width: Int,
   val bitsWidth: Int
 ) extends DemodulationParams[FixedPoint, UInt]{
-  val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
+  val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP)).cloneType
   val protoBits = UInt(1.W)
-  val tdummy = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
+  val tdummy = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP)).cloneType
   val udummy = UInt(1.W)
 }
 
 
 class Demodulator[T <: Data:Real:BinaryRepresentation, U <: Data](params: DemodulationParams[T, U]) extends Module {
   val io = IO(new Bundle {
-    val in = Flipped(Decoupled(PacketBundle(params)))
-    val out = Decoupled(PacketBundle(params))
+    val in = Flipped(Decoupled(DeserialPacketBundle(params)))
+    val out = Decoupled(BitsBundle(params))
   })
 }
