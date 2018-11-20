@@ -60,26 +60,26 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real](
   pktDetect.io.in <> phaseRotator.io.outIQ
 
   // CFO Estimation
-  cfoEstimator.io.in := pktDetect.io.out
+  cfoEstimator.io.in <> pktDetect.io.out
 
   // CP Removal
-  cyclicPrefix.io.in := cfoEstimator.io.out
+  cyclicPrefix.io.in <> cfoEstimator.io.out
   cyclicPrefix.io.add := false.B
 
   // FFT
-  fft.io.in := cyclicPrefix.io.out
+  fft.io.in <> cyclicPrefix.io.out
 
   // EQ
-  eq.io.in := fft.io.out
+  eq.io.in <> fft.io.out
 
   // CFO Pilot Estimation
   // cfoPilot.io.in := fft.io.out
 
   // Demodulator
-  demod.io.in := eq.io.out
+  demod.io.in <> eq.io.out
 
   // Decoder
-  decode.io.in := demod.io.out
+  decode.io.in <> demod.io.out
 
   io.out <> decode.io.out
 }
