@@ -126,6 +126,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
     switch(curState){
       is(idle){
+        estimatorReady := true.B
+        cordic.io.in.valid := false.B
         when(io.in.bits.pktStart && io.in.fire()){
           curState := st
         }.otherwise{
@@ -134,11 +136,11 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(st){
-        when(stCounter.inc()){
           cordic.io.in.bits.x := stAcc.real
           cordic.io.in.bits.y := stAcc.imag
           cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
           cordic.io.in.bits.vectoring := true.B
+        when(stCounter.inc()){
           cordic.io.in.valid := true.B
           estimatorReady := false.B
           cordic.io.out.ready := true.B
@@ -158,11 +160,11 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(lt){
-        when(ltCounter.inc()){
           cordic.io.in.bits.x := ltAcc.real
           cordic.io.in.bits.y := ltAcc.imag
           cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
           cordic.io.in.bits.vectoring := true.B
+        when(ltCounter.inc()){
           cordic.io.in.valid := true.B
           estimatorReady := false.B
           cordic.io.out.ready := true.B
@@ -183,6 +185,7 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(data){
+        estimatorReady := true.B
         when(io.in.bits.pktEnd){
           curState := idle
         }.otherwise{
