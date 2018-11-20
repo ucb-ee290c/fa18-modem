@@ -124,6 +124,9 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     io.out.valid := cordic.io.out.valid
     io.pErr := coarseOffset + fineOffset
 
+    io.out.bits.pktStart := io.in.bits.pktStart
+    io.out.bits.pktEnd := io.in.bits.pktEnd
+
     switch(curState){
       is(idle){
         estimatorReady := true.B
@@ -131,7 +134,7 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         when(io.in.bits.pktStart && io.in.fire()){
           curState := st
         }.otherwise{
-          curState := idle
+          //curState := idle
           // stAcc := DspComplex[T](0,0)
         }
       }
@@ -145,17 +148,23 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
           estimatorReady := false.B
           cordic.io.out.ready := true.B
         }.elsewhen(io.in.fire()){
-          curState := st
+          estimatorReady := false.B
+          cordic.io.in.valid := false.B
+          cordic.io.out.ready := false.B
+          //curState := st
           when(delayValidByST){
             stMul := (io.in.bits.iq * delayIQByST.conj())
             stAcc := stAcc + stMul
           }
         }.otherwise{
           cordic.io.in.valid := false.B
+          cordic.io.out.ready := true.B
           when(cordic.io.out.valid){
             coarseOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/stDelay)
             estimatorReady := true.B
             curState := lt
+          }.otherwise{
+            estimatorReady := false.B
           }
         }
       }
@@ -169,7 +178,10 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
           estimatorReady := false.B
           cordic.io.out.ready := true.B
         }.elsewhen(io.in.fire()){
-          curState := lt
+          estimatorReady := false.B
+          cordic.io.in.valid := false.B
+          cordic.io.out.ready := false.B
+          //curState := lt
           when(delayValidByLT){
             ltMul := (io.in.bits.iq * delayIQByLT.conj())
             ltAcc := stAcc + stMul
@@ -177,23 +189,30 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
         .otherwise{
           cordic.io.in.valid := false.B
+          cordic.io.out.ready := true.B
           when(cordic.io.out.valid){
             fineOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/ltDelay)
             estimatorReady := true.B
             curState := data
+          }.otherwise{
+            estimatorReady := false.B
           }
         }
       }
       is(data){
-        estimatorReady := true.B
         when(io.in.bits.pktEnd){
+          estimatorReady := true.B
           curState := idle
         }.otherwise{
-          curState := data
+          estimatorReady := true.B
+          //curState := data
         }
       }
+      is(Nil){
+        estimatorReady := false.B
+        curState := idle
+      }
     }
-
   }
 
 }
