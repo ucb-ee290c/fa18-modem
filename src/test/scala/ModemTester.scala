@@ -16,6 +16,7 @@ class RXTester[T <: Data, U <: Data](c: RX[T,U], trials: Seq[DspComplex[UInt]]) 
   for(trial <- trials) {
 
   }
+  expect(false, "Placeholder")
 }
 
 object FixedRXTester {
