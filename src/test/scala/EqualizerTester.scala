@@ -159,7 +159,8 @@ class ChannelInverterTester[T <: chisel3.Data](c: ChannelInverter[T], trials: Se
   */
 object FixedEqualizerTester {
   def apply(params: FixedEqualizerParams, trials: Seq[IQWide]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Equalizer(params)) {
+    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Equalizer(params)) {
+    dsptools.Driver.execute(() => new Equalizer(params), TestSetup.dspTesterOptions) {
       c => new EqualizerTester(c, trials)
     }
   }
