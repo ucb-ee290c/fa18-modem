@@ -44,8 +44,8 @@ case class FixedCFOParams(
 
 class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
   val io = IO(new Bundle{
-    val inIQ = Flipped(Decoupled(SerialPacketBundle(params)))
-    val outIQ = Decoupled(SerialPacketBundle(params))
+    val inIQ = Flipped(Decoupled(IQBundle(params)))
+    val outIQ = Decoupled(IQBundle(params))
     val phiCorrect = Input(params.protoZ)
   })
 
