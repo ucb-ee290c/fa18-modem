@@ -150,7 +150,8 @@ class CyclicPrefixTester[T <: chisel3.Data](c: CyclicPrefix[T], trials: Seq[CPTr
   */
 object CyclicPrefixTester{
   def apply[T<:Data](params: CyclicPrefixParams[T], trials: Seq[CPTrial]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new CyclicPrefix(params)) {
+    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new CyclicPrefix(params)) {
+    dsptools.Driver.execute(() => new ConfigurationMemory(params), TestSetup.dspTesterOptions) {
       c => new CyclicPrefixTester(c, trials)
     }
   }
