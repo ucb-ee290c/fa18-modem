@@ -76,7 +76,7 @@ object PacketBundle {
 object SerialPacketBundle {
   // def apply[T <: Data](params: PacketBundleParams[T]): SerialPacketBundle[T] = new SerialPacketBundle(params)
   def apply[T <: Data](params: PacketBundleParams[T]): PacketBundle[T] = new PacketBundle[T](params)
-  def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundle[T] = new SerialPacketBundle[T](PacketBundleParams[T](1, proto))
+  def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundle[T] = new PacketBundle[T](PacketBundleParams[T](1, proto))
 }
 /**
  * Bundle type for deserialized PacketBundle
