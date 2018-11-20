@@ -57,7 +57,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real](
   phaseRotator.io.phiCorrect := ConvertableTo[T].fromDouble(0) //cfoEstimator.phiCorrect
 
   // Packet Detector Block
-  pktDetect.io.in := phaseRotator.io.outIQ
+  pktDetect.io.in <> phaseRotator.io.outIQ
 
   // CFO Estimation
   cfoEstimator.io.in := pktDetect.io.out
