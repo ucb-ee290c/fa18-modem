@@ -22,9 +22,21 @@ case class HardDemodParams(
 }
 
 
+
 class Demodulator[T <: Data:Real:BinaryRepresentation, U <: Data](params: DemodulationParams[T, U]) extends Module {
   val io = IO(new Bundle {
     val in = Flipped(Decoupled(DeserialPacketBundle(params)))
     val out = Decoupled(BitsBundle(params))
   })
+  io.in.ready := io.out.ready
+  io.out.valid := io.in.valid
+
+  val dummyReg = RegNext(io.in.bits)
+  val dummyBits = BitsBundle(params)
+
+  dummyBits.bits := Vec.fill(params.bitsWidth){WireInit(1.S)}
+  dummyBits.pktStart := io.in.bits.pktStart
+  dummyBits.pktEnd := io.in.bits.pktEnd
+
+  io.out.bits := dummyBits
 }

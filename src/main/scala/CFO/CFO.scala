@@ -50,7 +50,7 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
     val phiCorrect = Input(params.protoZ)
   })
 
-  val cordic = Module( new IterativeCordic(params))
+  //val cordic = Module( new IterativeCordic(params))
 
   io.outIQ <> io.inIQ
   // cordic.io.in.bits.x := io.inIQ.bits.iq.real
@@ -80,8 +80,8 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
   // requireIsChiselType(params.protoIn)
   val io = IO(CFOIO(params))
 
-  val cordic = Module ( new IterativeCordic(params))
-  val phaseCorrect = Module( new PhaseRotator(params))
+  //val cordic = Module ( new IterativeCordic(params))
+  //val phaseCorrect = Module( new PhaseRotator(params))
 
   io.out <> io.in
   // phaseCorrect.io.inIQ.bits.iq := io.in.bits.iq
