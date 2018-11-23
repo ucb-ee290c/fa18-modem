@@ -12,7 +12,8 @@ class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
   require(params.n > 0)
 
   val io = IO(new Bundle {
-    val in        = Input(Vec(params.O, SInt(2.W)))
+    //val in        = Input(Vec(params.O, SInt(2.W)))
+    val in        = BitsBundle(bitsWidth = params.O, protoBits = SInt(2.W))
     val inReady   = Input(UInt(1.W))
     val out     = Decoupled(Vec(params.D, UInt(params.k.W)))
     val out_dp  = Output(Vec(params.n, SInt(2.W)))
