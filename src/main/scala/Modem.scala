@@ -26,7 +26,7 @@ class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Mod
   val io = IO(???)
 }
 
-class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real](
+class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real](
   val iqBundleParams: IQBundleParams[T],
   val pktDetectParams: PacketDetectParams[T],
   val cyclicPrefixParams: CyclicPrefixParams[T],
@@ -35,11 +35,12 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real](
   val fftParams: FFTParams[T],
   val bitsBundleParams: BitsBundleParams[U],
   val demodParams: DemodulationParams[T,U],
-  val viterbiParams: CodingParams[U],
+  val viterbiParams: CodingParams[V],
 ) extends Module {
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(IQBundle(iqBundleParams)))
-    val out = Decoupled(BitsBundle(bitsBundleParams))
+    //val out = Decoupled(BitsBundle(bitsBundleParams))
+    val out = Decoupled(Vec(36, UInt(1.W)))
   })
 
   val phaseRotator = Module( new PhaseRotator(cfoParams) )

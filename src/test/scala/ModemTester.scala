@@ -7,7 +7,7 @@ import breeze.math.Complex
 import scala.math
 import dsptools.DspTester
 
-class RXTester[T <: Data, U <: Data](c: RX[T,U], trials: Seq[DspComplex[UInt]]) extends DspTester(c) {
+class RXTester[T <: Data, U <: Data, V<: Data](c: RX[T,U,V], trials: Seq[DspComplex[UInt]]) extends DspTester(c) {
   val maxCyclesWait = 1000 //Whatever numnber
 
   poke(c.io.in.valid, 1)
@@ -27,7 +27,7 @@ object FixedRXTester {
     cfoParams: FixedCFOParams,
     cpParams: CyclicPrefixParams[FixedPoint],
     fftParams: FixedFFTParams,
-    bitsBundleParams: BitsBundleParams[UInt],
+    bitsBundleParams: BitsBundleParams[SInt],
     demodParams: HardDemodParams,
     viterbiParams: FixedCoding,
     trials: Seq[DspComplex[UInt]]): Boolean = {
