@@ -16,7 +16,7 @@ case class HardDemodParams(
   val bitsWidth: Int
 ) extends DemodulationParams[FixedPoint, UInt]{
   val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP)).cloneType
-  val protoBits = UInt(1.W)
+  val protoBits = SInt(2.W)
   val tdummy = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP)).cloneType
   val udummy = UInt(1.W)
 }
