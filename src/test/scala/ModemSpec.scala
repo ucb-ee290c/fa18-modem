@@ -28,7 +28,7 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val fixedEqualizerParams = FixedEqualizerParams(width = iqWidth)
 
-  val fixedCFOParams = FixedCFOParams(width = iqWidth, stagesPerCycle = 5)
+  val fixedCFOParams = FixedCFOParams(iqWidth = iqWidth, stagesPerCycle = 5)
 
   val fixedCPParams = new CyclicPrefixParams[FixedPoint]{
     val protoIQ = DspComplex(FixedPoint(iqWidth.W, binPoint.BP))
@@ -45,7 +45,7 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val hardBitsBundleParams = BitsBundleParams(width = bitsWidth, proto = UInt(1.W))
 
-  val hardDemodParams = HardDemodParams(width = iqWidth, bitsWidth = bitsWidth)
+  val hardDemodParams = HardDemodParams(width = 64, iqWidth = iqWidth, bitsWidth = bitsWidth)
 
   val hardViterbiParams = FixedCoding()
 
