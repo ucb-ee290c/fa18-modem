@@ -376,6 +376,7 @@ class SDFStageIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
   val out = Output(SerialPacketBundle(params))
   val twiddles_rom = Input(Vec(params.numPoints / 2, params.protoTwiddle.cloneType))
   val cntr = Input(UInt(log2Up(params.numPoints).W))
+  val en = Input(Bool())
 
   override def cloneType: this.type = SDFStageIO(params).asInstanceOf[this.type]
 }
@@ -419,7 +420,7 @@ class SDFStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
 
   val load_input = io.cntr < delay.U
   val shift_in = Mux(load_input, inp, butterfly_outputs(1))
-  val shift_out = ShiftRegister(shift_in, delay)
+  val shift_out = ShiftRegister(shift_in, delay, en=io.en)
 
   Butterfly[T](Seq(shift_out, inp)).zip(butterfly_outputs).foreach {
     case (out_val, out_wire) => out_wire := out_val
@@ -427,8 +428,8 @@ class SDFStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
 
   out := Mux(load_input, shift_out, butterfly_outputs(0))
 
-  io.out.pktStart := ShiftRegister(io.in.pktStart, delay)
-  io.out.pktEnd   := ShiftRegister(io.in.pktEnd  , delay)
+  io.out.pktStart := ShiftRegister(io.in.pktStart, delay, en=io.en)
+  io.out.pktEnd   := ShiftRegister(io.in.pktEnd  , delay, en=io.en)
 }
 
 class FFTUnscramblerDeserIn[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
@@ -498,6 +499,7 @@ class SDFFFTDeserIn[T <: Data : Real : BinaryRepresentation](val params: FFTPara
     val stage = Module(new SDFStage(params, delayLog2s(i), numStages - 1 - i, true))
     stage.io.twiddles_rom := twiddles_rom
     stage.io.cntr := (cntr - cumulative_delays(i).U)(i, 0)
+    stage.io.en := unscrambler.io.out.fire()
     stage
   })
 
@@ -507,11 +509,12 @@ class SDFFFTDeserIn[T <: Data : Real : BinaryRepresentation](val params: FFTPara
   })
 
   out_fifo.io.enq.bits := sdf_stages.last.io.out
-  out_fifo.io.enq.valid := ShiftRegister(unscrambler.io.out.fire(), cumulative_delays.last + 1)
+  out_fifo.io.enq.valid := ShiftRegister(unscrambler.io.out.fire(), cumulative_delays.last + 1, resetData=false.B, en=true.B)
   unscrambler.io.out.ready := out_fifo.io.enq.ready
 
   io.out <> out_fifo.io.deq
 
+  // Controller FSM
   cntr_next  := cntr
   state_next := state
 
@@ -538,7 +541,6 @@ class SDFFFTDeserIn[T <: Data : Real : BinaryRepresentation](val params: FFTPara
   state := state_next
 }
 class SDFFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val dit: Boolean = true) extends Module {
-  // FIXME: potential issue???
   require(isPow2(params.numPoints), "number of points must be a power of 2")
 
   val io = IO(SISOIO(params))
