@@ -12,6 +12,7 @@ class ViterbiDecoderUnitSpec extends FlatSpec with Matchers {
     L = 2,
     O = 20,
     D = 5,
+    H = 24,
     genPolynomial = List(7, 6), // generator polynomial
     punctureEnable = false,
     punctureMatrix = List(6, 5), // Puncture Matrix

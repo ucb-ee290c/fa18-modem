@@ -14,6 +14,7 @@ trait CodingParams[T <: Data] {
   val L: Int                        // Survivor path memory length. 6*K for hard-decision, 12*K for soft-decision
   val O: Int                        // Coded bits per OFDM symbol: 48, 96, 192, 288
   val D: Int                        // Viterbi decoder traceback depth.
+  val H: Int                        // 802.11a Header length
   val nStates: Int                  // number of states
   val genPolynomial: List[Int]      // Matrix contains the generator polynomial
   val punctureEnable: Boolean       // enable/disable puncturing
@@ -35,6 +36,7 @@ case class FixedCoding(
 //  L: Int = 6144,
   O: Int = 48,
   D: Int = 36,                            // D needs to be larger than 4 in current architecture
+  H: Int = 24,                            // Header length after encoding
   genPolynomial: List[Int] = List(7, 5), // generator polynomial
   punctureEnable: Boolean = false,
   punctureMatrix: List[Int] = List(6, 5), // Puncture Matrix
@@ -51,4 +53,23 @@ case class FixedCoding(
   val numInputs   = math.pow(2.0, k.asInstanceOf[Double]).asInstanceOf[Int]
   val pmBits = log2Ceil(6144)
 //  val softInput = DspComplex(FixedPoint(2.W, (softDecisionBitWidth-2).BP))
+}
+
+class DecodeHeadBundle[T <: Data]() extends Bundle {
+  val rate: Vec[UInt] = Vec(4, UInt(1.W))
+  val dataLen: UInt   = UInt(12.W)
+
+  override def cloneType: this.type = DecodeHeadBundle().asInstanceOf[this.type]
+}
+object DecodeHeadBundle {
+  def apply[T <: Data](): DecodeHeadBundle[T] = new DecodeHeadBundle()
+}
+
+class DecodeDataBundle[T <: Data]() extends Bundle {
+  val cntLen: UInt   = UInt(12.W)
+
+  override def cloneType: this.type = DecodeDataBundle().asInstanceOf[this.type]
+}
+object DecodeDataBundle {
+  def apply[T <: Data](): DecodeDataBundle[T] = new DecodeDataBundle()
 }

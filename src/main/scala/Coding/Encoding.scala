@@ -7,8 +7,8 @@ import chisel3.util._
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
 class CodingIO[T <: Data](params: CodingParams[T]) extends Bundle {
-  val in    = Flipped(Decoupled(params.protoInOut.cloneType))
-  val out   = Decoupled(Vec(params.O, params.protoInOut.cloneType))
+  val in        = Flipped(Decoupled(params.protoInOut.cloneType))
+  val out       = Decoupled(Vec(params.O, params.protoInOut.cloneType))
 
   override def cloneType: this.type = CodingIO(params).asInstanceOf[this.type]
 }

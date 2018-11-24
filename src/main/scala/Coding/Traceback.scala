@@ -20,6 +20,10 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
 //    val inSP    = Flipped(Decoupled(Vec(params.nStates, UInt(params.m.W))))
     val inReady = Input(UInt(1.W))
     val out     = Decoupled(Vec(params.D, UInt(params.k.W)))
+    val dataLen = Input(UInt(12.W))            // length information in header
+    val cntLen  = Output(UInt(6.W))           // output counter values
+    val allDataRecv  = Output(UInt(1.W))
+    val headInfo  = Flipped(Decoupled(DecodeHeadBundle()))
   })
   val L   = params.L
   val D   = params.D
@@ -60,6 +64,8 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   val counterD          = RegInit(0.U((log2Ceil(params.D)+1).W))      // counter for D
   val decodeReg         = Reg(Vec(D, UInt(params.k.W)))
   val memReg            = RegInit(VecInit(Seq.fill(params.nStates * (D+L-1))(0.U(m.W))))
+  val cntLenReg         = RegInit(0.U(6.W))
+  val allDataRecvReg    = RegInit(0.U(1.W))
 
   // find minimum in PM
   tmpPMMin(0)           := Mux(io.inPM(0) < io.inPM(1), io.inPM(0), io.inPM(1))
@@ -68,6 +74,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
     tmpPMMin(i)         := Mux(tmpPMMin(i - 1) < io.inPM(i + 1), tmpPMMin(i - 1), io.inPM(i + 1))
     tmpPMMinIndex(i)    := Mux(tmpPMMin(i - 1) < io.inPM(i + 1), tmpPMMinIndex(i - 1), (i + 1).U)
   }
+  cntLenReg := cntLenReg + 1.U
 
   // when the decoding just started, it starts decoding after it receives D+L bits
   when((addrReg % (params.nStates * (D+L)).U === (params.nStates * (D+L-1)).U) && (decodeStart === 0.U)) {
@@ -121,6 +128,18 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   when(io.out.fire()){
     outValid      := false.B
   }
+
+  when(cntLenReg === io.headInfo.bits.dataLen - 1.U){                   // received all the payload
+    cntLenReg     := 0.U
+    allDataRecvReg:= 1.U
+  }
+  when(allDataRecvReg === 1.U && cntLenReg === 48.U){     // received 48 bits of header information
+    cntLenReg     := 0.U
+    allDataRecvReg:= 0.U
+  }
+
   io.out.valid    := outValid
   io.out.bits     := decodeReg    // output is available 3 clk cycles after.
+  io.cntLen       := cntLenReg
+  io.allDataRecv  := allDataRecvReg
 }

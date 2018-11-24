@@ -2,8 +2,8 @@ package modem
 
 import org.scalatest.{FlatSpec, Matchers}
 
-class TracebackUnitSpec extends FlatSpec with Matchers {
-  behavior of "TracebackUnitSpec"
+class HeaderUnitSpec extends FlatSpec with Matchers {
+  behavior of "HeaderUnitSpec"
 
   val params = FixedCoding(
     k = 1,
@@ -14,7 +14,7 @@ class TracebackUnitSpec extends FlatSpec with Matchers {
     D = 4,
     H = 24,
     genPolynomial = List(7, 6), // generator polynomial
-    punctureEnable = true,
+    punctureEnable = false,
     punctureMatrix = List(6, 5), // Puncture Matrix
     CodingScheme = 0,
     fbPolynomial = List(0),
@@ -22,8 +22,8 @@ class TracebackUnitSpec extends FlatSpec with Matchers {
     tailBitingScheme = 0,
     softDecision = false
   )
-  it should "Traceback" in {
+  it should "Extract Header information" in {
 
-    FixedTracebackTester(params) should be (true)
+    FixedHeaderTester(params) should be (true)
   }
 }

@@ -14,6 +14,7 @@ class PathMetricUnitSpec extends FlatSpec with Matchers {
       L = 100,
       O = 6,
       D = 36,
+      H = 24,
       genPolynomial = List(7, 6), // generator polynomial
       punctureEnable = true,
       punctureMatrix = List(6, 5), // Puncture Matrix

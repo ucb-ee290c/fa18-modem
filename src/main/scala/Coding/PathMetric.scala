@@ -17,9 +17,7 @@ class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
   val inReadyReg          = RegInit(0.U(1.W))
   inReadyReg := io.inReady
   val startDecode         = RegInit(0.U(1.W))
-  val trellisObj          = new Trellis[T](params)
-  val nextStateTable      = trellisObj.nextstate_table
-  val branchMetricModule  = Module(new BranchMetric[T](params))
+  val branchMetricModule: BranchMetric[T] = Module(new BranchMetric[T](params))
   (0 until params.n).map(i => {branchMetricModule.io.in(i) := io.in(i)})
 
   val numRows             = math.pow(2.0, (params.m-1).asInstanceOf[Double]).asInstanceOf[Int]
@@ -48,26 +46,17 @@ class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
   when (startDecode === 1.U){
     // temporary matrix for Path Metric calculation
     // TODO: How to find the maximum # of bits for PM ?
-    val tmpPM               = Wire(Vec(params.nStates, Vec(params.numInputs, UInt(params.pmBits.W))))
-    for (currentInput <- 0 until params.numInputs){
-      for (currentStates <- 0 until params.nStates){
-        tmpPM(currentStates/2+currentInput*numRows)(currentStates%2) := pmRegs(currentStates)
-      }
-    }
-
+    val tmpPM   = Wire(Vec(params.nStates, Vec(params.numInputs, UInt(params.pmBits.W))))
     // temporary matrix for Branch Metric calculation
-    val tmpBM               = Wire(Vec(params.nStates, Vec(params.numInputs, UInt((log2Ceil(params.n)+1).W))))
+    val tmpBM   = Wire(Vec(params.nStates, Vec(params.numInputs, UInt((log2Ceil(params.n)+1).W))))
+    // temporary matrix for ACS (mainly for accumulation)
+    val tmpAcc  = Wire(Vec(params.nStates, Vec(params.numInputs, UInt(params.pmBits.W))))
+
     for (currentInput <- 0 until params.numInputs){
       for (currentStates <- 0 until params.nStates){
-        tmpBM(currentStates/2 + currentInput*numRows)(currentStates % 2) := branchMetricModule.io.out_dec(currentStates)(currentInput)
-      }
-    }
-
-    // temporary matrix for ACS (mainly for accumulation)
-    val tmpAcc = Wire(Vec(params.nStates, Vec(params.numInputs, UInt(params.pmBits.W))))
-    for (nCol <- 0 until params.numInputs){
-      for (nRow <- 0 until params.nStates){
-        tmpAcc(nRow)(nCol) := tmpPM(nRow)(nCol) + tmpBM(nRow)(nCol)
+        tmpPM(currentStates/2+currentInput*numRows)(currentStates%2)      := pmRegs(currentStates)
+        tmpBM(currentStates/2 + currentInput*numRows)(currentStates % 2)  := branchMetricModule.io.out_dec(currentStates)(currentInput)
+        tmpAcc(currentStates)(currentInput) := tmpPM(currentStates)(currentInput) + tmpBM(currentStates)(currentInput)
       }
     }
 

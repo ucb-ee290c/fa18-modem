@@ -17,32 +17,8 @@ class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
     val stateIn     = Input(UInt(2.W))
     val stateOut    = Output(UInt(2.W))
   })
-  val puncEn = RegInit(false.B)
+
   val puncMatBitWidth = RegInit(0.U(4.W))
-
-  // puncturing matrix
-  val punctureList1       = Array(Array(1, 0, 0, 0, 0, 0, 0), Array(1, 0, 0, 0, 0, 0, 0))   // rate = 1/2
-  val punctureList2       = Array(Array(1, 1, 0, 0, 0, 0, 0), Array(1, 0, 0, 0, 0, 0, 0))   // rate = 2/3
-  val punctureList3       = Array(Array(1, 1, 0, 0, 0, 0, 0), Array(1, 0, 1, 0, 0, 0, 0))   // rate = 3/4
-  val punctureList4       = Array(Array(1, 1, 0, 1, 0, 0, 0), Array(1, 0, 1, 0, 1, 0, 0))   // rate = 5/6 -> not in 802.11a
-  val punctureList5       = Array(Array(1, 1, 1, 1, 0, 1, 0), Array(1, 0, 0, 0, 1, 0, 1))   // rate = 7/8 -> not in 802.11a
-
-  // puncIndices contains buffer address offset
-  // ex) [1,1,0],[1,0,1] -> [1,1,0],[2,1,1] : accumulate over rows
-  val puncIndices1        = Array(Array(1, 0, 0, 0, 0, 0, 0), Array(2, 0, 0, 0, 0, 0, 0))   // rate = 1/2
-  val puncIndices2        = Array(Array(1, 1, 0, 0, 0, 0, 0), Array(2, 1, 0, 0, 0, 0, 0))   // rate = 2/3
-  val puncIndices3        = Array(Array(1, 1, 0, 0, 0, 0, 0), Array(2, 1, 1, 0, 0, 0, 0))   // rate = 3/4
-  val puncIndices4        = Array(Array(1, 1, 0, 1, 0, 0, 0), Array(2, 1, 1, 1, 1, 0, 0))   // rate = 5/6 -> not in 802.11a
-  val puncIndices5        = Array(Array(1, 1, 1, 1, 0, 1, 0), Array(2, 1, 1, 1, 1, 1, 1))   // rate = 7/8 -> not in 802.11a
-
-  // puncListColSum contains summation over rows
-  // ex) [1,1,0], [1,0,1] -> [2,1,1]
-  val puncListColSum1     = Array(1, 0, 0, 0, 0, 0, 0)  // rate = 1/2
-  val puncListColSum2     = Array(2, 1, 0, 0, 0, 0, 0)  // rate = 2/3
-  val puncListColSum3     = Array(2, 1, 1, 0, 0, 0, 0)  // rate = 3/4
-  val puncListColSum4     = Array(2, 1, 1, 1, 1, 0, 0)  // rate = 5/6 -> not in 802.11a
-  val puncListColSum5     = Array(2, 1, 1, 1, 1, 1, 1)  // rate = 7/8 -> not in 802.11a
-
   val punctureVecReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U(1.W))))))  // support up to 7/8 coding rate
   val puncIndicesReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U((log2Ceil(params.O)+1).W))))))
   val puncListColSumReg   = RegInit(VecInit(Seq.fill(7)(0.U((log2Ceil(params.n+1)).W))))
@@ -65,30 +41,44 @@ class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
   when(io.isHead === 1.U){
     when( ((io.puncMatrix(0).toBool() || io.puncMatrix(1).toBool()) && !io.puncMatrix(2).toBool() && io.puncMatrix(3).toBool()) === true.B)
     { // rate = 1/2
-      puncMatBitWidth := 1.U
-      puncEn := false.B
-    }.elsewhen( (!io.puncMatrix(0).toBool() && !io.puncMatrix(1).toBool() && !io.puncMatrix(2).toBool() && io.puncMatrix(3).toBool()) === true.B)
-    { // rate = 2/3
-      puncMatBitWidth := 2.U
-      puncEn := true.B
+      puncMatBitWidth := CodingVariables.puncMatBitWidth1.U
       (0 until params.n).map(i => {
         (0 until 2).map(j => {
-          punctureVecReg(i)(j) := (punctureList2(i)(j)).U
-          puncIndicesReg(i)(j) := puncIndices2(i)(j).U
+          punctureVecReg(i)(j) := (CodingVariables.punctureList1(i)(j)).U
+          puncIndicesReg(i)(j) := CodingVariables.puncIndices1(i)(j).U
         })
       })
-      (0 until 2).map(i => { puncListColSumReg(i) := puncListColSum2(i).U })
+      (0 until 2).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum1(i).U })
+    }.elsewhen( (!io.puncMatrix(0).toBool() && !io.puncMatrix(1).toBool() && !io.puncMatrix(2).toBool() && io.puncMatrix(3).toBool()) === true.B)
+    { // rate = 2/3
+      puncMatBitWidth := CodingVariables.puncMatBitWidth2.U
+      (0 until params.n).map(i => {
+        (0 until 2).map(j => {
+          punctureVecReg(i)(j) := (CodingVariables.punctureList2(i)(j)).U
+          puncIndicesReg(i)(j) := CodingVariables.puncIndices2(i)(j).U
+        })
+      })
+      (0 until 2).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum2(i).U })
     }.elsewhen( (io.puncMatrix(2).toBool() && io.puncMatrix(3).toBool()) === true.B)
     { // rate = 3/4
-      puncMatBitWidth := 3.U
-      puncEn := true.B
+      puncMatBitWidth := CodingVariables.puncMatBitWidth3.U
       (0 until params.n).map(i => {
         (0 until 3).map(j => {
-          punctureVecReg(i)(j) := (punctureList3(i)(j)).U
-          puncIndicesReg(i)(j) := puncIndices3(i)(j).U
+          punctureVecReg(i)(j) := (CodingVariables.punctureList3(i)(j)).U
+          puncIndicesReg(i)(j) := CodingVariables.puncIndices3(i)(j).U
         })
       })
-      (0 until 3).map(i => { puncListColSumReg(i) := puncListColSum3(i).U })
+      (0 until 3).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum3(i).U })
+    }.otherwise{
+      // rate = 1/2 for the rest of rate code
+      puncMatBitWidth := CodingVariables.puncMatBitWidth1.U
+      (0 until params.n).map(i => {
+        (0 until 2).map(j => {
+          punctureVecReg(i)(j) := (CodingVariables.punctureList1(i)(j)).U
+          puncIndicesReg(i)(j) := CodingVariables.puncIndices1(i)(j).U
+        })
+      })
+      (0 until 2).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum1(i).U })
     }
   }
 
@@ -106,32 +96,22 @@ class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
   // ex) puncturing Matrix: [1,1,0],[1,0,1]
   // -> Input Matrix: [A0,A1,A2], [B0, B1, B2] -> Output Matrix: [A0, B0, A1, B2]
   when(io.stateIn =/= sDone && io.inReady === 1.U && io.isHead === 0.U){
-    when(puncEn === true.B) {    // if puncturing is enabled,
-      for (i <- 0 until params.n) {
-        when(punctureVecReg((o_cnt+i.U) % params.n.U)((o_cnt / params.n.U) % puncMatBitWidth) === 1.U) {
-          bufInterleaver(p_cnt - 1.U + puncIndicesReg((o_cnt+i.U) % params.n.U)(((o_cnt+i.U) / params.n.U) % puncMatBitWidth)) := io.in(i.U)
-        }
-      }
-      p_cnt := p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)
-      o_cnt := o_cnt + params.n.U
-      when(p_cnt >= (params.O.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
-        stateWire := sDone
-        p_cnt := 0.U
-      }
-      when((o_cnt >= (params.O - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
-        o_cnt := 0.U
-      }
-    }.otherwise{                                  // no puncturing
-      (0 until params.n).map(i => { bufInterleaver(o_cnt + i.U) := io.in(i.U) })
-      o_cnt := o_cnt + params.n.U
-      when(o_cnt === (params.O - params.n).U) {
-        stateWire := sDone
-      }
-      when(o_cnt === (params.O - params.n).U) {
-        o_cnt := 0.U
+    // if puncturing is enabled,
+    for (i <- 0 until params.n) {
+      when(punctureVecReg((o_cnt+i.U) % params.n.U)((o_cnt / params.n.U) % puncMatBitWidth) === 1.U) {
+        bufInterleaver(p_cnt - 1.U + puncIndicesReg((o_cnt+i.U) % params.n.U)(((o_cnt+i.U) / params.n.U) % puncMatBitWidth)) := io.in(i.U)
       }
     }
-  }.elsewhen(io.stateIn =/= sDone && io.inReady === 1.U && io.isHead === 1.U){
+    p_cnt := p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)
+    o_cnt := o_cnt + params.n.U
+    when(p_cnt >= (params.O.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
+      stateWire := sDone
+      p_cnt := 0.U
+    }
+    when((o_cnt >= (params.O - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
+      o_cnt := 0.U
+    }
+  }.elsewhen(io.stateIn =/= sDone && io.inReady === 1.U && io.isHead === 1.U){    // no puncturing
     (0 until params.n).map(i => { bufInterleaver(o_cnt + i.U) := io.in(i.U) })
     o_cnt := o_cnt + params.n.U
     when(o_cnt === (params.O - params.n).U) {
