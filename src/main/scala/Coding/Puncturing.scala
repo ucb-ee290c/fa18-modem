@@ -6,7 +6,7 @@ import chisel3.util._
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
-// TODO: zero-flush bufInterleaver when all the packets are properly received
+// TODO: zero-flush bufInterleaver when all the packets are properly received -> assuming this will be done by MAC layer
 class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {
     val in          = Input(Vec(params.n, UInt(1.W)))

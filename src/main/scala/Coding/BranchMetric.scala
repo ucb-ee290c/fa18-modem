@@ -6,10 +6,11 @@ import chisel3.util._
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
+// Description: This module calculates branch metric for every n-bit reception
 class BranchMetric[T <: Data](params: CodingParams[T]) extends Module {
-  require(params.m > 1)
-  require(params.k > 0)
-  require(params.n > 0)
+  require(params.m >= 1)
+  require(params.k >= 1)
+  require(params.n >= 2)
 
   val io = IO(new Bundle {
 //    val in        = Input(Vec(params.n, UInt(1.W)))
@@ -20,9 +21,6 @@ class BranchMetric[T <: Data](params: CodingParams[T]) extends Module {
 
   val trellisObj  = new Trellis[T](params)
 
-  // below is for HARD-DECISION
-  // currently not supporting for punctured input sequence
-  // TODO: whenever bit is punctured, ignore the branch metric calculation
   for (currentStates <- 0 until params.nStates) {
     for (currentInputs <- 0 until params.numInputs) {
       for (r <- 0 until params.n) {
@@ -33,7 +31,7 @@ class BranchMetric[T <: Data](params: CodingParams[T]) extends Module {
           }.otherwise {
             io.out(currentStates)(currentInputs)(r) := Mux(io.in(r) === (2 * trellisObj.output_table(currentStates)(currentInputs)(r) - 1).S, 0.U, (1).U)
           }
-        }else{
+        }else{                                    // soft decision
 //          io.out(currentStates)(currentInputs)(r) := -1*trellisObj.output_table(currentStates)(currentInputs)(r)*io.in(r)
         }
       }

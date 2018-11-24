@@ -6,6 +6,7 @@ import chisel3.util._
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
+// Description: Convolutional encoder + puncturing block
 class CodingIO[T <: Data](params: CodingParams[T]) extends Bundle {
   val in        = Flipped(Decoupled(params.protoInOut.cloneType))
   val out       = Decoupled(Vec(params.O, params.protoInOut.cloneType))

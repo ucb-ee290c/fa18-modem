@@ -5,6 +5,8 @@ import chisel3.util._
 import chisel3.experimental.FixedPoint
 import dsptools.numbers._
 
+// Written by Kunmo Kim : kunmok@berkeley.edu
+// Description: This code contains a group of parameters used for 802.11a Convolutional encoding and Viterbi decoding
 trait CodingParams[T <: Data] {
   val protoInOut: T
   val k: Int                        // size of smallest block of input bits

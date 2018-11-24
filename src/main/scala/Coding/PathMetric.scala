@@ -7,6 +7,7 @@ import dsptools.numbers._
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
+// calculates brach-metric and path-metric, then find the survival path
 class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {
     val in        = Input(Vec(params.n, SInt(2.W)))
@@ -45,7 +46,6 @@ class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   when (startDecode === 1.U){
     // temporary matrix for Path Metric calculation
-    // TODO: How to find the maximum # of bits for PM ?
     val tmpPM   = Wire(Vec(params.nStates, Vec(params.numInputs, UInt(params.pmBits.W))))
     // temporary matrix for Branch Metric calculation
     val tmpBM   = Wire(Vec(params.nStates, Vec(params.numInputs, UInt((log2Ceil(params.n)+1).W))))

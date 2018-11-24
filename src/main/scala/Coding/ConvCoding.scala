@@ -5,6 +5,8 @@ import chisel3.util._
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
+// Written by Kunmo Kim : kunmok@berkeley.edu
+// Description: Convolutional encoder for 802.11a standard
 class ConvCoding[T <: Data](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {
     val in        = Input(UInt(1.W))    // assuming k=1 for all convolutional coding

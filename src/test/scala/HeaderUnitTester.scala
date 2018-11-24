@@ -3,7 +3,7 @@ package modem
 import dsptools.DspTester
 
 class HeaderUnitTester[T <: chisel3.Data](c: HeaderExtractor[T]) extends DspTester(c) {
-  // GP = [111, 110], rate = 1011 (3/4), length = 26
+  // GP = [111, 110], rate = 1011 (3/4), length = 26, H = 24
   poke(c.io.inReady, 0)
   poke(c.io.headInfo.ready, 1)
   poke(c.io.isHead, 1)
@@ -58,16 +58,24 @@ class HeaderUnitTester[T <: chisel3.Data](c: HeaderExtractor[T]) extends DspTest
   step(1)
   poke(c.io.inReady, 1)
   step(1)
-  step(1)
-  step(1)
-  step(1)
+  step(1) // computation should be completed at this time
+  step(1) // clk1
+  step(1) // clk2
+  step(1) // clk3
+  expect(c.io.headInfo.bits.rate(0), 1)
+  expect(c.io.headInfo.bits.rate(1), 0)
+  expect(c.io.headInfo.bits.rate(2), 1)
+  expect(c.io.headInfo.bits.rate(3), 1)
+  expect(c.io.headInfo.bits.dataLen, 26)
+  expect(c.io.headInfo.valid, 1)
+  poke(c.io.isHead, 0)
   step(1)
   expect(c.io.headInfo.bits.rate(0), 1)
   expect(c.io.headInfo.bits.rate(1), 0)
   expect(c.io.headInfo.bits.rate(2), 1)
   expect(c.io.headInfo.bits.rate(3), 1)
   expect(c.io.headInfo.bits.dataLen, 26)
-//  expect(c.io.headInfo.valid, 1)
+  expect(c.io.headInfo.valid, 0)
 
 }
 
@@ -80,6 +88,7 @@ object FixedHeaderTester {
 }
 
 /* test case 1
+  // H = 6
   poke(c.io.inReady, 0)
   poke(c.io.headInfo.ready, 1)
   poke(c.io.isHead, 1)
@@ -105,7 +114,7 @@ object FixedHeaderTester {
  */
 
 /*
-// GP = [111, 110], rate = 1011 (3/4), length = 26
+// GP = [111, 110], rate = 1011 (3/4), length = 26, H = 24
   poke(c.io.inReady, 0)
   poke(c.io.headInfo.ready, 1)
   poke(c.io.isHead, 1)
@@ -169,5 +178,5 @@ object FixedHeaderTester {
   expect(c.io.headInfo.bits.rate(2), 1)
   expect(c.io.headInfo.bits.rate(3), 1)
   expect(c.io.headInfo.bits.dataLen, 26)
-//  expect(c.io.headInfo.valid, 1)
+  expect(c.io.headInfo.valid, 1)
  */

@@ -8,13 +8,12 @@ import dsptools.numbers._
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
+// Description: de-puncturing block for Viterbi decoder
 class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
-//  val io = IO(DePuncturingIO(params))
   val io = IO(new Bundle{
     val in_hard   = Input(Vec(params.O, SInt(2.W)))
     //    val in_soft   = Input(Vec(params.O, DspComplex(FixedPoint(2.W, 30.BP))))
     val outData   = Output(Vec(params.n, SInt(2.W)))
-    val outHead   = Output(Vec(params.n, SInt(2.W)))
     //    val out_soft  = Output(Vec(params.n, DspComplex(FixedPoint(2.W, 30.BP))))
 
     val isHead    = Input(Bool())
@@ -27,9 +26,10 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
 
     val pktStart  = Input(Bool())
     val pktEnd    = Input(Bool())
+    val hdrEnd    = Input(Bool())
   })
   val H                   = 2 * params.H                        // header information is encoded with rate of 1/2
-  io.headInfo.ready := true.B
+  io.headInfo.ready       := true.B
 
   val puncMatBitWidth     = RegInit(0.U(4.W))
   val punctureVecReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U(1.W))))))  // support up to 7/8 coding rate
@@ -97,7 +97,7 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
   val bufData           = RegInit(VecInit(Seq.fill(params.n)(0.S(2.W))))  // buffer for interleaver
   val bufHeader         = RegInit(VecInit(Seq.fill(params.n)(0.S(2.W))))  // buffer for interleaver
   val pktLatch          = RegInit(false.B)
-  val cntHead           = RegInit(0.U(H.W))
+  val pktCnt            = RegInit(0.U(12.W))
 
   // Make states for state machine
   val sStartRecv  = 0.U(2.W)        // start taking input bits
@@ -112,7 +112,7 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
     pktLatch := false.B
   }
   when((io.pktStart || pktLatch) === true.B){
-    when( (io.isHead === true.B) && (cntHead < (H-1).U)){
+    when(io.isHead === true.B){
       (0 until params.n).map(i => { bufHeader(i.U) := io.in_hard(o_cnt + i.U) })
       o_cnt := o_cnt + params.n.U
       when(o_cnt === (params.O - params.n).U) {
@@ -121,15 +121,16 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
       when(o_cnt >= (params.O - params.n).U){
         o_cnt := 0.U
       }
-      cntHead := cntHead + 2.U
-    }.elsewhen( (io.isHead === false.B) && (cntHead > (H-1).U)) {
+
+    }.elsewhen(io.hdrEnd === true.B) {
       o_cnt := 0.U
       p_cnt := 0.U
-      cntHead := 0.U
       (0 until params.n).map(i => {
         bufHeader(i.U) := 0.S
       })
     }.elsewhen(io.isHead === false.B){
+      //TODO: add counter until it reaches to pktEnd
+
       // puncturing Matrix: [1,1,0],[1,0,1]
       // Input Matrix: [A0,A1,A2], [B0, B1, B2] -> Output Matrix: [A0, B0, A1, B2]
       for (i <- 0 until params.n) {
@@ -154,6 +155,5 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   // connect registers to output
   io.outData := bufData
-  io.outHead := bufHeader
   io.stateOut := stateWire
 }

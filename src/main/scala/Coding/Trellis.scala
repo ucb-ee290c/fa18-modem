@@ -3,6 +3,8 @@ package modem
 import chisel3._
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
+// Description: Trellis obj contains next-state table and output tables for all the possible data transitions
+// This object is used in brach-metric calculation
 class Trellis[T <: Data](params: CodingParams[T]){
   require(params.m > 1)
   require(params.k > 0)
