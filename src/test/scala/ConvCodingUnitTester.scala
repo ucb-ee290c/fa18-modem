@@ -19,81 +19,82 @@ class ConvCodingUnitTester[T <: chisel3.Data](c: ConvCoding[T]) extends DspTeste
   11    | 1   | 10  | 11
    */
   // currently there is 1 delay after taking input
-  poke(c.io.stateIn, 0)
-  poke(c.io.inReady, 0)
+//  poke(c.io.inReady, 0)
+  poke(c.io.in.valid, 0)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 0)
-  poke(c.io.in, 0)
+  poke(c.io.in.bits, 0)
 
   step(1)
-  poke(c.io.stateIn, 0)
-  poke(c.io.inReady, 0)
+//  poke(c.io.inReady, 0)
+  poke(c.io.in.valid, 0)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 0)
-  poke(c.io.in, 0)
+  poke(c.io.in.bits, 0)
 
   step(1)
-  poke(c.io.stateIn, 0)
-  poke(c.io.inReady, 1)
+//  poke(c.io.inReady, 1)
+  poke(c.io.in.valid, 1)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 0)
-  poke(c.io.in, 1)
+  poke(c.io.in.bits, 1)
 
   step(1)
   expect(c.io.out(0), 1)
   expect(c.io.out(1), 1)    // state 10
-  poke(c.io.in, 1)
+  poke(c.io.in.bits, 1)
 
   step(1)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 1)    // state 11
-  poke(c.io.in, 1)
+  poke(c.io.in.bits, 1)
 
   step(1)
   expect(c.io.out(0), 1)
   expect(c.io.out(1), 0)    // state 11
-  poke(c.io.in, 0)
+  poke(c.io.in.bits, 0)
 
   step(1)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 1)    // state 01
-  poke(c.io.in, 0)
+  poke(c.io.in.bits, 0)
 
   step(1)
   expect(c.io.out(0), 1)
   expect(c.io.out(1), 1)    // state 00
-  poke(c.io.in, 0)
+  poke(c.io.in.bits, 0)
 
   step(1)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 0)    // state 00
-  poke(c.io.in, 1)
+  poke(c.io.in.bits, 1)
 
   step(1)
   expect(c.io.out(0), 1)
   expect(c.io.out(1), 1)    // state 10
-  poke(c.io.in, 1)
+  poke(c.io.in.bits, 1)
 
   step(1)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 1)    // state 11
-  poke(c.io.in, 1)
+  poke(c.io.in.bits, 1)
 
   step(1)
   expect(c.io.out(0), 1)
   expect(c.io.out(1), 0)    // state 11
-  poke(c.io.in, 0)
+  poke(c.io.in.bits, 0)
 
   step(1)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 1)    // state 01
-  poke(c.io.in, 1)
-  poke(c.io.inReady, 0)        // last input 0, 1, 1 -> p0 = 0, p1 = 1
+  poke(c.io.in.bits, 1)
+//  poke(c.io.inReady, 0)        // last input 0, 1, 1 -> p0 = 0, p1 = 1
+  poke(c.io.in.valid, 0)
 
   step(1)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 1)    // state 10
-  poke(c.io.in, 0)
+  poke(c.io.in.bits, 0)
 
 }
 
@@ -109,171 +110,166 @@ object FixedConvCodingTester {
 }
 
 // ***** test case 1 : convolutional coding test (without tail-biting) *****
-//poke(c.io.stateIn, 0)
 //poke(c.io.inReady, 0)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
-//poke(c.io.stateIn, 0)
 //poke(c.io.inReady, 0)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //poke(c.io.inReady, 1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 1)    // state 10
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 1)    // state 11
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 0)    // state 11
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 1)    // state 01
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 1)    // state 00
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)    // state 00
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 1)    // state 10
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 1)    // state 11
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 0)    // state 11
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 1)    // state 01
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)    // state 10
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 0)    // state 01
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 1)    // state 00
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)    // state 00
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 1)    // state 10
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //poke(c.io.inReady, 0)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 1)    // state 10
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 
 // ***** test case 2 : convolutional coding test (with tail-biting) *****
-//poke(c.io.stateIn, 0)
 //poke(c.io.inReady, 0)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
-//poke(c.io.stateIn, 0)
 //poke(c.io.inReady, 0)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
-//poke(c.io.stateIn, 0)
 //poke(c.io.inReady, 1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 1)    // state 10
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 1)    // state 11
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 0)    // state 11
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 1)    // state 01
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 1)    // state 00
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 0)    // state 00
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 1)    // state 10
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 1)    // state 11
-//poke(c.io.in, 1)
+//poke(c.io.in.bits, 1)
 //
 //step(1)
 //expect(c.io.out(0), 1)
 //expect(c.io.out(1), 0)    // state 11
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)
 //
 //step(1)
 //expect(c.io.out(0), 0)
@@ -283,4 +279,4 @@ object FixedConvCodingTester {
 //step(1)
 //expect(c.io.out(0), 0)
 //expect(c.io.out(1), 1)    // state 10
-//poke(c.io.in, 0)
+//poke(c.io.in.bits, 0)

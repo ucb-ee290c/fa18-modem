@@ -10,15 +10,13 @@ import chisel3.util._
 class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {
     val in          = Input(Vec(params.n, UInt(1.W)))
-    val out         = Output(Vec(params.O, UInt(1.W)))
-    val puncMatrix  = Input(Vec(4, UInt(1.W)))
     val inReady     = Input(UInt(1.W))
-    val isHead      = Input(UInt(1.W))
-    val stateIn     = Input(UInt(2.W))
-    val stateOut    = Output(UInt(2.W))
+    val isHead      = Input(Bool())                               // from MAC layer
+    val puncMatrix  = Input(Vec(4, UInt(1.W)))                    // from MAC layer
+    val out         = Decoupled(Vec(params.O, UInt(1.W)))
   })
 
-  val puncMatBitWidth = RegInit(0.U(4.W))
+  val puncMatBitWidth     = RegInit(0.U(4.W))
   val punctureVecReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U(1.W))))))  // support up to 7/8 coding rate
   val puncIndicesReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U((log2Ceil(params.O)+1).W))))))
   val puncListColSumReg   = RegInit(VecInit(Seq.fill(7)(0.U((log2Ceil(params.n+1)).W))))
@@ -38,7 +36,7 @@ class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
     2/3 -> 1.U  ->  !R1 && !R2 && !R3 && R4
     3/4 -> 2.U  ->  R3 && R4
    */
-  when(io.isHead === 1.U){
+  when(io.isHead === true.B){
     when( ((io.puncMatrix(0).toBool() || io.puncMatrix(1).toBool()) && !io.puncMatrix(2).toBool() && io.puncMatrix(3).toBool()) === true.B)
     { // rate = 1/2
       puncMatBitWidth := CodingVariables.puncMatBitWidth1.U
@@ -90,12 +88,11 @@ class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
   val sStartRecv  = 0.U(2.W)        // start taking input bits
   val sEOS        = 1.U(2.W)
   val sDone       = 2.U(2.W)
-  val stateWire   = Wire(UInt(2.W))
-  stateWire := io.stateIn
+  val outValid    = RegInit(false.B)
 
   // ex) puncturing Matrix: [1,1,0],[1,0,1]
   // -> Input Matrix: [A0,A1,A2], [B0, B1, B2] -> Output Matrix: [A0, B0, A1, B2]
-  when(io.stateIn =/= sDone && io.inReady === 1.U && io.isHead === 0.U){
+  when( io.inReady === 1.U && io.isHead === false.B){
     // if puncturing is enabled,
     for (i <- 0 until params.n) {
       when(punctureVecReg((o_cnt+i.U) % params.n.U)((o_cnt / params.n.U) % puncMatBitWidth) === 1.U) {
@@ -105,24 +102,24 @@ class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
     p_cnt := p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)
     o_cnt := o_cnt + params.n.U
     when(p_cnt >= (params.O.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
-      stateWire := sDone
+      outValid  := true.B
       p_cnt := 0.U
     }
     when((o_cnt >= (params.O - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
       o_cnt := 0.U
     }
-  }.elsewhen(io.stateIn =/= sDone && io.inReady === 1.U && io.isHead === 1.U){    // no puncturing
+  }.elsewhen( io.inReady === 1.U && io.isHead === true.B){    // no puncturing
     (0 until params.n).map(i => { bufInterleaver(o_cnt + i.U) := io.in(i.U) })
     o_cnt := o_cnt + params.n.U
     when(o_cnt === (params.O - params.n).U) {
-      stateWire := sDone
-    }
-    when(o_cnt === (params.O - params.n).U) {
+      outValid  := true.B
       o_cnt := 0.U
     }
   }
-
+  when(io.out.fire()){
+    outValid := false.B
+  }
   // connect registers to output
-  io.out   := bufInterleaver
-  io.stateOut := stateWire
+  io.out.bits   := bufInterleaver
+  io.out.valid  := outValid
 }

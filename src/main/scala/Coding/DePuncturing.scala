@@ -27,6 +27,7 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
     val pktStart  = Input(Bool())
     val pktEnd    = Input(Bool())
     val hdrEnd    = Input(Bool())
+    val lenCnt    = Output(Bool())
   })
   val H                   = 2 * params.H                        // header information is encoded with rate of 1/2
   io.headInfo.ready       := true.B
@@ -97,7 +98,8 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
   val bufData           = RegInit(VecInit(Seq.fill(params.n)(0.S(2.W))))  // buffer for interleaver
   val bufHeader         = RegInit(VecInit(Seq.fill(params.n)(0.S(2.W))))  // buffer for interleaver
   val pktLatch          = RegInit(false.B)
-  val pktCnt            = RegInit(0.U(12.W))
+  val pktCntReg            = RegInit(0.U(12.W))
+  val lenCntReg         = RegInit(false.B)
 
   // Make states for state machine
   val sStartRecv  = 0.U(2.W)        // start taking input bits
@@ -130,7 +132,12 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
       })
     }.elsewhen(io.isHead === false.B){
       //TODO: add counter until it reaches to pktEnd
-
+//      when(io.in.fire()){
+//        pktCntReg := pktCntReg + params.O.U
+//        when(pktCntReg >= io.headInfo.bits.dataLen) {
+//          lenCntReg := true.B
+//        }
+//      }
       // puncturing Matrix: [1,1,0],[1,0,1]
       // Input Matrix: [A0,A1,A2], [B0, B1, B2] -> Output Matrix: [A0, B0, A1, B2]
       for (i <- 0 until params.n) {
@@ -154,6 +161,7 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
   }
 
   // connect registers to output
-  io.outData := bufData
+  io.outData  := bufData
   io.stateOut := stateWire
+  io.lenCnt   := lenCntReg
 }

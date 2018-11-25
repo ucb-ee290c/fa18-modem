@@ -7,8 +7,7 @@ import dsptools.numbers._
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // Description: This code contains a group of parameters used for 802.11a Convolutional encoding and Viterbi decoding
-trait CodingParams[T <: Data] {
-  val protoInOut: T
+trait CodingParams[T <: Data] extends BitsBundleParams[T] {
   val k: Int                        // size of smallest block of input bits
   val n: Int                        // size of smallest block of output bits
   val m: Int                        // number of memory elements. Constraint length is defined as K=m+1
@@ -48,13 +47,22 @@ case class FixedCoding(
   tailBitingScheme: Int = 0,
   softDecision: Boolean = false,
 //  softDecisionBitWidth: Int = 8
-) extends CodingParams[UInt] {
-  val protoInOut = UInt(1.W)
+) extends CodingParams[FixedPoint] {
+  override val protoBits = FixedPoint(16, 13)
+  override val bitsWidth: Int = 48
   val m = K - 1
   val nStates = math.pow(2.0, m.asInstanceOf[Double]).asInstanceOf[Int]
   val numInputs   = math.pow(2.0, k.asInstanceOf[Double]).asInstanceOf[Int]
   val pmBits = log2Ceil(6144)
 //  val softInput = DspComplex(FixedPoint(2.W, (softDecisionBitWidth-2).BP))
+}
+class MACctrl[T <: Data](params: CodingParams[T]) extends Bundle {
+  val isHead      = Input(Bool())                   // indicate whether the current block is header
+  val puncMatrix  = Input(Vec(4, UInt(1.W)))        // from MAC layer
+  override def cloneType: this.type = MACctrl(params).asInstanceOf[this.type]
+}
+object MACctrl {
+  def apply[T <: Data](params: CodingParams[T]): MACctrl[T] = new MACctrl(params)
 }
 
 class DecodeHeadBundle[T <: Data]() extends Bundle {

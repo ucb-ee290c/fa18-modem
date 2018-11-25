@@ -139,6 +139,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   }
 
   io.out.valid    := outValid
+  io.headInfo.ready := outValid
   io.out.bits     := decodeReg    // output is available 3 clk cycles after.
   io.cntLen       := cntLenReg
   io.allDataRecv  := allDataRecvReg

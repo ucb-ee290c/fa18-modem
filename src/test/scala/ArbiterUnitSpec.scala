@@ -2,19 +2,19 @@ package modem
 
 import org.scalatest.{FlatSpec, Matchers}
 
-class EncodingUnitSpec extends FlatSpec with Matchers {
-  behavior of "Encoding UnitSpec"
+class ArbiterUnitSpec extends FlatSpec with Matchers {
+  behavior of "ArbiterUnitSpec"
 
   val params = FixedCoding(
     k = 1,
     n = 2,
     K = 3,
-    L = 7,
+    L = 3,
     O = 6,
-    D = 36,
+    D = 4,
     H = 24,
-    genPolynomial = List(7, 5), // generator polynomial
-    punctureEnable = true,
+    genPolynomial = List(7, 6), // generator polynomial
+    punctureEnable = false,
     punctureMatrix = List(6, 5), // Puncture Matrix
     CodingScheme = 0,
     fbPolynomial = List(0),
@@ -22,8 +22,8 @@ class EncodingUnitSpec extends FlatSpec with Matchers {
     tailBitingScheme = 0,
     softDecision = false
   )
-  it should "Convolutional Encoding" in {
+  it should "check Header in || data in" in {
 
-    FixedEncodingTester(params) should be (true)
+    FixedArbiterTester(params) should be (true)
   }
 }
