@@ -16,9 +16,10 @@ class BranchMetric_backup[T <: Data:Real](params: CodingParams[T]) extends Modul
 
   val io = IO(new Bundle {
     val in        = Input(Vec(params.n, params.protoBits.cloneType))
-    val out       = Output(Vec(params.nStates, Vec(params.numInputs, Vec(params.n, UInt(params.n.W)))))
-    val out_frac  = Output(Vec(params.nStates, Vec(params.numInputs, Vec(params.n, params.protoBits.cloneType))))
-    val out_dec   = Output(Vec(params.nStates, Vec(params.numInputs, UInt((log2Ceil(params.n)+1).W))))
+    val out       = Output(Vec(params.nStates, Vec(params.numInputs, Vec(params.n, params.protoBits.cloneType))))
+//    val out_frac  = Output(Vec(params.nStates, Vec(params.numInputs, Vec(params.n, params.protoBits.cloneType))))
+//    val out_dec   = Output(Vec(params.nStates, Vec(params.numInputs, UInt((log2Ceil(params.n)+1).W))))
+    val out_dec   = Output(Vec(params.nStates, Vec(params.numInputs, params.protoBits.cloneType)))
   })
 
   val trellisObj  = new Trellis[T](params)
@@ -26,12 +27,15 @@ class BranchMetric_backup[T <: Data:Real](params: CodingParams[T]) extends Modul
   for (currentStates <- 0 until params.nStates) {
     for (currentInputs <- 0 until params.numInputs) {
       for (r <- 0 until params.n) {
-        when(io.in(r) === ConvertableTo[T].fromInt(0)) {
-          io.out(currentStates)(currentInputs)(r) := 0.U
-        }.otherwise {
-          io.out(currentStates)(currentInputs)(r) := Mux(io.in(r) === ConvertableTo[T].fromInt(2 * trellisObj.output_table(currentStates)(currentInputs)(r) - 1), 0.U, 1.U)
+        if(params.softDecision == false) { // hard decision
+          when(io.in(r) === ConvertableTo[T].fromInt(0)) {
+            io.out(currentStates)(currentInputs)(r) := ConvertableTo[T].fromInt(0)
+          }.otherwise {
+            io.out(currentStates)(currentInputs)(r) := Mux(io.in(r) === ConvertableTo[T].fromInt(2 * trellisObj.output_table(currentStates)(currentInputs)(r) - 1), ConvertableTo[T].fromInt(0), ConvertableTo[T].fromInt(1))
+          }
+        } else {
+          io.out(currentStates)(currentInputs)(r) := ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r))*io.in(r)*(-1)
         }
-        io.out_frac(currentStates)(currentInputs)(r) := ConvertableTo[T].fromInt(-1*trellisObj.output_table(currentStates)(currentInputs)(r))*io.in(r)
       }
       io.out_dec(currentStates)(currentInputs)  := io.out(currentStates)(currentInputs).reduce(_ + _)
     }

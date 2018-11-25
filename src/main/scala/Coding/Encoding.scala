@@ -46,8 +46,7 @@ class Encoding[T <: Data](params: CodingParams[T]) extends Module {
   }
 
   // connect registers to output
-  io.out <> puncturingModule.io.out
-  printf(p"********** out.ready = ${io.out.ready} ************ \n")
+  io.out        <> puncturingModule.io.out
   io.in.ready   := state === sStartRecv   // io.out.ready is fired from FIFO sitting b/w interleaver and
 
 }

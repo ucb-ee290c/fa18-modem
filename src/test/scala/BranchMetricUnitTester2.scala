@@ -4,8 +4,8 @@ import dsptools.DspTester
 
 case class BranchMetricInOut2(
   // input sequence
-  inBit0: Int,
-  inBit1: Int,
+  inBit0: Float,
+  inBit1: Float,
   outBitSeq: Array[Array[Array[Int]]]
 )
 
@@ -17,9 +17,12 @@ class BranchMetricUnitTester2[T <: chisel3.Data](c: BranchMetric_backup[T], tria
 
     for (currentStates <- 0 until 4) {
       for (currentInputs <- 0 until 2) {
-        expect(c.io.out(currentStates)(currentInputs)(0), trial.outBitSeq(currentStates)(currentInputs)(0) ^ ((trial.inBit0+1)/2))
-        expect(c.io.out(currentStates)(currentInputs)(1), trial.outBitSeq(currentStates)(currentInputs)(1) ^ ((trial.inBit1+1)/2))
-        expect(c.io.out_dec(currentStates)(currentInputs), (trial.outBitSeq(currentStates)(currentInputs)(0) ^ ((trial.inBit0+1)/2)) + (trial.outBitSeq(currentStates)(currentInputs)(1) ^ ((trial.inBit1+1)/2)))
+//        expect(c.io.out(currentStates)(currentInputs)(0), trial.outBitSeq(currentStates)(currentInputs)(0) ^ ((trial.inBit0+1)/2))
+//        expect(c.io.out(currentStates)(currentInputs)(1), trial.outBitSeq(currentStates)(currentInputs)(1) ^ ((trial.inBit1+1)/2))
+//        expect(c.io.out_dec(currentStates)(currentInputs), (trial.outBitSeq(currentStates)(currentInputs)(0) ^ ((trial.inBit0+1)/2)) + (trial.outBitSeq(currentStates)(currentInputs)(1) ^ ((trial.inBit1+1)/2)))
+          fixTolLSBs.withValue(1) {
+            expect(c.io.out_dec(currentStates)(currentInputs), -1 * ((trial.outBitSeq(currentStates)(currentInputs)(0) * (trial.inBit0)) + (trial.outBitSeq(currentStates)(currentInputs)(1) * (trial.inBit1))))
+          }
       }
     }
   }
