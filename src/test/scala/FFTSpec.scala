@@ -24,11 +24,10 @@ class FFTSpec extends FlatSpec with Matchers {
     dataWidth = 10,
     twiddleWidth = 10,
     numPoints = 2,
-    binPoint = 2,
-    fftType = "direct"
+    binPoint = 2
   )
 
-  for (i <- Seq(2, 4, 8, 16)) {
+  for (i <- Seq(2, 16, 64)) {
     it should f"compute $i-point Direct FFT/IFFT" in {
       val (params, inp, out_fft, out_ifft) = test_setup(base_params, i, "direct")
       FixedFFTTester(params,  inp, out_fft ) should be (true)

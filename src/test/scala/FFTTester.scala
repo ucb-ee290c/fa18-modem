@@ -10,7 +10,7 @@ import breeze.math.{Complex}
  * Run each trial in @trials
  */
 class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Complex], pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 5) extends DspTester(c) with HasTesterUtil[FFT[T]] {
-  val maxCyclesWait = 50
+  val maxCyclesWait = scala.math.max(50, c.params.numPoints * 3)
 
   poke(c.io.out.ready, 1)
   poke(c.io.in.valid, 1)
@@ -30,7 +30,7 @@ class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Comple
 }
 
 class IFFTTester[T <: chisel3.Data](c: IFFT[T], inp: Seq[Complex], out: Seq[Complex], pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 2) extends DspTester(c) with HasTesterUtil[IFFT[T]] {
-  val maxCyclesWait = 50
+  val maxCyclesWait = scala.math.max(50, c.params.numPoints * 3)
 
   poke(c.io.out.ready, 1)
   poke(c.io.in.valid, 1)
