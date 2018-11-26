@@ -3,7 +3,7 @@ package modem
 import dsptools.DspTester
 
 class TracebackUnitTester[T <: chisel3.Data](c: Traceback[T]) extends DspTester(c) {
-  poke(c.io.inReady, 1)
+  poke(c.io.enable, 1)
   poke(c.io.out.ready, 1)
   // addr = 0
   poke(c.io.inPM(0), 0)
@@ -241,7 +241,7 @@ object FixedTracebackTester {
 
 /*
 // D = 5, L = 2
-  poke(c.io.inReady, 1)
+  poke(c.io.enable, 1)
   poke(c.io.out.ready, 1)
   // addr = 0
   poke(c.io.inPM(0), 0)

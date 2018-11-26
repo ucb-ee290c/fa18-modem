@@ -20,6 +20,8 @@ class ConvCodingUnitSpec extends FlatSpec with Matchers {
     fbPolynomial = List(0),
     tailBitingEn = true,
     tailBitingScheme = 0,
+    protoBitsWidth = 16,
+    bitsWidth = 48,
     softDecision = false
   )
   it should "Convolution code" in {

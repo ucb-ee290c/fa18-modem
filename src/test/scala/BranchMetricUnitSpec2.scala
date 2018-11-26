@@ -22,6 +22,8 @@ class BranchMetricUnitSpec2 extends FlatSpec with Matchers {
     fbPolynomial = List(0),
     tailBitingEn = false,
     tailBitingScheme = 0,
+    protoBitsWidth = 16,
+    bitsWidth = 48,
     softDecision = true
   )
   it should "calculate Branch Metrics2" in {

@@ -20,6 +20,8 @@ class HeaderUnitSpec extends FlatSpec with Matchers {
     fbPolynomial = List(0),
     tailBitingEn = false,
     tailBitingScheme = 0,
+    protoBitsWidth = 16,
+    bitsWidth = 48,
     softDecision = false
   )
   it should "Extract Header information" in {

@@ -17,8 +17,6 @@ class BranchMetric_backup[T <: Data:Real](params: CodingParams[T]) extends Modul
   val io = IO(new Bundle {
     val in        = Input(Vec(params.n, params.protoBits.cloneType))
     val out       = Output(Vec(params.nStates, Vec(params.numInputs, Vec(params.n, params.protoBits.cloneType))))
-//    val out_frac  = Output(Vec(params.nStates, Vec(params.numInputs, Vec(params.n, params.protoBits.cloneType))))
-//    val out_dec   = Output(Vec(params.nStates, Vec(params.numInputs, UInt((log2Ceil(params.n)+1).W))))
     val out_dec   = Output(Vec(params.nStates, Vec(params.numInputs, params.protoBits.cloneType)))
   })
 

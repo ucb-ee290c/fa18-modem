@@ -35,24 +35,32 @@ class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
   val DePuncturingModule          = Module(new DePuncturing[T](params))
   val pathMetricModule            = Module(new PathMetric[T](params))
   val tracebackModule             = Module(new Traceback[T](params))
+  val arbiterModule               = Module(new Arbiter[T](params))
+
+  // Arbiter
+  arbiterModule.io.inHead         := DePuncturingModule.io.outHead
+  arbiterModule.io.lenCnt         := DePuncturingModule.io.lenCnt
+  arbiterModule.io.hdrPktLatch    := DePuncturingModule.io.hdrPktLatch
 
   // Header-Extractor connection
-  HeaderExtModule.io.in           <> io.in
-
+  HeaderExtModule.io.in           := DePuncturingModule.io.outHead
+  HeaderExtModule.io.isHead       := arbiterModule.io.isHead
 
   DePuncturingModule.io.in_hard   <> io.in
   DePuncturingModule.io.headInfo  := HeaderExtModule.io.headInfo
-  DePuncturingModule.io.inReady   := io.inReady
-  DePuncturingModule.io.stateIn   := 0.U
+  DePuncturingModule.io.hdrEnd    := arbiterModule.io.hdrEnd
+  DePuncturingModule.io.isHead    := arbiterModule.io.isHead
+
   io.out_dp                       <> DePuncturingModule.io.outData
 
   pathMetricModule.io.in          <> DePuncturingModule.io.outData
-  pathMetricModule.io.inReady     := io.inReady
+  pathMetricModule.io.hdrEnd      := arbiterModule.io.hdrEnd
+  pathMetricModule.io.inEnable    := DePuncturingModule.io.outEnable
   io.out_pm <> pathMetricModule.io.outPM
   io.out_sp <> pathMetricModule.io.outSP
 
   tracebackModule.io.inPM         := pathMetricModule.io.outPM
   tracebackModule.io.inSP         := pathMetricModule.io.outSP
-  tracebackModule.io.inReady      := io.inReady
+  tracebackModule.io.enable       := pathMetricModule.io.outEnable
   io.out    <> tracebackModule.io.out
 }

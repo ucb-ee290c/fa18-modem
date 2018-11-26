@@ -20,6 +20,8 @@ class PuncturingUnitSpec extends FlatSpec with Matchers {
     fbPolynomial = List(0),
     tailBitingEn = false,
     tailBitingScheme = 0,
+    protoBitsWidth = 16,
+    bitsWidth = 48,
     softDecision = false
   )
   it should "puncturing code" in {

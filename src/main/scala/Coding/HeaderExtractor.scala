@@ -11,20 +11,15 @@ import dsptools.numbers._
 class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {
     val in        = Input(Vec((params.n * params.H), SInt(2.W)))
-    val inReady   = Input(UInt(1.W))
     val isHead    = Input(Bool())
     val headInfo  = Decoupled(DecodeHeadBundle())
   })
   // ***************************************************************************************************
   // ************************************* Path Metric Calculation *************************************
   // ***************************************************************************************************
-  val H                   = params.H
-  val L                   = params.L
-  val D                   = params.D
-  val m                   = params.m
-  val N                   = params.nStates
-  val inReadyReg          = RegInit(0.U(1.W))
-  inReadyReg := io.inReady
+  val H                   = params.H          // # of bits in header block
+  val m                   = params.m          // # of memory for convolutional coding
+  val N                   = params.nStates    // # of possible states
   val branchMetricModule  = VecInit(Seq.fill(H)(Module(new BranchMetric[T](params)).io))
   (0 until (params.n*H)).map(i => { branchMetricModule(i/params.n).in(i % (params.n)) := io.in(i) })
 
@@ -39,7 +34,7 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   val pmRegs              = RegInit(VecInit(Seq.fill(H+1)(VecInit(Seq.fill(N)(0.U(params.pmBits.W))))))
   val SPcalcCompleted     = RegInit(false.B)    // flag for SP & PM calculation
 
-  when (io.inReady === 1.U && io.isHead === true.B){
+  when (io.isHead === true.B){
     // temporary matrix for Path Metric calculation
     val tmpPM   = Wire(Vec(H+1, Vec(N, Vec(params.numInputs, UInt(params.pmBits.W)))))
     // temporary matrix for Branch Metric calculation
@@ -95,13 +90,12 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   // *************************************************************************************
   // declare variables for decoding process
   val outValid          = RegInit(false.B)
-
   val trackValid        = RegInit(VecInit(Seq.fill(3)(0.U(1.W))))   // to relax time constraint of critical timing path
   val decodeReg         = Reg(Vec(H, UInt(params.k.W)))
   val lengthInfoWire    = Wire(Vec(12, UInt(12.W)))
 
   // start decoding !
-  when((io.isHead === 1.U) && (SPcalcCompleted === true.B)) {
+  when((io.isHead === true.B) && (SPcalcCompleted === true.B)) {
     val tmpPMMin          = Wire(Vec(N - 1, UInt(m.W)))
     val tmpPMMinIndex     = Wire(Vec(N - 1, UInt(m.W)))
     val tmpSPforTB  = Wire(Vec(H-1, UInt(m.W)))
@@ -134,7 +128,7 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
     outValid        := true.B
   }
 
-  when(io.headInfo.fire() && io.isHead === false.B){
+  when(io.headInfo.fire() === true.B && io.isHead === false.B){
     SPcalcCompleted := false.B
     outValid        := false.B
   }
@@ -144,7 +138,7 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   // normal operation mode
   (0 until 4).map(i   => { io.headInfo.bits.rate(i)  := decodeReg(i)             })
   (0 until 12).map(i  => { lengthInfoWire(i)         := decodeReg(5 + i) << (i)  })
-  io.headInfo.bits.dataLen    := lengthInfoWire.reduce(_ + _)
+  io.headInfo.bits.dataLen    := lengthInfoWire.reduce(_ + _) << 3  // contains number of data "octets" in a packet
   io.headInfo.valid           := outValid
 
   // test mode (H=6)

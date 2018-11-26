@@ -4,7 +4,6 @@ import dsptools.DspTester
 
 class HeaderUnitTester[T <: chisel3.Data](c: HeaderExtractor[T]) extends DspTester(c) {
   // GP = [111, 110], rate = 1011 (3/4), length = 26, H = 24
-  poke(c.io.inReady, 0)
   poke(c.io.headInfo.ready, 1)
   poke(c.io.isHead, 1)
   poke(c.io.in(0), 1)
@@ -56,7 +55,6 @@ class HeaderUnitTester[T <: chisel3.Data](c: HeaderExtractor[T]) extends DspTest
   poke(c.io.in(46), -1)
   poke(c.io.in(47), -1)           // tail 5
   step(1)
-  poke(c.io.inReady, 1)
   step(1)
   step(1) // computation should be completed at this time
   step(1) // clk1
@@ -66,7 +64,7 @@ class HeaderUnitTester[T <: chisel3.Data](c: HeaderExtractor[T]) extends DspTest
   expect(c.io.headInfo.bits.rate(1), 0)
   expect(c.io.headInfo.bits.rate(2), 1)
   expect(c.io.headInfo.bits.rate(3), 1)
-  expect(c.io.headInfo.bits.dataLen, 26)
+  expect(c.io.headInfo.bits.dataLen, 26*8)
   expect(c.io.headInfo.valid, 1)
   poke(c.io.isHead, 0)
   step(1)
@@ -74,7 +72,7 @@ class HeaderUnitTester[T <: chisel3.Data](c: HeaderExtractor[T]) extends DspTest
   expect(c.io.headInfo.bits.rate(1), 0)
   expect(c.io.headInfo.bits.rate(2), 1)
   expect(c.io.headInfo.bits.rate(3), 1)
-  expect(c.io.headInfo.bits.dataLen, 26)
+  expect(c.io.headInfo.bits.dataLen, 26*8)
   expect(c.io.headInfo.valid, 0)
 
 }
@@ -89,7 +87,6 @@ object FixedHeaderTester {
 
 /* test case 1
   // H = 6
-  poke(c.io.inReady, 0)
   poke(c.io.headInfo.ready, 1)
   poke(c.io.isHead, 1)
   poke(c.io.in(0), 1)
@@ -105,7 +102,6 @@ object FixedHeaderTester {
   poke(c.io.in(10), 1)
   poke(c.io.in(11), -1)
   step(1)
-  poke(c.io.inReady, 1)
   step(1)
   step(1)
   step(1)
@@ -115,7 +111,6 @@ object FixedHeaderTester {
 
 /*
 // GP = [111, 110], rate = 1011 (3/4), length = 26, H = 24
-  poke(c.io.inReady, 0)
   poke(c.io.headInfo.ready, 1)
   poke(c.io.isHead, 1)
   poke(c.io.in(0), 1)
@@ -167,7 +162,6 @@ object FixedHeaderTester {
   poke(c.io.in(46), -1)
   poke(c.io.in(47), -1)           // tail 5
   step(1)
-  poke(c.io.inReady, 1)
   step(1)
   step(1)
   step(1)

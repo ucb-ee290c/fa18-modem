@@ -24,7 +24,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
 //    |  x     x     2     3     2o    3     3  |
 //  */
   // below works for generator polynomial : 111, 110
-  poke(c.io.inReady, 0)
+  poke(c.io.hdrEnd, 0)
   poke(c.io.in(0), -1)
   poke(c.io.in(1), -1)
   expect(c.io.outPM(0), 0)
@@ -36,8 +36,8 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(2), 0)
   expect(c.io.outSP(3), 0)
 
-  step(1)
-  poke(c.io.inReady, 1)
+  step(1)                                   // startDecode becomes 1 in the next clk cycle. pmRegs(1~3) === 100.U
+  poke(c.io.hdrEnd, 1)
   poke(c.io.in(0), -1)
   poke(c.io.in(1), -1)
   expect(c.io.outPM(0), 0)
@@ -49,8 +49,8 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(2), 0)
   expect(c.io.outSP(3), 0)
 
-  step(1)
-  poke(c.io.inReady, 0)
+  step(1)                                   // startDecode is 1. PDSU starts!
+  poke(c.io.hdrEnd, 0)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 1)
   expect(c.io.outPM(0), 0)
@@ -63,7 +63,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(3), 0)
 
   step(1)
-  poke(c.io.inReady, 0)
+  poke(c.io.hdrEnd, 0)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), -1)
   expect(c.io.outPM(0), 2)
@@ -76,7 +76,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
 //  expect(c.io.outSP(3), 0)              // I don't care about outSP(1) and outSP(2) at this point
 
   step(1)
-  poke(c.io.inReady, 0)
+  poke(c.io.hdrEnd, 0)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 1)
   expect(c.io.outPM(0), 3)
@@ -89,7 +89,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(3), 2)
 
   step(1)
-  poke(c.io.inReady, 0)
+  poke(c.io.hdrEnd, 0)
   poke(c.io.in(0), -1)
   poke(c.io.in(1), -1)
   expect(c.io.outPM(0), 2)
@@ -102,7 +102,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(3), 3)
 
   step(1)
-  poke(c.io.inReady, 0)
+  poke(c.io.hdrEnd, 0)
   poke(c.io.in(0), -1)
   poke(c.io.in(1), 1)
   expect(c.io.outPM(0), 2)
@@ -115,7 +115,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(3), 2)
 
   step(1)
-  poke(c.io.inReady, 0)
+  poke(c.io.hdrEnd, 0)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), -1)
   expect(c.io.outPM(0), 3)
@@ -128,7 +128,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(3), 3)
 
   step(1)
-  poke(c.io.inReady, 0)
+  poke(c.io.hdrEnd, 0)
 //  poke(c.io.in(0), 1)
 //  poke(c.io.in(1), 0)
   expect(c.io.outPM(0), 2)

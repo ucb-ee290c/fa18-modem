@@ -20,6 +20,8 @@ class ArbiterUnitSpec extends FlatSpec with Matchers {
     fbPolynomial = List(0),
     tailBitingEn = false,
     tailBitingScheme = 0,
+    protoBitsWidth = 16,
+    bitsWidth = 48,
     softDecision = false
   )
   it should "check Header in || data in" in {

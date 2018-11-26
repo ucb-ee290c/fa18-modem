@@ -38,23 +38,22 @@ case class FixedCoding(
   O: Int = 48,
   D: Int = 36,                            // D needs to be larger than 4 in current architecture
   H: Int = 24,                            // Header length after encoding
-  genPolynomial: List[Int] = List(7, 5), // generator polynomial
+  genPolynomial: List[Int] = List(7, 5),  // generator polynomial
   punctureEnable: Boolean = false,
   punctureMatrix: List[Int] = List(6, 5), // Puncture Matrix
   CodingScheme: Int = 0,
   fbPolynomial: List[Int] = List(0),
   tailBitingEn: Boolean = false,
   tailBitingScheme: Int = 0,
+  protoBitsWidth: Int = 16,
+  bitsWidth: Int = 48,
   softDecision: Boolean = false,
-//  softDecisionBitWidth: Int = 8
 ) extends CodingParams[FixedPoint] {
-  override val protoBits = FixedPoint(16, 13)
-  override val bitsWidth: Int = 48
+  val protoBits = FixedPoint(protoBitsWidth.W, (protoBitsWidth-2).BP)
   val m = K - 1
   val nStates = math.pow(2.0, m.asInstanceOf[Double]).asInstanceOf[Int]
   val numInputs   = math.pow(2.0, k.asInstanceOf[Double]).asInstanceOf[Int]
   val pmBits = log2Ceil(6144)
-//  val softInput = DspComplex(FixedPoint(2.W, (softDecisionBitWidth-2).BP))
 }
 class MACctrl[T <: Data](params: CodingParams[T]) extends Bundle {
   val isHead      = Input(Bool())                   // indicate whether the current block is header
