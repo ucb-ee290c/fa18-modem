@@ -117,7 +117,7 @@ class SingleVecToSerial[T<:Data](params: IQBundleParams[T]) extends Module {
   io.in.ready :=  io.out.ready
   io.out.valid := io.in.valid
   io.out.bits.pktStart := io.in.bits.pktStart
-  io.out.bits.pktEnd := io.out.bits.pktEnd
+  io.out.bits.pktEnd := io.in.bits.pktEnd
   io.out.bits.iq := io.in.bits.iq(0)
 
 }
