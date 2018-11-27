@@ -28,15 +28,10 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   val outValid    = RegInit(false.B)
   val addrSize    = params.nStates * (D+L)
   val addrWidth   = log2Ceil(addrSize) + 2
-  val addr        = Wire(UInt(addrWidth.W))
-  val tmpSP       = Wire(Vec(D+L, UInt(m.W)))
   val addrReg     = RegInit(0.U(addrWidth.W))
   val mem = Reg(Vec(addrSize * 2, UInt(m.W)))
 
   // declare variables for decoding process
-  val memWire           = Wire(Vec(params.nStates * (D+L-1), UInt(m.W)))
-  val tmpPMMin          = Wire(Vec(params.nStates - 1, UInt(m.W)))
-  val tmpPMMinIndex     = Wire(Vec(params.nStates - 1, UInt(m.W)))
   val tmpPMMinReg       = RegInit(VecInit(Seq.fill(params.nStates - 1)(0.U(m.W))))
   val tmpPMMinIndexReg  = RegInit(VecInit(Seq.fill(params.nStates - 1)(0.U(m.W))))
   val tmpSPReg          = RegInit(VecInit(Seq.fill(params.nStates)(0.U(m.W))))
@@ -50,8 +45,13 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   val allDataRecvReg    = RegInit(0.U(1.W))
 
   // setup registers for address
-  addr    := addrReg
   when(io.enable === true.B){
+    val addr              = Wire(UInt(addrWidth.W))
+    val tmpSP             = Wire(Vec(D+L, UInt(m.W)))
+    val memWire           = Wire(Vec(params.nStates * (D+L-1), UInt(m.W)))
+    val tmpPMMin          = Wire(Vec(params.nStates - 1, UInt(m.W)))
+    val tmpPMMinIndex     = Wire(Vec(params.nStates - 1, UInt(m.W)))
+    addr    := addrReg
 
     when(addrReg < (addrSize * 2 - params.nStates).U ){
       addrReg := addrReg + params.nStates.U
@@ -126,7 +126,6 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
     when(io.out.fire()){
       outValid      := false.B
     }
-
   }
 
   io.out.valid    := outValid

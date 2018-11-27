@@ -12,12 +12,8 @@ class DePuncturingUnitSpec extends FlatSpec with Matchers {
     L = 7,
     O = 10,
     D = 36,
-    H = 24,
+    H = 5,
     genPolynomial = List(7, 5), // generator polynomial
-    punctureEnable = true,
-    punctureMatrix = List(6, 5), // Puncture Matrix
-    CodingScheme = 0,
-    fbPolynomial = List(0),
     tailBitingEn = false,
     tailBitingScheme = 0,
     protoBitsWidth = 16,

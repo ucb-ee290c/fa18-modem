@@ -14,10 +14,6 @@ class TracebackUnitSpec extends FlatSpec with Matchers {
     D = 4,
     H = 24,
     genPolynomial = List(7, 6), // generator polynomial
-    punctureEnable = true,
-    punctureMatrix = List(6, 5), // Puncture Matrix
-    CodingScheme = 0,
-    fbPolynomial = List(0),
     tailBitingEn = false,
     tailBitingScheme = 0,
     protoBitsWidth = 16,

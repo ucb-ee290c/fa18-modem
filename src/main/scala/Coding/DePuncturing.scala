@@ -10,28 +10,25 @@ import dsptools.numbers._
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // Description: de-puncturing block for Viterbi decoder
 class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
-//  require((params.n * params.H) <= params.O)
+//  require((params.n * params.H) <= params.n * params.H)
   val io = IO(new Bundle{
 
     val hdrPktLatch = Output(Bool())
 
-    val in          = Flipped(Decoupled(BitsBundle(params)))
-    val isHead      = Input(Bool())
-    val headInfo    = Flipped(Decoupled(DecodeHeadBundle()))
-    val hdrEnd      = Input(Bool())
-    val in_hard     = Input(Vec(params.O, SInt(2.W)))
+    val in          = Flipped(Decoupled(BitsBundle(params)))      // from Demod
+    val in_hard     = Input(Vec(params.n * params.H, SInt(2.W)))  // from Demod
+    val isHead      = Input(Bool())                               // from arbiter
+    val hdrEnd      = Input(Bool())                               // from arbiter
+    val headInfo    = Flipped(Decoupled(DecodeHeadBundle()))      // from Head Extractor
 
-    val outData     = Output(Vec(params.n, SInt(2.W)))
-    val outHead     = Output(Vec(params.O, SInt(2.W)))
-    val lenCnt      = Output(Bool())
-    val stateOut    = Output(UInt(2.W))
-    val outEnable   = Output(Bool())
+    val outData     = Output(Vec(params.n, SInt(2.W)))            // to PathMetric
+    val outHead     = Output(Vec(params.n * params.H, SInt(2.W))) // to HeadExtractor
+    val lenCnt      = Output(Bool())                              // to arbiter
+    val outEnable   = Output(Bool())                              // to PathMetric
   })
-  val H                   = params.n * params.H                        // header information is encoded with rate of 1/2
-
   val puncMatBitWidth     = RegInit(0.U(4.W))
   val punctureVecReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U(1.W))))))  // support up to 7/8 coding rate
-  val puncIndicesReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U((log2Ceil(params.O)+1).W))))))
+  val puncIndicesReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U((log2Ceil(params.n * params.H)+1).W))))))
   val puncListColSumReg   = RegInit(VecInit(Seq.fill(7)(0.U((log2Ceil(params.n+1)).W))))
   val headInfoReady       = RegInit(true.B)
   /*
@@ -81,7 +78,9 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
         })
       })
       (0 until 3).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum3(i).U })
-    }.otherwise{
+    }.otherwise
+    { // rate = 1/2
+      printf("ajklasdjfkla;sjkflasjl;faadfjklasjfklas;klf l \n ")
       puncMatBitWidth := 1.U
       (0 until params.n).map(i => {
         (0 until 2).map(j => {
@@ -94,33 +93,22 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
     headInfoReady := false.B
   }
 
-  val o_cnt         = RegInit(0.U(log2Ceil(params.O).W))              // counter for data vector tracker
-  val p_cnt         = RegInit(0.U(log2Ceil(params.O).W))              // counter for outReg tracker
+  val o_cnt         = RegInit(0.U(log2Ceil(params.n * params.H).W))              // counter for data vector tracker
+  val p_cnt         = RegInit(0.U(log2Ceil(params.n * params.H).W))              // counter for outReg tracker
   val h_cnt         = RegInit(0.U(6.W))
   val bufData       = RegInit(VecInit(Seq.fill(params.n)(0.S(2.W))))  // buffer for Data
   val pktLatch      = RegInit(false.B)
   val pktCntReg     = RegInit(0.U(15.W))
-  val lenCntReg     = RegInit(false.B)
-  val bitCntReg     = RegInit(0.U(6.W))
+  val lenCntReg     = RegInit(true.B)
+  val bitCntReg     = RegInit((params.n * params.H).U(log2Ceil(params.n * params.H).W))
   val enReg         = RegInit(false.B)
-  val inReadyReg    = RegInit(false.B)
 
-  // Make states for state machine
-  val sStartRecv    = 0.U(2.W)        // start taking input bits
-  val sWork         = 1.U(2.W)
-  val sDone         = 2.U(2.W)
-  val state         = RegInit(0.U(2.W))
-  val stateWire     = Wire(UInt(2.W))
-  stateWire         := 0.U
-
-  val inReg       = Reg(Vec(params.O, SInt(2.W)))
+  val inReg       = Reg(Vec(params.n * params.H, SInt(2.W)))
   when(io.in.fire()){
-    printf(" store input into inReg ******* \n")
     inReg := io.in_hard
     when((io.in.bits.pktStart === true.B) && (pktLatch === false.B)){
       pktLatch := true.B
     }
-    state       := sWork
     bitCntReg   := 0.U
   }
   when( (io.in.bits.pktEnd === true.B) && (pktLatch === true.B)){             // lower pktLatch
@@ -128,32 +116,22 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
   }
   when(io.isHead === true.B){
     pktCntReg := 0.U
-    lenCntReg := false.B
   }
   when(io.isHead === true.B || pktCntReg >= io.headInfo.bits.dataLen || bitCntReg >= (params.n * params.H).U) {
     enReg := false.B
   }
-  printf(p" ********* pktLatch = ${pktLatch}******* \n")
+
   when(pktLatch === true.B && bitCntReg < (params.n * params.H).U){
-//    when(io.isHead === true.B || (io.isHead === false.B && pktCntReg >= io.headInfo.bits.dataLen) ){
-//      enReg := false.B
-//
-//      o_cnt := o_cnt + params.n.U
-//      when(o_cnt === (params.O - params.n).U) {
-//        stateWire := sDone
-//      }
-//      when(o_cnt >= (params.O - params.n).U){
-//        o_cnt := 0.U
-//      }
     // hdrEnd triggers one cycle before the end of header block
     // -> needs to reset o_cnt and p_cnt registers.
-    // -> below may not be necessary if params.O is set to 96 or higher.
-    // -> but I don't see any reason not to have params.O fixed at 48 bits.
-//    }.elsewhen(io.hdrEnd === true.B) {
+    // -> below may not be necessary if params.n * params.H is set to 96 or higher.
+    // -> but I don't see any reason not to have params.n * params.H fixed at 48 bits.
     when(io.hdrEnd === true.B) {
       o_cnt     := 0.U
       p_cnt     := 0.U
       enReg     := false.B
+      lenCntReg := false.B
+      bitCntReg := (params.n * params.H).U
     // when it starts receiving payload
     // need to count number of bits it has received.
     // Once all the data has been received, raise 'lenCntReg' and 'headInfoReady' registers
@@ -171,29 +149,29 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
       enReg := true.B
       p_cnt := p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)
       o_cnt := o_cnt + params.n.U
-      when(p_cnt >= (params.O.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
-        stateWire := sDone
+      when(p_cnt >= (params.n * params.H.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
         p_cnt := 0.U
       }
-      when((o_cnt >= (params.O - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
+      when((o_cnt >= (params.n * params.H - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
         o_cnt := 0.U
       }
 
       when(pktCntReg < io.headInfo.bits.dataLen){
         pktCntReg := pktCntReg + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)  // count # of processed bits
-      }.otherwise{
-        lenCntReg := true.B
-        headInfoReady := true.B
       }
       bitCntReg := bitCntReg + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)    // count # of processed bits
     }
   }
-//  inReadyReg        := bitCntReg >= (params.n * params.H).U
-  inReadyReg        := true.B
+  when(pktCntReg >= io.headInfo.bits.dataLen){                // length counter.
+    lenCntReg := true.B
+    headInfoReady := true.B
+  }
+
+  printf(p"bitCntReg = ${bitCntReg} *********\n")
+
   // connect registers to output
-  io.in.ready       := inReadyReg
+  io.in.ready       := bitCntReg >= (params.n * params.H).U
   io.outData        := bufData
-  io.stateOut       := stateWire
   io.lenCnt         := lenCntReg
   io.headInfo.ready := headInfoReady
   io.outHead        := inReg

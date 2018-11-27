@@ -18,15 +18,13 @@ trait CodingParams[T <: Data] extends BitsBundleParams[T] {
   val H: Int                        // 802.11a Header length
   val nStates: Int                  // number of states
   val genPolynomial: List[Int]      // Matrix contains the generator polynomial
-  val punctureEnable: Boolean       // enable/disable puncturing
-  val punctureMatrix: List[Int]     // puncturing matrix
-  val CodingScheme: Int             // 0: Convolutional Coding, 1: Turbo Coding, 2: LDPC
-  val fbPolynomial: List[Int]       // feedback generator polynomial for Recursive Systematic Coding (Turbo Code) -> currently not supporting
+//  val CodingScheme: Int             // 0: Convolutional Coding, 1: Turbo Coding, 2: LDPC
+//  val fbPolynomial: List[Int]       // feedback generator polynomial for Recursive Systematic Coding (Turbo Code) -> currently not supporting
   val tailBitingEn: Boolean         // 0: disable tail-biting, 1: enable tail-biting
   val tailBitingScheme: Int         // 0: zero tail-biting. 1: sophisticated tail-biting
   val numInputs: Int
   val pmBits: Int
-  val softDecision: Boolean         // Does Viterbi decoder take soft-input ?
+  val softDecision: Boolean       // will always perform soft-decoding
 }
 
 case class FixedCoding(
@@ -39,10 +37,8 @@ case class FixedCoding(
   D: Int = 36,                            // D needs to be larger than 4 in current architecture
   H: Int = 24,                            // Header length after encoding
   genPolynomial: List[Int] = List(7, 5),  // generator polynomial
-  punctureEnable: Boolean = false,
-  punctureMatrix: List[Int] = List(6, 5), // Puncture Matrix
-  CodingScheme: Int = 0,
-  fbPolynomial: List[Int] = List(0),
+//  CodingScheme: Int = 0,
+//  fbPolynomial: List[Int] = List(0),
   tailBitingEn: Boolean = false,
   tailBitingScheme: Int = 0,
   protoBitsWidth: Int = 16,

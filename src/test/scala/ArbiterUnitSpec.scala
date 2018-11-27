@@ -12,12 +12,8 @@ class ArbiterUnitSpec extends FlatSpec with Matchers {
     L = 3,
     O = 6,
     D = 4,
-    H = 24,
+    H = 4,
     genPolynomial = List(7, 6), // generator polynomial
-    punctureEnable = false,
-    punctureMatrix = List(6, 5), // Puncture Matrix
-    CodingScheme = 0,
-    fbPolynomial = List(0),
     tailBitingEn = false,
     tailBitingScheme = 0,
     protoBitsWidth = 16,

@@ -8,26 +8,18 @@ import modem.{BranchMetric, CodingParams, Trellis}
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
-class ArbiterIO[T <: Data: Real](params: CodingParams[T]) extends Bundle{
-  val lenCnt      = Input(Bool())    // dataInfo.valid indicates whether length counter reaches to target length value set by header
-  val inHead      = Input(Vec((params.n * params.H), SInt(2.W)))
-  val hdrPktLatch = Input(Bool())
-//  val pktStart    = Input(Bool())
-//  val pktEnd      = Input(Bool())
-
-  val isHead      = Output(Bool())
-  val hdrEnd      = Output(Bool())
-}
-
-object ArbiterIO {
-  def apply[T <: Data: Real](params: CodingParams[T]): ArbiterIO[T] = new ArbiterIO(params)
-}
-
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // Description: Arbiter identifies whether the incoming packet contains header information or payload
 class Arbiter[T <: Data: Real](params: CodingParams[T]) extends Module {
-  val io = IO(ArbiterIO(params))
-  val isHeadReg     = RegInit(true.B)
+  val io = IO(new Bundle{
+    val inHead      = Input(Vec((params.n * params.H), SInt(2.W)))  // from De-Puncturing
+    val lenCnt      = Input(Bool())                                 // from De-Puncturing
+    val hdrPktLatch = Input(Bool())                                 // from De-Puncturing
+
+    val isHead      = Output(Bool())                                // to De-Puncturing & HeadExtractor
+    val hdrEnd      = Output(Bool())                                // to De-Puncturing
+  })
+  val isHeadReg     = RegInit(false.B)
   val hdrCounter    = RegInit(0.U(6.W))
   val hdrEndReg     = RegInit(false.B)
 
@@ -46,6 +38,8 @@ class Arbiter[T <: Data: Real](params: CodingParams[T]) extends Module {
   }.otherwise{
     hdrEndReg   := false.B
   }
+
+  printf(p"hdrCounter = ${hdrCounter} ********* \n")
   io.isHead         := isHeadReg
   io.hdrEnd         := hdrEndReg
 }

@@ -27,6 +27,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   poke(c.io.hdrEnd, 0)
   poke(c.io.in(0), -1)
   poke(c.io.in(1), -1)
+  poke(c.io.inEnable, 0)
   expect(c.io.outPM(0), 0)
   expect(c.io.outPM(1), 0)
   expect(c.io.outPM(2), 0)
@@ -48,9 +49,24 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(1), 0)
   expect(c.io.outSP(2), 0)
   expect(c.io.outSP(3), 0)
+  expect(c.io.outEnable, 0)
 
   step(1)                                   // startDecode is 1. PDSU starts!
   poke(c.io.hdrEnd, 0)
+  poke(c.io.in(0), -1)
+  poke(c.io.in(1), -1)
+  expect(c.io.outPM(0), 0)
+  expect(c.io.outPM(1), 100)
+  expect(c.io.outPM(2), 100)
+  expect(c.io.outPM(3), 100)
+  expect(c.io.outSP(0), 0)
+  expect(c.io.outSP(1), 0)
+  expect(c.io.outSP(2), 0)
+  expect(c.io.outSP(3), 0)
+  expect(c.io.outEnable, 0)
+
+  step(1)                                   // startDecode is 1. PDSU starts!
+  poke(c.io.inEnable, 1)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 1)
   expect(c.io.outPM(0), 0)
@@ -61,6 +77,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(1), 0)
   expect(c.io.outSP(2), 0)
   expect(c.io.outSP(3), 0)
+  expect(c.io.outEnable, 0)
 
   step(1)
   poke(c.io.hdrEnd, 0)
@@ -74,6 +91,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
 //  expect(c.io.outSP(1), 0)              // I don't care about outSP(1) and outSP(2) at this point
   expect(c.io.outSP(2), 0)
 //  expect(c.io.outSP(3), 0)              // I don't care about outSP(1) and outSP(2) at this point
+  expect(c.io.outEnable, 1)
 
   step(1)
   poke(c.io.hdrEnd, 0)
@@ -87,6 +105,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(1), 2)
   expect(c.io.outSP(2), 0)
   expect(c.io.outSP(3), 2)
+  expect(c.io.outEnable, 1)
 
   step(1)
   poke(c.io.hdrEnd, 0)
@@ -100,6 +119,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(1), 3)
   expect(c.io.outSP(2), 1)
   expect(c.io.outSP(3), 3)
+  expect(c.io.outEnable, 1)
 
   step(1)
   poke(c.io.hdrEnd, 0)
@@ -113,6 +133,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(1), 3)
   expect(c.io.outSP(2), 1)
   expect(c.io.outSP(3), 2)
+  expect(c.io.outEnable, 1)
 
   step(1)
   poke(c.io.hdrEnd, 0)
@@ -126,6 +147,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(1), 3)
   expect(c.io.outSP(2), 1)
   expect(c.io.outSP(3), 3)
+  expect(c.io.outEnable, 1)
 
   step(1)
   poke(c.io.hdrEnd, 0)
@@ -139,6 +161,7 @@ class PathMetricUnitTester[T <: chisel3.Data](c: PathMetric[T]) extends DspTeste
   expect(c.io.outSP(1), 2)
   expect(c.io.outSP(2), 1)
   expect(c.io.outSP(3), 3)
+  expect(c.io.outEnable, 1)
 
 }
 

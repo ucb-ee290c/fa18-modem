@@ -10,9 +10,9 @@ import dsptools.numbers._
 // Description: 48-bit minimum latency Viterbi-Decoder to extract information from header block
 class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   val io = IO(new Bundle {
-    val in        = Input(Vec((params.n * params.H), SInt(2.W)))
-    val isHead    = Input(Bool())
-    val headInfo  = Decoupled(DecodeHeadBundle())
+    val in        = Input(Vec((params.n * params.H), SInt(2.W)))      // from De-Puncturing
+    val isHead    = Input(Bool())                                     // from arbiter
+    val headInfo  = Decoupled(DecodeHeadBundle())                     // to De-Puncturing
   })
   // ***************************************************************************************************
   // ************************************* Path Metric Calculation *************************************
@@ -122,7 +122,7 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   when(trackValid(0) === 1.U){
     (2 to 1 by -1).map(i => {trackValid(i) := trackValid(i-1)})
   }
-  printf(p"**************** trackValid(2) = ${trackValid(2)} **************** \n")
+//  printf(p"**************** trackValid(2) = ${trackValid(2)} **************** \n")
 
   when(trackValid(2) === 1.U) {
     outValid        := true.B
@@ -133,7 +133,7 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
     outValid        := false.B
   }
   for(i <- (0 until H).reverse){
-    printf(p"**************** i = ${i}, decodeReg = ${decodeReg(i)} **************** \n")
+//    printf(p"**************** i = ${i}, decodeReg = ${decodeReg(i)} **************** \n")
   }
   // normal operation mode
   (0 until 4).map(i   => { io.headInfo.bits.rate(i)  := decodeReg(i)             })
