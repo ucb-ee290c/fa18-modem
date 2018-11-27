@@ -120,6 +120,17 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
     val idle::st::lt::data::Nil = Enum(4)
 
+    def RunVectorCordic[T<:Data:BinaryRepresentation:Real:ConvertableTo](cplx: DspComplex[T]): Boolean = {
+      cordic.io.in.bits.x := cplx.real
+      cordic.io.in.bits.y := cplx.imag
+      cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
+      cordic.io.in.bits.vectoring := true.B
+      cordic.io.in.valid := true.B
+      estimatorReady := false.B
+      cordic.io.out.ready := true.B
+      true
+    }
+
     io.in.ready := estimatorReady
     io.out.valid := cordic.io.out.valid
     io.pErr := coarseOffset + fineOffset
@@ -136,18 +147,12 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(st){
-          cordic.io.in.bits.x := stAcc.real
-          cordic.io.in.bits.y := stAcc.imag
-          cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
-          cordic.io.in.bits.vectoring := true.B
         when(stCounter.inc()){
-          cordic.io.in.valid := true.B
-          estimatorReady := false.B
-          cordic.io.out.ready := true.B
+          RunVectorCordic(stAcc)
         }.elsewhen(io.in.fire()){
           curState := st
-          when(delayValidByST){
-            stMul := (io.in.bits.iq * delayIQByST.conj())
+          when(delayValidByST && io.in.valid){
+            stMul := (delayIQByST.conj() * io.in.bits.iq)
             stAcc := stAcc + stMul
           }
         }.otherwise{
@@ -160,19 +165,13 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(lt){
-          cordic.io.in.bits.x := ltAcc.real
-          cordic.io.in.bits.y := ltAcc.imag
-          cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
-          cordic.io.in.bits.vectoring := true.B
         when(ltCounter.inc()){
-          cordic.io.in.valid := true.B
-          estimatorReady := false.B
-          cordic.io.out.ready := true.B
+          RunVectorCordic(ltAcc)
         }.elsewhen(io.in.fire()){
           curState := lt
-          when(delayValidByLT){
-            ltMul := (io.in.bits.iq * delayIQByLT.conj())
-            ltAcc := stAcc + stMul
+          when(delayValidByLT && io.in.valid){
+            ltMul := (delayIQByLT.conj() * io.in.bits.iq)
+            ltAcc := ltAcc + ltMul
           }
         }
         .otherwise{
