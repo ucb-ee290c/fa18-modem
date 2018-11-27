@@ -33,7 +33,7 @@ class CFOEstimationSpec extends FlatSpec with Matchers {
   behavior of "Estimate CFO"
 
   val fixedCFOParams = FixedCFOParams(
-    width = 16
+    iqWidth = 16
   )
   it should "detect no offset" in {
     val trials = Seq(IQ(vecs.cleanTV, None))
