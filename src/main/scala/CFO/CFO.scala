@@ -87,13 +87,42 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
 //   pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
 // }
 
+class OneCyclePulseGen[T<:Data] extends Module {
+  val io = IO( new Bundle{
+    val in = Input(Bool())
+    val out = Output(Bool())
+  })
+
+  val idle::trig::stop::Nil = Enum(4)
+  val delayedIn = RegNext(io.in)
+  val nxtState = WireInit(idle)
+  val curState = RegNext(next=nxtState, init=idle)
+
+  switch(curState){
+    is(idle){
+      io.out := false.B
+      when(io.in && !delayedIn){
+        nxtState := trig
+      }.otherwise{
+        nxtState := idle
+      }
+    }
+    is(trig){
+      io.out := true.B
+      nxtState := stop
+    }
+    is(stop){
+      io.out := false.B
+      nxtState := idle
+    }
+  }
+}
+
 class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params: CFOParams[T]) extends Module {
   // requireIsChiselType(params.protoIn)
   val io = IO(CFOEIO(params))
 
   val cordic = Module ( new IterativeCordic(params))
-
-
 
   if(params.preamble == true){
     // val sm = Module( new PreambleStateMachine(params.stLength, params.ltLength) )
