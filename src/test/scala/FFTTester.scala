@@ -54,13 +54,11 @@ class IFFTTester[T <: chisel3.Data](c: IFFT[T], inp: Seq[Complex], out: Seq[Comp
  */
 object FixedFFTTester {
   def apply(params: FixedFFTParams, inp: Seq[Complex], out: Seq[Complex]): Boolean = {
-    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new FFT(params)) {
-    dsptools.Driver.execute(() => new FFT(params), TestSetup.dspTesterOptions) {
-      c => new FFTTester(c, inp, out) }
+    dsptools.Driver.execute(() => new FFT(params), TestSetup.dspTesterOptions) { c => new FFTTester(c, inp, out) }
   }
 }
 object FixedIFFTTester {
   def apply(params: FixedFFTParams, inp: Seq[Complex], out: Seq[Complex]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new IFFT(params)) { c => new IFFTTester(c, inp, out) }
+    dsptools.Driver.execute(() => new IFFT(params), TestSetup.dspTesterOptions) { c => new IFFTTester(c, inp, out) }
   }
 }

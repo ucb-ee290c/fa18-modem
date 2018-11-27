@@ -153,18 +153,16 @@ class DesSerTester[T <: chisel3.Data](c: DesSerTestModule[T], inp: Seq[Complex],
  */
 object FixedDeserializerTester {
   def apply(params: FixedSerDesParams, inp: Seq[Complex]): Boolean = {
-    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Deserializer(params)) {
-    dsptools.Driver.execute(() => new Deserializer(params), TestSetup.dspTesterOptions) {
-       c => new DeserializerTester(c, inp) }
+    dsptools.Driver.execute(() => new Deserializer(params), TestSetup.dspTesterOptions) { c => new DeserializerTester(c, inp) }
   }
 }
 object FixedSerializerTester {
   def apply(params: FixedSerDesParams, inp: Seq[Complex]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Serializer(params)) { c => new SerializerTester(c, inp) }
+    dsptools.Driver.execute(() => new Serializer(params), TestSetup.dspTesterOptions) { c => new SerializerTester(c, inp) }
   }
 }
 object FixedDesSerTester {
   def apply(params: FixedSerDesParams, inp: Seq[Complex]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new DesSerTestModule(params)) { c => new DesSerTester(c, inp) }
+    dsptools.Driver.execute(() => new DesSerTestModule(params), TestSetup.dspTesterOptions) { c => new DesSerTester(c, inp) }
   }
 }
