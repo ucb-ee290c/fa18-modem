@@ -25,5 +25,6 @@ object TestSetup {
       isVerbose = false
     )
     testerOptions = testerOptionsFirrtl
+    //testerOptions = testerOptionsVerilog
   }
 }
