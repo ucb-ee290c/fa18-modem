@@ -1,6 +1,7 @@
 package modem
 
 import chisel3._
+import chisel3.util._
 import dsptools.numbers._
 
 /**
@@ -106,33 +107,17 @@ object BitsBundle {
 }
 
 //=======================================================================================================================================================
-/**
-  * Fixed Parameters for IQBundle
-  */
+class SingleVecToSerial[T<:Data](params: IQBundleParams[T]) extends Module {
+  val io = IO( new Bundle{
+    val in = Flipped(Decoupled(PacketBundle(PacketBundleParams(1, params.protoIQ))))
+    val out = Decoupled(SerialPacketBundle(PacketBundleParams(1, params.protoIQ)))
+  }
+  )
 
-//case class FixedIQBundleParams(
-  //bitWidth: Int,
-  //binPoint: Int
-//) extends IQBundleParams[FixedPoint]{
-  //protoIQ = DspComplex(FixedPoint(bitWidth.W, binPoint.BP))
-//}
+  io.in.ready :=  io.out.ready
+  io.out.valid := io.in.valid
+  io.out.bits.pktStart := io.in.bits.pktStart
+  io.out.bits.pktEnd := io.in.bits.pktEnd
+  io.out.bits.iq := io.in.bits.iq(0)
 
-//case class FixedPacketBundleParams(
-  //bitWidth: Int,
-  //binPoint: Int
-//) extends PacketBundleParams[FixedPoint]{
-  //width =
-//}
-
-//case class FixedFFTParams(
-  //// width of Input and Output
-  //dataWidth: Int,
-  //// width of twiddle constants
-  //twiddleWidth: Int,
-  //maxVal: Int,
-  //numPoints: Int = 4,
-  //pipeline: Boolean = false
-//) extends FFTParams[FixedPoint] {
-  //val protoIQ = DspComplex(FixedPoint(dataWidth.W, (dataWidth-2-log2Ceil(maxVal)).BP))
-  //val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP))
-//}
+}
