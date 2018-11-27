@@ -38,7 +38,7 @@ class DeserializerTester[T <: chisel3.Data](c: Deserializer[T], inp: Seq[Complex
 
   poke(c.io.out.ready, 1)
   poke(c.io.in.valid, 1)
-  
+
   inp.zipWithIndex.foreach { case (value, index) =>
     poke(c.io.in.bits.iq, value)
     poke(c.io.in.bits.pktStart, (index == 0))
@@ -126,7 +126,7 @@ class DesSerTester[T <: chisel3.Data](c: DesSerTestModule[T], inp: Seq[Complex],
   poke(c.io.in.valid, 1)
 
   var out_idx = 0
-  
+
   inp.zipWithIndex.foreach { case (value, index) =>
     poke(c.io.in.bits.iq, value)
     poke(c.io.in.bits.pktStart, (index == 0))
@@ -153,7 +153,9 @@ class DesSerTester[T <: chisel3.Data](c: DesSerTestModule[T], inp: Seq[Complex],
  */
 object FixedDeserializerTester {
   def apply(params: FixedSerDesParams, inp: Seq[Complex]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Deserializer(params)) { c => new DeserializerTester(c, inp) }
+    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Deserializer(params)) {
+    dsptools.Driver.execute(() => new Deserializer(params), TestSetup.dspTesterOptions) {
+       c => new DeserializerTester(c, inp) }
   }
 }
 object FixedSerializerTester {

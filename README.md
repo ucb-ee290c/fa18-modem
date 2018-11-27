@@ -20,9 +20,13 @@ Not implemented yet.
 
 ## Current Standard Support
 ### CFO
-- Preamble based coarse correction
-- Preamble based fine correction
-- ? Pilot based correction
+The CFO Estimation and Correction estimates the carrier frequency offset using the short and long training fields of the OFDM packet. The training samples are cross correlated to determine the phase offset of each sample, then the error is sent to a CORDIC phase correction to rotate the input IQ vectors accordingly.
+
+The length of the training fields and the pipeline depth of the estimator/CORDIC are parameterizable. The generator is type-generic with regard to the IQ representation.
+
+TODOs:
+- Non-preamble based CFO Estimation
+- Pilot tracking
 
 ### Packet Detection
 The packet detector uses a moving average power estimate to detect the beginning of a packet when average power exceeds a threshold and the end of a packet when the average power falls below a threshold.
@@ -37,8 +41,11 @@ TODOS:
 The cyclic prefix block can add or remove a cyclic prefix from symbols in a packet. The length of the previx and size of an OFDM symbol are parameterized in the generator, and addition/removal is controlled with a bool input.
 
 ### FFT
-- Fixed 2^n FFT
-- ? Fixed 2^n IFFT
+The FFT uses the radix-2 Cooley-Tukey decimation-in-time (DIT) algorithm to compute the fast Fourier transform. The IFFT reuses the FFT, but swaps the real and imaginary components at the input to the FFT and scales the output by 1/N for an N-point IFFT. Currently, the supported FFT sizes are powers of 2, and sizes are fixed. FFTs with reconfigurable sizes are not yet supported.
+
+The following FFT architectures are implemented:
+- Direct: simplest to implement
+- Single-path delay feedback (SDF): more hardware-efficient (through reuse) at the cost of increased latency
 
 ### Equalizer
 The equalizer uses preamble-based least-squares equalization to apply a fixed channel correction to a full packet. Pilot-based equalization is not yet supported. Currently, the preamble must be BPSK, but could easily be extended to arbitrary symbols.
@@ -58,18 +65,20 @@ TODOS:
 - TODO: Interleaving/deinterleaving
 - TODO: QPSK, 16QAM, 64QAM
 
-### FEC
+### Convolutional Encoder 
 - Generator configurable
   - Constraint length
   - Generator polynomials
-  - Coding ratio
+  - Coding ratio (k=1 is fixed) 
   - Puncturing
   - Feedback polynomial for recursive systematic coding
   - Tailbiting scheme
-  - Minimum bits per OFDM symbol
-- Viterbi algorithm python model
-- TODO: Chisel Viterbi decoder
+  
 
+### Viterbi Decoder 
+- currently supporting hard-decision only 
+- continuous-time sliding-window Viterbi Decoder 
+ 
 ### Modem
 - Currently just passthrough dummy blocks
 - TODO: replace with actual implementations

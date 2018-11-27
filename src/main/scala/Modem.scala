@@ -7,7 +7,6 @@ import chisel3.util._
 import dsptools.numbers._
 // import freechips.rocketchip.diplomacy.LazyModule
 // import freechips.rocketchip.subsystem.BaseSubsystem
-
 /**
   * Mixin for top-level rocket to add a modem
   *
@@ -27,7 +26,7 @@ class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Mod
   val io = IO(???)
 }
 
-class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
+class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real](
   val iqBundleParams: IQBundleParams[T],
   val pktDetectParams: PacketDetectParams[T],
   val cyclicPrefixParams: CyclicPrefixParams[T],
@@ -36,16 +35,18 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   val fftParams: FFTParams[T],
   val bitsBundleParams: BitsBundleParams[U],
   val demodParams: DemodulationParams[T,U],
-  val viterbiParams: ViterbiParams[U],
+  val viterbiParams: CodingParams[V],
 ) extends Module {
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(IQBundle(iqBundleParams)))
-    val out = Decoupled(BitsBundle(bitsBundleParams))
+    //val out = Decoupled(BitsBundle(bitsBundleParams))
+    val out = Decoupled(Vec(36, UInt(1.W)))
   })
 
   val phaseRotator = Module( new PhaseRotator(cfoParams) )
   val pktDetect = Module( new PacketDetect(pktDetectParams) )
   val cfoEstimator = Module( new CFOCorrection(cfoParams) )
+  val vecToSerial = Module (new SingleVecToSerial(iqBundleParams) )
   val cyclicPrefix = Module( new CyclicPrefix(cyclicPrefixParams) )
   val fft = Module( new FFT(fftParams) )
   val eq = Module( new Equalizer(equalizerParams) )
@@ -54,43 +55,44 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data](
   val decode = Module( new ViterbiDecoder(viterbiParams) )
 
   // Phase Rotation Block
-  phaseRotator.io.inIQ := io.in
+  phaseRotator.io.inIQ <> io.in
   phaseRotator.io.phiCorrect := ConvertableTo[T].fromDouble(0) //cfoEstimator.phiCorrect
 
   // Packet Detector Block
-  pktDetect.io.in := phaseRotator.io.outIQ
+  pktDetect.io.in <> phaseRotator.io.outIQ
 
   // CFO Estimation
-  cfoEstimator.io.in := pktDetect.io.out
+  cfoEstimator.io.in <> pktDetect.io.out
 
   // CP Removal
-  cyclicPrefix.io.in := cfoEstimator.io.out
+  cyclicPrefix.io.in <> cfoEstimator.io.out
   cyclicPrefix.io.add := false.B
 
   // FFT
-  fft.io.in := cyclicPrefix.io.out
+  vecToSerial.io.in <> cyclicPrefix.io.out 
+  fft.io.in <> vecToSerial.io.out
 
   // EQ
-  eq.io.in := fft.io.out
+  eq.io.in <> fft.io.out
 
   // CFO Pilot Estimation
   // cfoPilot.io.in := fft.io.out
 
   // Demodulator
-  demod.io.in := eq.io.out
+  demod.io.in <> eq.io.out
 
   // Decoder
-  decode.io.in := demod.io.out
+  decode.io.in <> demod.io.out
 
-  io.out := decode.io.out
+  io.out <> decode.io.out
 }
 
-trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
-  val foo: Int
-}
-
-class Modem[T<:Data:Real:BinaryRepresentation, U<:Data](val params: ModemParams[T,U]) extends Module{
-  val io = IO(???)
-
-
-}
+// trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
+//   val foo: Int
+// }
+//
+// class Modem[T<:Data:Real:BinaryRepresentation, U<:Data](val params: ModemParams[T,U]) extends Module{
+//   val io = IO(???)
+//
+//
+// }

@@ -2,6 +2,7 @@ package modem
 
 import chisel3._
 import chisel3.util._
+import chisel3.experimental.FixedPoint
 import dsptools.numbers._
 
 trait CFOParams[T <: Data] extends CordicParams[T] with PacketBundleParams[T] {
@@ -11,8 +12,8 @@ trait CFOParams[T <: Data] extends CordicParams[T] with PacketBundleParams[T] {
 }
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(params)))
+  val out = Decoupled(PacketBundle(params))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
@@ -21,17 +22,37 @@ object CFOIO {
     new CFOIO(params)
 }
 
+case class FixedCFOParams(
+  width: Int = 1,
+  iqWidth: Int,
+  stLength: Int = 160,
+  ltLength: Int = 160,
+  preamble: Boolean = true,
+  stagesPerCycle: Int = 1
+) extends CFOParams[FixedPoint] {
+  val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP)).cloneType
+  val protoXY = FixedPoint(iqWidth.W, (iqWidth-3).BP).cloneType
+  val protoZ = FixedPoint(iqWidth.W, (iqWidth-3).BP).cloneType
+  val correctGain = true
+  val minNumber = math.pow(2.0, -(iqWidth-3))
+  // number of cordic stages
+  private var n = 0
+  while (breeze.numerics.tan(math.pow(2.0, -n)) >= minNumber) {
+    n += 1
+  }
+  val nStages = n
+}
 
 class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) extends Module{
   val io = IO(new Bundle{
-    val inIQ = Flipped(Decoupled(SerialPacketBundle(params)))
-    val outIQ = Decoupled(SerialPacketBundle(params))
+    val inIQ = Flipped(Decoupled(IQBundle(params)))
+    val outIQ = Decoupled(IQBundle(params))
     val phiCorrect = Input(params.protoZ)
   })
 
-  val cordic = Module( new IterativeCordic(params))
+  //val cordic = Module( new IterativeCordic(params))
 
-  io.outIQ := io.inIQ
+  io.outIQ <> io.inIQ
   // cordic.io.in.bits.x := io.inIQ.bits.iq.real
   // cordic.io.in.bits.y := io.inIQ.bits.iq.imag
   // cordic.io.in.bits.z := io.phiCorrect
@@ -59,10 +80,10 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
   // requireIsChiselType(params.protoIn)
   val io = IO(CFOIO(params))
 
-  val cordic = Module ( new IterativeCordic(params))
-  val phaseCorrect = Module( new PhaseRotator(params))
+  //val cordic = Module ( new IterativeCordic(params))
+  //val phaseCorrect = Module( new PhaseRotator(params))
 
-  io.out := io.in
+  io.out <> io.in
   // phaseCorrect.io.inIQ.bits.iq := io.in.bits.iq
   // io.out.bits.iq := phaseCorrect.io.outIQ.bits.iq
   // io.out.bits.pktStart := io.in.bits.pktStart

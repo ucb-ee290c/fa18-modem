@@ -1,6 +1,7 @@
 package modem
 
 import chisel3._
+import chisel3.util._
 import dsptools.numbers._
 
 /**
@@ -15,9 +16,8 @@ object IQBundleParams {
 /**
  * Bundle type for packetized IQ data
  */
-trait PacketBundleParams[T <: Data] {
+trait PacketBundleParams[T <: Data] extends IQBundleParams[T]{
   val width: Int
-  val protoIQ: DspComplex[T]
 }
 object PacketBundleParams {
   def apply[T <: Data](size: Int, proto: DspComplex[T]): PacketBundleParams[T] = {
@@ -104,4 +104,20 @@ class BitsBundle[T<:Data](params: BitsBundleParams[T]) extends Bundle {
 object BitsBundle {
   def apply[T<:Data](params: BitsBundleParams[T]): BitsBundle[T] = new BitsBundle[T](params)
   def apply[T<:Data](bitsWidth: Int, protoBits: T): BitsBundle[T] = new BitsBundle[T](BitsBundleParams[T](bitsWidth, protoBits))
+}
+
+//=======================================================================================================================================================
+class SingleVecToSerial[T<:Data](params: IQBundleParams[T]) extends Module {
+  val io = IO( new Bundle{
+    val in = Flipped(Decoupled(PacketBundle(PacketBundleParams(1, params.protoIQ))))
+    val out = Decoupled(SerialPacketBundle(PacketBundleParams(1, params.protoIQ)))
+  }
+  )
+
+  io.in.ready :=  io.out.ready
+  io.out.valid := io.in.valid
+  io.out.bits.pktStart := io.in.bits.pktStart
+  io.out.bits.pktEnd := io.in.bits.pktEnd
+  io.out.bits.iq := io.in.bits.iq(0)
+
 }

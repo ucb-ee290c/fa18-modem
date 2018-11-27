@@ -1,4 +1,4 @@
-package Coding
+package modem
 
 /**
  * Object for computing useful constants

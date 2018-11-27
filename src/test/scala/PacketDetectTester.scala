@@ -99,7 +99,8 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
   */
 object FixedPacketDetectTester {
   def apply(params: FixedPacketDetectParams, trials: Seq[IQ]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new PacketDetect(params)) {
+    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new PacketDetect(params)) {
+    dsptools.Driver.execute(() => new PacketDetect(params), TestSetup.dspTesterOptions) {  
       c => new PacketDetectTester(c, trials)
     }
   }
