@@ -12,8 +12,8 @@ trait CFOParams[T <: Data] extends CordicParams[T] with PacketBundleParams[T] {
 }
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
+  val out = Decoupled(PacketBundle(1, params.protoIQ))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
@@ -23,8 +23,8 @@ object CFOIO {
 }
 
 class CFOEIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
+  val out = Decoupled(PacketBundle(1, params.protoIQ))
 
   val pErr = Output(params.protoIQ.real.cloneType)
 
@@ -87,13 +87,42 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
 //   pbus.toVariableWidthSlave(Some("cordicRead")) { cordicChain.readQueue.mem.get }
 // }
 
+class OneCyclePulseGen[T<:Data] extends Module {
+  val io = IO( new Bundle{
+    val in = Input(Bool())
+    val out = Output(Bool())
+  })
+
+  val idle::trig::stop::Nil = Enum(4)
+  val delayedIn = RegNext(io.in)
+  val nxtState = WireInit(idle)
+  val curState = RegNext(next=nxtState, init=idle)
+
+  switch(curState){
+    is(idle){
+      io.out := false.B
+      when(io.in && !delayedIn){
+        nxtState := trig
+      }.otherwise{
+        nxtState := idle
+      }
+    }
+    is(trig){
+      io.out := true.B
+      nxtState := stop
+    }
+    is(stop){
+      io.out := false.B
+      nxtState := idle
+    }
+  }
+}
+
 class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params: CFOParams[T]) extends Module {
   // requireIsChiselType(params.protoIn)
   val io = IO(CFOEIO(params))
 
   val cordic = Module ( new IterativeCordic(params))
-
-
 
   if(params.preamble == true){
     // val sm = Module( new PreambleStateMachine(params.stLength, params.ltLength) )
@@ -133,6 +162,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
     io.in.ready := estimatorReady
     io.out.valid := cordic.io.out.valid
+    // io.out.bits.pktStart := Mux(curState === st, )
+    io.out.bits.bits := Mux(curState === lt || curState === data, io.in.bits.bits, VecInit(Seq(DspComplex[T](0,0))))
     io.pErr := coarseOffset + fineOffset
 
     switch(curState){
@@ -192,9 +223,7 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
     }
-
   }
-
 }
 
 class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params: CFOParams[T]) extends Module {
