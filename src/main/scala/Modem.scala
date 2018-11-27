@@ -45,7 +45,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real](
 
   val phaseRotator = Module( new PhaseRotator(cfoParams) )
   val pktDetect = Module( new PacketDetect(pktDetectParams) )
-  val cfoEstimator = Module( new CFOCorrection(cfoParams) )
+  val cfoEstimator = Module( new CFOEstimation(cfoParams) )
   val vecToSerial = Module (new SingleVecToSerial(iqBundleParams) )
   val cyclicPrefix = Module( new CyclicPrefix(cyclicPrefixParams) )
   val fft = Module( new FFT(fftParams) )
@@ -69,7 +69,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real](
   cyclicPrefix.io.add := false.B
 
   // FFT
-  vecToSerial.io.in <> cyclicPrefix.io.out 
+  vecToSerial.io.in <> cyclicPrefix.io.out
   fft.io.in <> vecToSerial.io.out
 
   // EQ
