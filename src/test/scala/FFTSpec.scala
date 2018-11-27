@@ -40,12 +40,12 @@ class FFTSpec extends FlatSpec with Matchers {
     }
   }
 
-  for (i <- Seq(5, 7)) {
-    it should f"compute $i-point FFT" in {
-      val (params, inp, out_fft, _) = test_setup(base_params, i, "direct")
-      FixedFFTTester(params, inp, out_fft) should be (true)
-    }
-  }
+  // for (i <- Seq(5, 7)) {
+  //   it should f"compute $i-point FFT" in {
+  //     val (params, inp, out_fft, _) = test_setup(base_params, i, "direct")
+  //     FixedFFTTester(params, inp, out_fft) should be (true)
+  //   }
+  // }
 
   behavior of "FFTUtil"
   it should "check factorize" in {
