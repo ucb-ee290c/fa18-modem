@@ -123,6 +123,7 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
   val io = IO(CFOEIO(params))
 
   val cordic = Module ( new IterativeCordic(params))
+  val pulseGen = Module ( new OneCyclePulseGen )
 
   if(params.preamble == true){
     // val sm = Module( new PreambleStateMachine(params.stLength, params.ltLength) )
@@ -162,6 +163,9 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
     io.in.ready := estimatorReady
     io.out.valid := cordic.io.out.valid
+    io.out.bits.pktStart := pulseGen.io.out
+    io.out.bits.pktEnd := io.in.bits.pktEnd
+    io.out.bits(0).bits := Mux(curState === lt || curState === data, io.in.bits.bits, VecInit(Seq(DspComplex[T](0,0))))
     io.pErr := coarseOffset + fineOffset
 
     switch(curState){
