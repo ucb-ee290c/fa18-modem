@@ -12,8 +12,8 @@ trait CFOParams[T <: Data] extends CordicParams[T] with PacketBundleParams[T] {
 }
 
 class CFOIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
+  val out = Decoupled(PacketBundle(1, params.protoIQ))
 
   override def cloneType: this.type = CFOIO(params).asInstanceOf[this.type]
 }
@@ -23,8 +23,8 @@ object CFOIO {
 }
 
 class CFOEIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
+  val out = Decoupled(PacketBundle(1, params.protoIQ))
 
   val pErr = Output(params.protoIQ.real.cloneType)
 
