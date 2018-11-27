@@ -23,7 +23,7 @@ class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   val DePuncturingModule  = Module(new DePuncturing[T](params))
   val pathMetricModule    = Module(new PathMetric[T](params))
-  val tracebackModule     = Module(new Traceback[T](params))
+  //val tracebackModule     = Module(new Traceback[T](params))
 
   DePuncturingModule.io.in_hard :=  io.in.bits.bits
   DePuncturingModule.io.inReady := io.in.valid
@@ -35,9 +35,11 @@ class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
   io.out_pm <> pathMetricModule.io.outPM
   io.out_sp <> pathMetricModule.io.outSP
 
-  tracebackModule.io.inPM     := pathMetricModule.io.outPM
-  tracebackModule.io.inSP     := pathMetricModule.io.outSP
-  tracebackModule.io.inReady  := io.in.valid
-  io.out  <> tracebackModule.io.out
+  //tracebackModule.io.inPM     := pathMetricModule.io.outPM
+  //tracebackModule.io.inSP     := pathMetricModule.io.outSP
+  //tracebackModule.io.inReady  := io.in.valid
+  //io.out  <> tracebackModule.io.out
+  io.out.bits := VecInit(Seq.fill(36){0.U})
+  io.out.valid := true.B
   io.in.ready := io.out.ready
 }
