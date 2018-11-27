@@ -143,8 +143,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
     val estimatorReady = Wire(Bool())
 
-    val delayIQByST = (0 until stDelay).foldLeft(io.in.bits[0].iq){(prev, curr) => RegNext(prev)}
-    val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits[0].iq){(prev, curr) => RegNext(prev)}
+    val delayIQByST = (0 until stDelay).foldLeft(io.in.bits.iq[0]){(prev, curr) => RegNext(prev)}
+    val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits.iq[0]){(prev, curr) => RegNext(prev)}
     val delayValidByST = (0 until stDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
     val delayValidByLT = (0 until ltDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
 
@@ -165,7 +165,7 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     io.out.valid := cordic.io.out.valid
     io.out.bits.pktStart := pulseGen.io.out
     io.out.bits.pktEnd := io.in.bits.pktEnd
-    io.out.bits[0].bits := Mux(curState === lt || curState === data, io.in.bits[0].bits, VecInit(Seq(DspComplex(ConvertableTo[T].fromDouble(0),ConvertableTo[T].fromDouble(0)))))
+    io.out.bits.iq[0] := Mux(curState === lt || curState === data, io.in.bits.iq[0], VecInit(Seq(DspComplex(ConvertableTo[T].fromDouble(0),ConvertableTo[T].fromDouble(0)))))
     io.pErr := coarseOffset + fineOffset
 
     switch(curState){
