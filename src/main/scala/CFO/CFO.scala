@@ -36,6 +36,7 @@ object CFOEIO {
 }
 
 case class FixedCFOParams(
+  width: Int = 1,
   iqWidth: Int,
   stLength: Int = 160,
   ltLength: Int = 160,
