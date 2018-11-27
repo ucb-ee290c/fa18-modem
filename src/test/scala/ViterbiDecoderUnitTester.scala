@@ -8,6 +8,7 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   poke(c.io.in_soft.bits.pktStart, 0)
   poke(c.io.in_soft.bits.pktEnd, 0)
   expect(c.io.out.valid, 0)
+  expect(c.io.out_en2, 0)
   step(1)
   poke(c.io.in_soft.valid, 1)
   poke(c.io.in_soft.bits.pktStart, 1)
@@ -71,6 +72,8 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_isHead, 0)
   expect(c.io.out_pktLatch, 0)
   expect(c.io.out_lenCnt, 1)
+  expect(c.io.out_en1, 0)
+  expect(c.io.out_en2, 0)
 
   step(1)
   poke(c.io.in_soft.valid, 0)
@@ -79,16 +82,22 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_isHead, 0)
   expect(c.io.out_pktLatch, 1)
   expect(c.io.out_lenCnt, 1)
+  expect(c.io.out_en1, 0)
+  expect(c.io.out_en2, 0)
 
   step(1) // hdr cnt 1
   expect(c.io.out_isHead, 1)
   expect(c.io.out_pktLatch, 1)
   expect(c.io.out_lenCnt, 1)
+  expect(c.io.out_en1, 0)   // wrong
+  expect(c.io.out_en2, 0)
 
   step(1) // hdr cnt 2
   expect(c.io.out_isHead, 1)
   expect(c.io.out_pktLatch, 1)
   expect(c.io.out_lenCnt, 1)
+  expect(c.io.out_en1, 0)
+  expect(c.io.out_en2, 0)   // wrong
 
   step(1) // hdr cnt 3
   expect(c.io.out_isHead, 1)
@@ -100,6 +109,7 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_header_rate(3),0)
 //  expect(c.io.out_header_len,26*8)
   expect(c.io.out_header_len,200)
+  expect(c.io.out_en2, 0)
 
   step(10)  // hdr cnt 13
   expect(c.io.out_isHead, 1)
@@ -112,6 +122,7 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
 //  expect(c.io.out_header_len,26*8)
   expect(c.io.out_hdrEnd, 0)
   expect(c.io.out_en1, 0)
+  expect(c.io.out_en2, 0)
 
   step(10)  // hdr cnt 23
   expect(c.io.out_isHead, 1)
@@ -124,6 +135,7 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
 //  expect(c.io.out_header_len,26*8)
   expect(c.io.out_hdrEnd, 1)
   expect(c.io.out_en1, 0)
+  expect(c.io.out_en2, 0)
 
   step(1) // hdr cnt 24
   expect(c.io.out_isHead, 0)
@@ -131,6 +143,7 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_lenCnt, 0)
   expect(c.io.out_hdrEnd, 0)
   expect(c.io.out_en1, 0)
+  expect(c.io.out_en2, 0)
 
   step(1)
   poke(c.io.in_soft.valid, 1)
@@ -188,14 +201,17 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_hdrEnd, 0)
   expect(c.io.in_soft.ready, 1)
   expect(c.io.out_en1, 0)
+  expect(c.io.out_en2, 0)
 
   step(1)
   expect(c.io.out_en1, 0)
+  expect(c.io.out_en2, 0)
   expect(c.io.out.valid, 0)
 
   step(1)
   poke(c.io.in_soft.valid, 0)
-  expect(c.io.out_en1, 1)
+  expect(c.io.out_bufData(0), 1)
+  expect(c.io.out_bufData(0), 1)
   expect(c.io.out_pm(0), 0)
   expect(c.io.out_pm(1), 100)
   expect(c.io.out_pm(2), 100)
@@ -205,6 +221,8 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_sp(2), 0)
   expect(c.io.out_sp(3), 0)
   expect(c.io.out.valid, 0)
+  expect(c.io.out_en1, 1)
+  expect(c.io.out_en2, 0)
 
   step(1)
   poke(c.io.in_soft.valid, 0)
@@ -218,6 +236,7 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_sp(2), 0)
   expect(c.io.out_sp(3), 3)
   expect(c.io.out.valid, 0)
+  expect(c.io.out_en2, 1)
 
   step(1)
   expect(c.io.out_en1, 1)
@@ -296,9 +315,13 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_sp(2), 0)
   expect(c.io.out_sp(3), 2)
   expect(c.io.out.valid, 0)
+  expect(c.io.out.bits(0), 1)
+  expect(c.io.out.bits(1), 0)
+  expect(c.io.out.bits(2), 1)
+  expect(c.io.out.bits(3), 1)
+  expect(c.io.out.bits(4), 0)
 
   step(1) // 18 & 19
-
   expect(c.io.out_pm(0), 2)
   expect(c.io.out_pm(1), 5)
   expect(c.io.out_pm(2), 4)
@@ -310,20 +333,18 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out.valid, 0)
 
   step(1) // 20 & 21
+  expect(c.io.out.valid, 0)
+
+  step(1)
   expect(c.io.out.valid, 1)
-  expect(c.io.out.bits(0), 0)
-  expect(c.io.out.bits(1), 1)
-  expect(c.io.out.bits(2), 0)
+  expect(c.io.out.bits(0), 1)
+  expect(c.io.out.bits(1), 0)
+  expect(c.io.out.bits(2), 1)
   expect(c.io.out.bits(3), 1)
-  expect(c.io.out.bits(4), 1)
+  expect(c.io.out.bits(4), 0)
 
   step(1)
   expect(c.io.out.valid, 0)
-  expect(c.io.out.bits(0), 0)
-  expect(c.io.out.bits(1), 1)
-  expect(c.io.out.bits(2), 0)
-  expect(c.io.out.bits(3), 1)
-  expect(c.io.out.bits(4), 1)
 
   step(1)
   expect(c.io.out.valid, 0)
@@ -344,11 +365,11 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
 
   step(5)
   expect(c.io.out.valid, 1)
-  expect(c.io.out.bits(0), 0)
-  expect(c.io.out.bits(1), 1)
-  expect(c.io.out.bits(2), 0)
+  expect(c.io.out.bits(0), 1)
+  expect(c.io.out.bits(1), 0)
+  expect(c.io.out.bits(2), 1)
   expect(c.io.out.bits(3), 1)
-  expect(c.io.out.bits(4), 1)
+  expect(c.io.out.bits(4), 0)
 }
 
 object FixedViterbiDecoderTester {

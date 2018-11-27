@@ -135,7 +135,7 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
     // when it starts receiving payload
     // need to count number of bits it has received.
     // Once all the data has been received, raise 'lenCntReg' and 'headInfoReady' registers
-    }.elsewhen(io.isHead === false.B){
+    }.elsewhen(io.isHead === false.B && lenCntReg === false.B){
       // puncturing Matrix: [1,1,0],[1,0,1]
       // Input Matrix: [A0,A1,A2], [B0, B1, B2] -> Output Matrix: [A0, B0, A1, B2]
       for (i <- 0 until params.n) {

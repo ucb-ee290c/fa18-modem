@@ -29,7 +29,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   val addrSize    = params.nStates * (D+L)
   val addrWidth   = log2Ceil(addrSize) + 2
   val addrReg     = RegInit(0.U(addrWidth.W))
-  val mem = Reg(Vec(addrSize * 2, UInt(m.W)))
+  val mem         = Reg(Vec(addrSize * 2, UInt(m.W)))
 
   // declare variables for decoding process
   val tmpPMMinReg       = RegInit(VecInit(Seq.fill(params.nStates - 1)(0.U(m.W))))
@@ -58,9 +58,8 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
     }.otherwise{
       addrReg := 0.U
     }
-
+    printf(p"addrReg = ${addrReg} ******* \n")
     // TODO: currently using register file but later I will come back and try to use SyncReadMem instead
-
     for (i <- 0 until params.nStates){
       mem(addrReg + i.U) := io.inSP(i)
     }

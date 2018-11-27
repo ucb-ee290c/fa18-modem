@@ -25,6 +25,7 @@ class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
     val out_header_rate = Output(Vec(4, UInt(1.W)))   // for testing purpose
     val out_header_len = Output(UInt(12.W))           // for testing purpose
     val out_hdrEnd    = Output(Bool())                // for testing purpose
+    val out_bufData   = Output(Vec(params.n, SInt(2.W)))   // for testing purpose
     val out_en1       = Output(Bool())                // for testing purpose
     val out_en2       = Output(Bool())                // for testing purpose
 //    val out_dp    = Output(Vec(params.n, SInt(2.W)))
@@ -64,6 +65,7 @@ class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
   pathMetricModule.io.in          <> DePuncturingModule.io.outData
   pathMetricModule.io.hdrEnd      := arbiterModule.io.hdrEnd
   pathMetricModule.io.inEnable    := DePuncturingModule.io.outEnable
+  io.out_bufData  := DePuncturingModule.io.outData
   io.out_en1 := DePuncturingModule.io.outEnable
   io.out_pm <> pathMetricModule.io.outPM
   io.out_sp <> pathMetricModule.io.outSP
