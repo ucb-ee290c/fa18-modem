@@ -120,12 +120,20 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
     val idle::st::lt::data::Nil = Enum(4)
 
+    def RunVectorCordic[T<:Data:BinaryRepresentation:Real:ConvertableTo](cplx: DspComplex[T]): Boolean = {
+      cordic.io.in.bits.x := cplx.real
+      cordic.io.in.bits.y := cplx.imag
+      cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
+      cordic.io.in.bits.vectoring := true.B
+      cordic.io.in.valid := true.B
+      estimatorReady := false.B
+      cordic.io.out.ready := true.B
+      true
+    }
+
     io.in.ready := estimatorReady
     io.out.valid := cordic.io.out.valid
     io.pErr := coarseOffset + fineOffset
-
-    io.out.bits.pktStart := io.in.bits.pktStart
-    io.out.bits.pktEnd := io.in.bits.pktEnd
 
     switch(curState){
       is(idle){
@@ -134,85 +142,57 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         when(io.in.bits.pktStart && io.in.fire()){
           curState := st
         }.otherwise{
-          //curState := idle
+          curState := idle
           // stAcc := DspComplex[T](0,0)
         }
       }
       is(st){
-          cordic.io.in.bits.x := stAcc.real
-          cordic.io.in.bits.y := stAcc.imag
-          cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
-          cordic.io.in.bits.vectoring := true.B
         when(stCounter.inc()){
-          cordic.io.in.valid := true.B
-          estimatorReady := false.B
-          cordic.io.out.ready := true.B
+          RunVectorCordic(stAcc)
         }.elsewhen(io.in.fire()){
-          estimatorReady := false.B
-          cordic.io.in.valid := false.B
-          cordic.io.out.ready := false.B
-          //curState := st
-          when(delayValidByST){
-            stMul := (io.in.bits.iq * delayIQByST.conj())
+          curState := st
+          when(delayValidByST && io.in.valid){
+            stMul := (delayIQByST.conj() * io.in.bits.iq)
             stAcc := stAcc + stMul
           }
         }.otherwise{
           cordic.io.in.valid := false.B
-          cordic.io.out.ready := true.B
           when(cordic.io.out.valid){
             coarseOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/stDelay)
             estimatorReady := true.B
             curState := lt
-          }.otherwise{
-            estimatorReady := false.B
           }
         }
       }
       is(lt){
-          cordic.io.in.bits.x := ltAcc.real
-          cordic.io.in.bits.y := ltAcc.imag
-          cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
-          cordic.io.in.bits.vectoring := true.B
         when(ltCounter.inc()){
-          cordic.io.in.valid := true.B
-          estimatorReady := false.B
-          cordic.io.out.ready := true.B
+          RunVectorCordic(ltAcc)
         }.elsewhen(io.in.fire()){
-          estimatorReady := false.B
-          cordic.io.in.valid := false.B
-          cordic.io.out.ready := false.B
-          //curState := lt
-          when(delayValidByLT){
-            ltMul := (io.in.bits.iq * delayIQByLT.conj())
-            ltAcc := stAcc + stMul
+          curState := lt
+          when(delayValidByLT && io.in.valid){
+            ltMul := (delayIQByLT.conj() * io.in.bits.iq)
+            ltAcc := ltAcc + ltMul
           }
         }
         .otherwise{
           cordic.io.in.valid := false.B
-          cordic.io.out.ready := true.B
           when(cordic.io.out.valid){
             fineOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/ltDelay)
             estimatorReady := true.B
             curState := data
-          }.otherwise{
-            estimatorReady := false.B
           }
         }
       }
       is(data){
+        estimatorReady := true.B
         when(io.in.bits.pktEnd){
-          estimatorReady := true.B
           curState := idle
         }.otherwise{
-          estimatorReady := true.B
-          //curState := data
+          curState := data
         }
       }
-      is(Nil){
-        estimatorReady := false.B
-        curState := idle
-      }
     }
+
   }
 
 }
