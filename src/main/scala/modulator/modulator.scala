@@ -71,33 +71,6 @@ trait MapParams[T <: Data]{
   val n: Int
   val protoIQ: T
 }
-trait FirParams[T <: Data] {
-  val protoin: T
-  val protoout: T
-  val length: Int
-  val constants: T
-
-}
-case class FixedFirParams(
-    fiwidth: Int,
-    fowidth: Int,
-    cwidth: Int,
-    length: Int
-) extends FirParams[FixedPoint] {
-    val protoin = FixedPoint(fiwidth.W, (fiwidth-3).BP)
-    val protoout = FixedPoint(fowidth.W, (fowidth-3).BP)
-    val constants = FixedPoint(cwidth.W, (cwidth-2).BP)
-}
-
-case class UIntFirParams(
-   mwidth: Int,
-   length: Int
-
-) extends FirParams[UInt] {
-  val protoin = UInt(mwidth.W)
-  val protoout = UInt(mwidth.W)
-  val constants = UInt(mwidth.W)
-}
 case class Uintp2sParams(
     mwidth: Int,
     n: Int
@@ -276,7 +249,7 @@ class Interleaver[T <: Data](params: ModFFTParams[T]) extends Module {
 
   io.in.ready := state === sInit || state === sWork
   io.out.valid := state === sDone
-  io.out.bits := pout
+  //io.out.bits := pout
   io.cnt := iter
   io.sat := state
   val perm1 = Wire(Vec(params.Ncbps,Bool()))
@@ -289,6 +262,268 @@ class Interleaver[T <: Data](params: ModFFTParams[T]) extends Module {
        io.out.bits( s*floor(i/s)+(i+params.Ncbps-floor(16* (i/params.Ncbps)) ) %s ):= perm1(i)  }
 
 }
+ 
+
+//-- Interleaver modify2(48bits input: Nbpsc = 1)
+class Interleaverds1[T <: Data:Real:BinaryRepresentation](params: ModFFTParams[T]) extends Module {
+    val io = IO(new Bundle {
+    
+    val in  = Flipped(Decoupled(Vec(params.Ncbps/params.Nbpsc,Bool())))
+    val out = Decoupled(Vec(params.Ncbps,Bool()))
+   // val cnt = Output(UInt(8.W))
+    val sat = Output(UInt(2.W))
+  })
+  val s = floor( (params.Nbpsc+1)/2 )
+  val pout = Reg(Vec(params.Ncbps,Bool()))
+  //val cnt = Reg(UInt(8.W))
+  //val iter = Reg(UInt(8.W))
+   // Make states for state machine
+  val sInit = 0.U(1.W)
+ // val sWork = 1.U(2.W)
+  val sDone = 1.U(1.W)
+  val state = RegInit(sInit)
+  //io.out(0):= RegNext(io.in)
+ 
+   
+  when (state === sInit && io.in.fire()) {
+          state := sDone
+          //iter := 0.U
+	  pout := io.in.bits                    
+	 
+  }
+    when (state === sDone && io.out.fire()) {
+          state := sInit	 
+	  
+  }
+
+  io.in.ready := state === sInit
+  io.out.valid := state === sDone
+  io.out.bits := pout
+  //io.cnt := iter
+  io.sat := state
+ // val perm1 = Wire(Vec(params.Ncbps,Bool()))
+
+   //for (k <- 0 until params.Ncbps) {
+    
+     //perm1(floor(params.Ncbps/16) * (k % 16) + floor(k/16)):= pout(k)
+   //}
+   //for (i <- 0 until params.Ncbps) {
+       //io.out.bits( s*floor(i/s)+(i+params.Ncbps-floor(16* (i/params.Ncbps)) ) %s ):= perm1(i)  
+      // }
+
+}
+//-- Interleaver modify2(48bits input: Nbpsc = 1)
+class Interleaverds1b[T <: Data:Real:BinaryRepresentation](params: ModFFTParams[T]) extends Module {
+    val io = IO(new Bundle {
+    val in = Flipped(Decoupled(BitsBundle1bt(params)))
+    val out = Decoupled(BitsBundle2t(params))
+
+    
+    //val in  = Flipped(Decoupled(Vec(params.Ncbps/params.Nbpsc,Bool())))
+    //val out = Decoupled(Vec(params.Ncbps,Bool()))
+   
+    val sat = Output(UInt(2.W))
+  })
+  val s = floor( (params.Nbpsc+1)/2 )
+  val pout = Reg(Vec(params.Ncbps,Bool()))
+  
+   // Make states for state machine
+  val sInit = 0.U(1.W)
+  val sDone = 1.U(1.W)
+  val state = RegInit(sInit)
+  val reg_pktstart = Reg(Bool())
+  val reg_pktend = Reg(Bool())
+  
+ 
+   
+  when (state === sInit && io.in.fire()) {
+          state := sDone
+          //iter := 0.U
+	  for (i <- 0 until params.Ncbps) {
+              pout(i) := io.in.bits.bits(i)  }
+
+	  //pout := io.in.bits.bits 
+	  reg_pktstart :=io.in.bits.pktStart
+          reg_pktend :=io.in.bits.pktEnd
+	 
+  }
+    when (state === sDone && io.out.fire()) {
+          state := sInit	 
+	  
+  }
+
+  io.in.ready := state === sInit
+  io.out.valid := state === sDone
+  io.out.bits.pktStart := reg_pktstart
+  io.out.bits.pktEnd := reg_pktend
+  io.out.bits.bits := pout
+  //io.cnt := iter
+  io.sat := state
+ // val perm1 = Wire(Vec(params.Ncbps,Bool()))
+
+   //for (k <- 0 until params.Ncbps) {
+    
+     //perm1(floor(params.Ncbps/16) * (k % 16) + floor(k/16)):= pout(k)
+   //}
+   //for (i <- 0 until params.Ncbps) {
+       //io.out.bits.bits( s*floor(i/s)+(i+params.Ncbps-floor(16* (i/params.Ncbps)) ) %s ):= perm1(i)  
+      // }
+
+}
+
+//-- Interleaver modify2(48bits input: Nbpsc > 1)
+class Interleaverds2b[T <: Data](params: ModFFTParams[T]) extends Module {
+   val io = IO(new Bundle {
+      val in = Flipped(Decoupled(BitsBundle1bt(params)))
+      val out = Decoupled(BitsBundle2t(params))
+    //val in  = Flipped(Decoupled(Vec(params.Ncbps / params.Nbpsc,Bool())))
+    //val out = Decoupled(Vec(params.Ncbps,Bool()))
+    val cnt = Output(UInt(8.W))
+    val sat = Output(UInt(2.W))
+  })
+
+  val s = floor( (params.Nbpsc+1)/2 )
+  val pout = Reg(Vec(params.Ncbps,Bool()))
+  val cnt = Reg(UInt(8.W))
+  val iter = Reg(UInt(8.W))
+   // Make states for state machine
+  val sInit = 0.U(2.W)
+  val sWork = 1.U(2.W)
+  val sDone = 2.U(2.W)
+  val state = RegInit(sInit)
+   val reg_pktstart = Reg(Bool())
+   val reg_pktend = Reg(Bool())
+  //io.out(0):= RegNext(io.in)
+ 
+   
+  when (state === sInit && io.in.fire()) {
+          state := sWork
+          iter := 0.U
+	  reg_pktstart :=io.in.bits.pktStart
+          reg_pktend :=io.in.bits.pktEnd
+	  for  (i <-0 until params.Ncbps / params.Nbpsc){
+	        pout(i) := io.in.bits.bits(i)
+	  }
+	  
+                    
+	 
+  }
+  when (state === sWork && io.in.fire()) {
+         val iterNext = iter + 1.U
+         iter := iterNext
+
+        
+         for  (i <-0 until params.Ncbps / params.Nbpsc){
+	        pout(i) := io.in.bits.bits(i)
+	  }
+         for  (j <-1 until  params.Nbpsc){
+
+	      for  (i <-0 until params.Ncbps / params.Nbpsc){
+	        pout( (params.Ncbps / params.Nbpsc)*j + i ) :=  pout( (params.Ncbps / params.Nbpsc) *(j-1) + i ) }
+	      
+	 }
+        
+	
+         when (iterNext >= ( params.Nbpsc - 1).U) {
+            state := sDone
+          }
+  }
+  when (state === sDone && io.out.fire()) {
+          state := sInit	 
+	  
+  }
+
+  io.in.ready := state === sInit || state === sWork
+  io.out.valid := state === sDone
+  //io.out.bits.bits := pout
+  io.out.bits.pktStart := reg_pktstart
+  io.out.bits.pktEnd := reg_pktend
+  io.cnt := iter
+  io.sat := state
+  val perm1 = Wire(Vec(params.Ncbps,Bool()))
+
+   for (k <- 0 until params.Ncbps) {
+    
+     perm1(floor(params.Ncbps/16) * (k % 16) + floor(k/16)):= pout(k) }
+   for (i <- 0 until params.Ncbps) {
+       io.out.bits.bits( s*floor(i/s)+(i+params.Ncbps-floor(16* (i/params.Ncbps)) ) %s ):= perm1(i)  }
+
+}
+
+
+
+//-- Interleaver modify2(48bits input: Nbpsc > 1)
+class Interleaverds2[T <: Data](params: ModFFTParams[T]) extends Module {
+   val io = IO(new Bundle {
+    
+    val in  = Flipped(Decoupled(Vec(params.Ncbps / params.Nbpsc,Bool())))
+    val out = Decoupled(Vec(params.Ncbps,Bool()))
+    val cnt = Output(UInt(8.W))
+    val sat = Output(UInt(2.W))
+  })
+
+  val s = floor( (params.Nbpsc+1)/2 )
+  val pout = Reg(Vec(params.Ncbps,Bool()))
+  val cnt = Reg(UInt(8.W))
+  val iter = Reg(UInt(8.W))
+   // Make states for state machine
+  val sInit = 0.U(2.W)
+  val sWork = 1.U(2.W)
+  val sDone = 2.U(2.W)
+  val state = RegInit(sInit)
+  //io.out(0):= RegNext(io.in)
+ 
+   
+  when (state === sInit && io.in.fire()) {
+          state := sWork
+          iter := 0.U
+	  for  (i <-0 until params.Ncbps / params.Nbpsc){
+	        pout(i) := io.in.bits(i)
+	  }
+	  
+                    
+	 
+  }
+  when (state === sWork && io.in.fire()) {
+         val iterNext = iter + 1.U
+         iter := iterNext
+        
+         for  (i <-0 until params.Ncbps / params.Nbpsc){
+	        pout(i) := io.in.bits(i)
+	  }
+         for  (j <-1 until  params.Nbpsc){
+
+	      for  (i <-0 until params.Ncbps / params.Nbpsc){
+	        pout( (params.Ncbps / params.Nbpsc)*j + i ) :=  pout( (params.Ncbps / params.Nbpsc) *(j-1) + i ) }
+	      
+	 }
+        
+	
+         when (iterNext >= ( params.Nbpsc - 1).U) {
+            state := sDone
+          }
+  }
+  when (state === sDone && io.out.fire()) {
+          state := sInit	 
+	  
+  }
+
+  io.in.ready := state === sInit || state === sWork
+  io.out.valid := state === sDone
+  //io.out.bits := pout
+  io.cnt := iter
+  io.sat := state
+  val perm1 = Wire(Vec(params.Ncbps,Bool()))
+
+   for (k <- 0 until params.Ncbps) {
+    
+     perm1(floor(params.Ncbps/16) * (k % 16) + floor(k/16)):= pout(k) }
+   for (i <- 0 until params.Ncbps) {
+       io.out.bits( s*floor(i/s)+(i+params.Ncbps-floor(16* (i/params.Ncbps)) ) %s ):= perm1(i)  }
+
+}
+
+
 
 // serilizer
 class Serilizer[T <: Data](params: BPSKModParams[T]) extends Module {
@@ -338,21 +573,10 @@ class Serilizer[T <: Data](params: BPSKModParams[T]) extends Module {
 
 }
 
-class FirIO[T <: Data](params: FirParams[T]) extends Bundle {
-    val consts = Input(Vec(params.length, params.constants.cloneType))
-    val valid = Input(Bool())
-    val in = Input(params.protoin.cloneType)
-    val out = Output(params.protoout.cloneType)
-        //val pout = Vec(params.n, Decoupled(params.gen.cloneType))
-    override def cloneType: this.type = FirIO(params).asInstanceOf[this.type]
-}
-object FirIO {
-  def apply[T <: Data](params: FirParams[T]): FirIO[T] =
-    new FirIO(params)
-}
 trait ModFFTParams[T <: Data] extends FFTParams[T] {
   val Ncbps: Int
   val Nbpsc: Int
+  //val length: Int
 }
 object ModFFTParams {
   def apply[T <: Data](old_params: ModFFTParams[T], new_num_points: Int): ModFFTParams[T] = new ModFFTParams[T] {
@@ -363,6 +587,7 @@ object ModFFTParams {
     val fftType = old_params.fftType
     val Ncbps = old_params.Ncbps
     val Nbpsc = old_params.Nbpsc
+    //val length = old_params.length
   }
 }
 
@@ -372,6 +597,7 @@ object ModFFTParams {
 case class FixedModFFTParams(
   // width of Input and Output
   dataWidth: Int,
+  //length: Int,
   // width of twiddle constants
   twiddleWidth: Int,
   numPoints: Int = 4,
@@ -424,6 +650,51 @@ class BPSKCPMapper[T <: Data :Real:BinaryRepresentation](val params: ModFFTParam
       }
     }
 }
+// Mapper modify 
+class BPSKCPMapper1[T <: Data :Real:BinaryRepresentation](val params: ModFFTParams[T]) extends Module {
+   val io = IO(new Bundle {
+         val in = Flipped(Decoupled(BitsBundle2t(params)))
+	 val out = Decoupled(PacketBundle(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+        //val in  = Flipped(Decoupled(Vec(params.Ncbps, Bool())))
+        //val out = Decoupled(Vec(params.Ncbps, params.protoIQ.cloneType))
+
+     })
+
+      val rin = Reg(Vec(params.Ncbps, Bool()))
+      val sInit = 0.U(1.W)
+      val sDone = 1.U(1.W)
+      val state = RegInit(sInit)
+      val reg_pktstart = Reg(Bool())
+      val reg_pktend = Reg(Bool())
+   
+   
+      when (state === sInit && io.in.fire()) {
+          state := sDone
+	  reg_pktstart :=io.in.bits.pktStart
+          reg_pktend :=io.in.bits.pktEnd
+	  for (i <- 0 until params.Ncbps) {
+              rin(i) := io.in.bits.bits(i)  }
+      }
+      when (state === sDone && io.out.fire()) {
+          state := sInit
+      }
+      
+   //mapping.io.in := rin.asUInt
+   io.in.ready := state === sInit 
+   io.out.valid := state === sDone
+   io.out.bits.pktStart := reg_pktstart
+   io.out.bits.pktEnd := reg_pktend
+   //io.par := rin.asUInt
+    for (i <- 0 until params.Ncbps){
+      when (rin(i)){
+	io.out.bits.iq(i).real := ConvertableTo[T].fromDouble(1.0)
+        io.out.bits.iq(i).imag := ConvertableTo[T].fromDouble(0.0)  
+      } .otherwise{
+        io.out.bits.iq(i).real := ConvertableTo[T].fromDouble(-1.0)
+        io.out.bits.iq(i).imag := ConvertableTo[T].fromDouble(0.0) 
+      }
+    }
+}
 
 class BPSKCPModulator[T <: Data :Real:BinaryRepresentation](val params: ModFFTParams[T]) extends Module {
       val io = IO(new Bundle {
@@ -442,6 +713,66 @@ class BPSKCPModulator[T <: Data :Real:BinaryRepresentation](val params: ModFFTPa
  io.out.valid := mapping.io.out.valid
  io.in.ready := interleaving.io.in.ready
 }
+
+class BPSKCPModulator1[T <: Data :Real:BinaryRepresentation](val params: ModFFTParams[T]) extends Module {
+      val io = IO(new Bundle {
+        val in = Flipped(Decoupled(BitsBundle1bt(params)))
+	val out = Decoupled(PacketBundle(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+       //val in  = Flipped(Decoupled(Bool()))
+       //val out = Decoupled(Vec(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+  })
+ val mapping = Module( new BPSKCPMapper1(params) )
+ val interleaving =  Module( new Interleaverds1b(params) )
+ interleaving.io.in.bits := io.in.bits
+ interleaving.io.in.valid := io.in.valid
+ interleaving.io.out.ready := mapping.io.in.ready
+ mapping.io.in.valid := interleaving.io.out.valid
+ mapping.io.in.bits := interleaving.io.out.bits
+ mapping.io.out.ready := io.out.ready
+ io.out.bits := mapping.io.out.bits
+ io.out.valid := mapping.io.out.valid
+ io.in.ready := interleaving.io.in.ready
+}
+class QPSKCPModulator1[T <: Data :Real:BinaryRepresentation](val params: ModFFTParams[T]) extends Module {
+      val io = IO(new Bundle {
+        val in = Flipped(Decoupled(BitsBundle1bt(params)))
+	val out = Decoupled(PacketBundle(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+       //val in  = Flipped(Decoupled(Bool()))
+       //val out = Decoupled(Vec(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+  })
+ val mapping = Module( new QPSKCPMapper1(params) )
+ val interleaving =  Module( new Interleaverds2b(params) )
+ interleaving.io.in.bits := io.in.bits
+ interleaving.io.in.valid := io.in.valid
+ interleaving.io.out.ready := mapping.io.in.ready
+ mapping.io.in.valid := interleaving.io.out.valid
+ mapping.io.in.bits := interleaving.io.out.bits
+ mapping.io.out.ready := io.out.ready
+ io.out.bits := mapping.io.out.bits
+ io.out.valid := mapping.io.out.valid
+ io.in.ready := interleaving.io.in.ready
+}
+
+class QAM16CPModulator1[T <: Data :Real:BinaryRepresentation](val params: ModFFTParams[T]) extends Module {
+      val io = IO(new Bundle {
+        val in = Flipped(Decoupled(BitsBundle1bt(params)))
+	val out = Decoupled(PacketBundle(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+       //val in  = Flipped(Decoupled(Bool()))
+       //val out = Decoupled(Vec(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+  })
+ val mapping = Module( new QAM16CPMapper1(params) )
+ val interleaving =  Module( new Interleaverds2b(params) )
+ interleaving.io.in.bits := io.in.bits
+ interleaving.io.in.valid := io.in.valid
+ interleaving.io.out.ready := mapping.io.in.ready
+ mapping.io.in.valid := interleaving.io.out.valid
+ mapping.io.in.bits := interleaving.io.out.bits
+ mapping.io.out.ready := io.out.ready
+ io.out.bits := mapping.io.out.bits
+ io.out.valid := mapping.io.out.valid
+ io.in.ready := interleaving.io.in.ready
+}
+
 class QPSKCPModulator[T <: Data :Real:BinaryRepresentation](val params: ModFFTParams[T]) extends Module {
       val io = IO(new Bundle {
        val in  = Flipped(Decoupled(Bool()))
@@ -577,6 +908,113 @@ class QPSKCPMapper[T <: Data :Real:BinaryRepresentation](val params:  ModFFTPara
 	
 	} 
 
+     
+     }
+}
+// QPSK mapper modify
+class QPSKCPMapper1[T <: Data :Real:BinaryRepresentation](val params:  ModFFTParams[T]) extends Module {
+   val io = IO(new Bundle {
+         val in = Flipped(Decoupled(BitsBundle2t(params)))
+	 val out = Decoupled(PacketBundle(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+        //val in  = Flipped(Decoupled(Vec(params.Ncbps, Bool())))
+        //val out = Decoupled(Vec(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+
+     })
+
+      val rin = Reg(Vec(params.Ncbps, Bool()))
+      val sInit = 0.U(1.W)
+      val sDone = 1.U(1.W)
+      val state = RegInit(sInit)
+      val reg_pktstart = Reg(Bool())
+      val reg_pktend = Reg(Bool())
+   
+   
+      when (state === sInit && io.in.fire()) {
+          state := sDone
+	  reg_pktstart :=io.in.bits.pktStart
+          reg_pktend :=io.in.bits.pktEnd
+	  for (i <- 0 until params.Ncbps) {
+              rin(i) := io.in.bits.bits(i)  }
+      }
+      when (state === sDone && io.out.fire()) {
+          state := sInit
+      }
+      
+   //mapping.io.in := rin.asUInt
+   io.in.ready := state === sInit 
+   io.out.valid := state === sDone
+   io.out.bits.pktStart := reg_pktstart
+   io.out.bits.pktEnd := reg_pktend
+   //io.par := rin.asUInt
+    for (i <- 0 until params.Ncbps/params.Nbpsc){
+      when(!rin(2*i+1) && !rin(2*i)){
+           io.out.bits.iq(i).real := ConvertableTo[T].fromDouble(-0.707)
+           io.out.bits.iq(i).imag := ConvertableTo[T].fromDouble(-0.707) 
+        }
+        // 01
+        .elsewhen(!rin(2*i+1) && rin(2*i)){
+           io.out.bits.iq(i).real := ConvertableTo[T].fromDouble(0.707)
+           io.out.bits.iq(i).imag := ConvertableTo[T].fromDouble(-0.707) 
+        }
+        //10
+       .elsewhen(rin(2*i+1) && !rin(2*i)){
+           io.out.bits.iq(i).real := ConvertableTo[T].fromDouble(-0.707)
+           io.out.bits.iq(i).imag := ConvertableTo[T].fromDouble(0.707) 
+        } 
+        //11
+       .elsewhen(rin(2*i+1) && rin(2*i)){
+           io.out.bits.iq(i).real := ConvertableTo[T].fromDouble(0.707)
+           io.out.bits.iq(i).imag := ConvertableTo[T].fromDouble(0.707) 
+        }.otherwise{
+	   io.out.bits.iq(i).real := ConvertableTo[T].fromDouble(0.707)
+           io.out.bits.iq(i).imag := ConvertableTo[T].fromDouble(0.707) 
+	
+	} 
+
+     
+     }
+}
+
+// QPSK mapper modify
+class QAM16CPMapper1[T <: Data :Real:BinaryRepresentation](val params:  ModFFTParams[T]) extends Module {
+   val io = IO(new Bundle {
+         val in = Flipped(Decoupled(BitsBundle2t(params)))
+	 val out = Decoupled(PacketBundle(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+        //val in  = Flipped(Decoupled(Vec(params.Ncbps, Bool())))
+        //val out = Decoupled(Vec(params.Ncbps/params.Nbpsc, params.protoIQ.cloneType))
+
+     })
+
+      val rin = Reg(Vec(params.Ncbps, Bool()))
+      val sInit = 0.U(1.W)
+      val sDone = 1.U(1.W)
+      val state = RegInit(sInit)
+      val reg_pktstart = Reg(Bool())
+      val reg_pktend = Reg(Bool())
+   
+   
+      when (state === sInit && io.in.fire()) {
+          state := sDone
+	  reg_pktstart :=io.in.bits.pktStart
+          reg_pktend :=io.in.bits.pktEnd
+	  for (i <- 0 until params.Ncbps) {
+              rin(i) := io.in.bits.bits(i)  }
+      }
+      when (state === sDone && io.out.fire()) {
+          state := sInit
+      }
+      
+   //mapping.io.in := rin.asUInt
+   io.in.ready := state === sInit 
+   io.out.valid := state === sDone
+   io.out.bits.pktStart := reg_pktstart
+   io.out.bits.pktEnd := reg_pktend
+   val zd = ConvertableTo[T].fromDouble(0.316)
+   val z3d = ConvertableTo[T].fromDouble(0.949)
+   //io.par := rin.asUInt
+    for (i <- 0 until params.Ncbps/params.Nbpsc){
+        io.out.bits.iq(i).real := Mux(rin(4*i+1) && rin(4*i),zd,Mux(rin(4*i+1) && !rin(4*i),-zd,Mux(!rin(4*i+1) && rin(4*i),z3d,-z3d)))
+        io.out.bits.iq(i).imag := Mux(rin(4*i+3) && rin(4*i+2),zd,Mux(rin(4*i+3) && !rin(4*i+2),-zd,Mux(!rin(4*i+3) && rin(4*i+2),z3d,-z3d)))     
      
      }
 }
@@ -771,18 +1209,6 @@ class Mapper[T <: Data :Real:BinaryRepresentation](val params: MapParams[T]) ext
 
 
 
-class ScalaFirFilter(taps: Seq[Int]) {
-  var pseudoRegisters = List.fill(taps.length)(0)
-
-  def poke(value: Int): Int = {
-    pseudoRegisters = value :: pseudoRegisters.take(taps.length - 1)
-    var accumulator = 0
-    for(i <- taps.indices) {
-      accumulator += taps(i) * pseudoRegisters(i)
-    }
-    accumulator
-  }
-}
 
 
 

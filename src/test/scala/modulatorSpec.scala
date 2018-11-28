@@ -33,6 +33,31 @@ class modulatorSpec extends FlatSpec with Matchers {
      Nbpsc = 1
   )
   //InterleaverTester(paramsinterleaver)
+   behavior of "Interleaverds1_modify"
+  val paramsinterleaverds1 =  FixedModFFTParams(
+    dataWidth = 16,
+    Ncbps = 4,
+    Nbpsc = 1,
+    twiddleWidth = 10,
+    numPoints = 2,
+    binPoints = 2,
+    fftType = "direct"
+  )
+ //Interleaverds1Tester(paramsinterleaverds1)
+  // Interleaverds1bTester(paramsinterleaverds1)
+  behavior of "Interleaverds1_modify"
+  val paramsinterleaverds2 =  FixedModFFTParams(
+    dataWidth = 16,
+    Ncbps = 8,
+    Nbpsc = 4,
+    twiddleWidth = 10,
+    numPoints = 2,
+    binPoints = 2,
+    fftType = "direct"
+  )
+ //Interleaverds2Tester(paramsinterleaverds2)
+ //Interleaverds2bTester(paramsinterleaverds2)
+
 
  behavior of "Deinterleaver_modify"
   val paramsdeinterleaver = FixedBPSKModParams(
@@ -43,12 +68,31 @@ class modulatorSpec extends FlatSpec with Matchers {
   //DeinterleaverTester(paramsdeinterleaver)
 
  behavior of "BPSKModulator"
-  val paramsbpskmod = FixedBPSKModParams(
-     dataWidth = 12,
-     Ncbps = 48,
-     Nbpsc = 1
+  val paramsbpskmod =  FixedModFFTParams(
+    dataWidth = 16,
+    Ncbps = 4,
+    Nbpsc = 1,
+    twiddleWidth = 10,
+    numPoints = 2,
+    binPoints = 2,
+    fftType = "direct"
   )
+
   //BPSKCPModTester(paramsbpskmod)
+ // BPSKCPMod1Tester(paramsbpskmod)
+  behavior of "qam16Modulator"
+  val paramsqammod1 =  FixedModFFTParams(
+    dataWidth = 16,
+    Ncbps = 8,
+    Nbpsc = 4,
+    twiddleWidth = 10,
+    numPoints = 2,
+    binPoints = 10,
+    fftType = "direct"
+  )
+  //QAM16CPMod1Tester(paramsqammod1)
+  
+
  behavior of "Serilizer"
   val paramser = FixedBPSKModParams(
      dataWidth = 12,
@@ -77,13 +121,17 @@ class modulatorSpec extends FlatSpec with Matchers {
      Nbpsc = 1
   )
   //BPSKSerDemodTester(paramserbpskdemod)
- behavior of "QPSKDemodulator"
-  val paramsqpskdemod = FixedBPSKModParams(
-     dataWidth = 12,
-     Ncbps = 96,
-     Nbpsc = 2
+ behavior of "QPSKmodulatorm"
+  val paramsqpskmod1 =   FixedModFFTParams(
+    dataWidth = 16,
+    Ncbps = 4,
+    Nbpsc = 2,
+    twiddleWidth = 10,
+    numPoints = 2,
+    binPoints = 2,
+    fftType = "direct"
   )
-  //QPSKDemodTester(paramsqpskdemod)
+  //QPSKCPMod1Tester(paramsqpskmod1)
  behavior of "QPSKModulator"
   val paramsqpskmod = FixedBPSKModParams(
      dataWidth = 12,
@@ -148,7 +196,7 @@ class modulatorSpec extends FlatSpec with Matchers {
   val binPoint = base_qmparams.dataWidth-2-log2Ceil(64)
   val params = base_qmparams.copy(numPoints = 64, binPoints = binPoint, pipeline = true)
   val sdf_params = params.copy(fftType="sdf")
-  FixedQPSKModFFTTester(params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
+  //FixedQPSKModFFTTester(params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
  
  behavior of "Modulatorm"
   val paramsmodm = FixedMapParams(

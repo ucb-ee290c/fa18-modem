@@ -33,7 +33,7 @@ trait BitsBundleParams[T<:Data] {
   val protoBits: T
 }
 object BitsBundleParams {
-  def apply[T <: Data](width: Int, proto: T): BitsBundleParams[T] = new BitsBundleParams[T] { val bitsWidth = width; val protoBits = proto }
+   def apply[T <: Data](width: Int, proto: T): BitsBundleParams[T] = new BitsBundleParams[T] { val bitsWidth = width; val protoBits = proto }
 }
 
 
@@ -97,11 +97,13 @@ object DeserialPacketBundle {
 class BitsBundle[T<:Data](params: BitsBundleParams[T]) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
+  //SInt(2.W)
   val bits : Vec[T] = Vec(params.bitsWidth, params.protoBits.cloneType)
-
   override def cloneType: this.type = BitsBundle(params).asInstanceOf[this.type]
 }
 object BitsBundle {
   def apply[T<:Data](params: BitsBundleParams[T]): BitsBundle[T] = new BitsBundle[T](params)
   def apply[T<:Data](bitsWidth: Int, protoBits: T): BitsBundle[T] = new BitsBundle[T](BitsBundleParams[T](bitsWidth, protoBits))
+  //def apply[T<:Data](bitsWidth: Int): BitsBundle[T] = new BitsBundle[T](BitsBundleParams[T](bitsWidth))
+
 }
