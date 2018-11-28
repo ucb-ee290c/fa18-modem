@@ -158,10 +158,10 @@ class CoarseOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val
   val delayIQByST = (0 until stDelay).foldLeft(io.in.bits){(prev, curr) => RegNext(prev)}
   val delayValidByST = (0 until stDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
 
-  cordicIn.bits.x := stAcc.real
-  cordicIn.bits.y := stAcc.imag
-  cordicIn.bits.z := ConvertableTo[T].fromDouble(0)
-  cordicIn.bits.vectoring := true.B
+  io.cordicIn.bits.x := stAcc.real
+  io.cordicIn.bits.y := stAcc.imag
+  io.cordicIn.bits.z := ConvertableTo[T].fromDouble(0)
+  io.cordicIn.bits.vectoring := true.B
   stMul := (delayIQByST * io.in.bits.conj())
 
   when(delayValidByST && io.in.valid){
@@ -171,10 +171,10 @@ class CoarseOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val
   }
 
   pulseGen.io.in := !io.in.valid
-  cordicIn.valid := pulseGen.io.out
+  io.cordicIn.valid := pulseGen.io.out
 
   io.out.bits := io.cordicOut.bits.z * ConvertableTo[T].fromDouble(1/stDelay)
-  io.out.valid := cordicOut.valid
+  io.out.valid := io.cordicOut.valid
   io.in.ready := io.out.ready
 }
 
@@ -194,10 +194,10 @@ class FineOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val p
   val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits){(prev, curr) => RegNext(prev)}
   val delayValidByLT = (0 until ltDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
 
-  cordicIn.bits.x := ltAcc.real
-  cordicIn.bits.y := ltAcc.imag
-  cordicIn.bits.z := ConvertableTo[T].fromDouble(0)
-  cordicIn.bits.vectoring := true.B
+  io.cordicIn.bits.x := ltAcc.real
+  io.cordicIn.bits.y := ltAcc.imag
+  io.cordicIn.bits.z := ConvertableTo[T].fromDouble(0)
+  io.cordicIn.bits.vectoring := true.B
   ltMul := (delayIQByLT * io.in.bits.conj())
 
   when(delayValidByLT && io.in.valid){
@@ -207,10 +207,10 @@ class FineOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val p
   }
 
   pulseGen.io.in := !io.in.valid
-  cordicIn.valid := pulseGen.io.out
+  io.cordicIn.valid := pulseGen.io.out
 
   io.out.bits := io.cordicOut.bits.z * ConvertableTo[T].fromDouble(1/ltDelay)
-  io.out.valid := cordicOut.valid
+  io.out.valid := io.cordicOut.valid
   io.in.ready := io.out.ready
 }
 
