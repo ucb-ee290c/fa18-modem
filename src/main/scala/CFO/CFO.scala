@@ -221,14 +221,15 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
   val cordic = Module ( new IterativeCordic(params) )
   val pulseGen = Module ( new OneCyclePulseGen )
   val stfDropper = Module ( new STFDropper(params) )
-  val coe = Module ( new CoarseOffsetEstimator(params, stDelay) )
-  val foe = Module ( new FineOffsetEstimator(params, ltDelay) )
 
   if(params.preamble == true){
     // val sm = Module( new PreambleStateMachine(params.stLength, params.ltLength) )
     val stDelay = 16
     val ltDelay = 64
 
+    val coe = Module ( new CoarseOffsetEstimator(params, stDelay) )
+    val foe = Module ( new FineOffsetEstimator(params, ltDelay) )
+    
     val curState = Reg(UInt(3.W))
     val nxtState = Wire(UInt(3.W))
     val coarseOffset = RegInit(params.protoZ, ConvertableTo[T].fromDouble(0))
@@ -271,7 +272,9 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     stfDropper.io.keep := (curState === lt || curState === data) // Put this in FSM
     pulseGen.io.in := (curState === lt || curState === data)
     io.out.bits.iq(0) := stfDropper.io.out.iq
-    io.pErr := (coe.io.out.bits & coe.io.out.valid) + (foe.io.out.bits & foe.io.out.valid)
+    //io.pErr := (coe.io.out.bits & coe.io.out.valid) + (foe.io.out.bits & foe.io.out.valid)
+    //io.pErr := Mux(coe.io.out.valid, coe.io.out.bits, ConvertableTo[T].fromDouble(0)) + (foe.io.out.valid, foe.io.out.bits, ConvertableTo[T].fromDouble(0))
+    io.pErr := coe.io.out.bits + foe.io.out.bits
 
     coe.io.in.bits := io.in.bits.iq(0)
     foe.io.in.bits := io.in.bits.iq(0)
