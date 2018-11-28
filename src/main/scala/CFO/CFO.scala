@@ -8,6 +8,7 @@ import dsptools.numbers._
 trait CFOParams[T <: Data] extends CordicParams[T] with PacketBundleParams[T] {
   val stLength: Int
   val ltLength: Int
+  val giLength: Int
   val preamble: Boolean
 }
 
@@ -40,6 +41,7 @@ case class FixedCFOParams(
   iqWidth: Int,
   stLength: Int = 160,
   ltLength: Int = 160,
+  giLength = 32,
   preamble: Boolean = true,
   stagesPerCycle: Int = 1
 ) extends CFOParams[FixedPoint] {
@@ -95,7 +97,7 @@ class OneCyclePulseGen[T<:Data] extends Module {
   })
 
   val idle::trig::stop::Nil = Enum(3)
-  val delayedIn = RegNext(io.in)
+  val delayedIn = RegNext(next = io.in, init = true.B)
   val nxtState = WireInit(idle)
   val curState = RegNext(next=nxtState, init=idle)
 
@@ -127,7 +129,7 @@ class STFDropper[T<:Data:ConvertableTo:Ring](val params: CFOParams[T]) extends M
     val keep = Input(Bool())
     val out = Output(IQBundle(params))
   })
-  
+
   //val zero = DspComplex(ConvertableTo[T].fromDouble(0), ConvertableTo[T].fromDouble(0))
   //val zeroWire = WireInit(zero)
 
@@ -139,6 +141,79 @@ class STFDropper[T<:Data:ConvertableTo:Ring](val params: CFOParams[T]) extends M
   }
 }
 
+class CoarseOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val params: CFOParams[T], val stDelay: Int) extends Module{
+  val io = IO(new Bundle{
+    val in = Flipped(Decoupled(params.protoIQ))
+    // val counter = Input(Bool())
+    val cordicIn = Decoupled(CordicBundle(params)))
+    val cordicOut = Flipped(Decoupled(CordicBundle(params))
+    val out = Decoupled(params.protoZ)
+  })
+
+  val pulseGen = Module( new OneCyclePulseGen )
+
+  val stMul = Wire(params.protoIQ)
+  val stAcc = Reg(params.protoIQ)
+  // val stCounter = Counter(params.stLength)
+  val delayIQByST = (0 until stDelay).foldLeft(io.in.bits){(prev, curr) => RegNext(prev)}
+  val delayValidByST = (0 until stDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
+
+  cordicIn.bits.x := stAcc.real
+  cordicIn.bits.y := stAcc.imag
+  cordicIn.bits.z := ConvertableTo[T].fromDouble(0)
+  cordicIn.bits.vectoring := true.B
+  stMul := (delayIQByST * io.in.bits.conj())
+
+  when(delayValidByST && io.in.valid){
+    stAcc := stAcc + stMul
+  }.otherwise{
+    stAcc := stAcc
+  }
+
+  pulseGen.io.in := !io.in.valid
+  cordicIn.valid := pulseGen.io.out
+
+  io.out.bits := io.cordicOut.bits.z * ConvertableTo[T].fromDouble(1/stDelay)
+  io.out.valid := cordicOut.valid
+  io.in.ready := io.out.ready
+}
+
+class FineOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val params: CFOParams[T], val ltDelay: Int) extends Module{
+  val io = IO(new Bundle{
+    val in = Flipped(Decoupled(params.protoIQ))
+    // val ltCounter = Input(Bool())
+    // val giCounter = Input(Bool())
+    val cordicIn = Decoupled(CordicBundle(params)))
+    val cordicOut = Flipped(Decoupled(CordicBundle(params))
+    val out = Decoupled(params.protoZ)
+  })
+  val pulseGen = Module( new OneCyclePulseGen )
+  val ltMul = Wire(params.protoIQ)
+  val ltAcc = Reg(params.protoIQ)
+  // val stCounter = Counter(params.stLength)
+  val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits){(prev, curr) => RegNext(prev)}
+  val delayValidByLT = (0 until ltDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
+
+  cordicIn.bits.x := ltAcc.real
+  cordicIn.bits.y := ltAcc.imag
+  cordicIn.bits.z := ConvertableTo[T].fromDouble(0)
+  cordicIn.bits.vectoring := true.B
+  ltMul := (delayIQByLT * io.in.bits.conj())
+
+  when(delayValidByLT && io.in.valid){
+    ltAcc := ltAcc + ltMul
+  }.otherwise{
+    ltAcc := ltAcc
+  }
+
+  pulseGen.io.in := !io.in.valid
+  cordicIn.valid := pulseGen.io.out
+
+  io.out.bits := io.cordicOut.bits.z * ConvertableTo[T].fromDouble(1/ltDelay)
+  io.out.valid := cordicOut.valid
+  io.in.ready := io.out.ready
+}
+
 class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params: CFOParams[T]) extends Module {
   // requireIsChiselType(params.protoIn)
   val io = IO(CFOEIO(params))
@@ -146,13 +221,16 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
   val cordic = Module ( new IterativeCordic(params) )
   val pulseGen = Module ( new OneCyclePulseGen )
   val stfDropper = Module ( new STFDropper(params) )
+  val coe = Module ( new CoarseOffsetEstimator(params, stDelay) )
+  val foe = Module ( new FineOffsetEstimator(params, ltDelay) )
 
   if(params.preamble == true){
     // val sm = Module( new PreambleStateMachine(params.stLength, params.ltLength) )
     val stDelay = 16
     val ltDelay = 64
 
-    val curState = Reg(UInt(2.W))
+    val curState = Reg(UInt(3.W))
+    val nxtState = Wire(UInt(3.W))
     val coarseOffset = RegInit(params.protoZ, ConvertableTo[T].fromDouble(0))
     val fineOffset = RegInit(params.protoZ, ConvertableTo[T].fromDouble(0))
 
@@ -162,6 +240,7 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     val ltAcc = Reg(params.protoIQ)
     val stCounter = Counter(params.stLength)
     val ltCounter = Counter(params.ltLength)
+    val giCounter = Counter(params.giLength)
 
     val estimatorReady = Wire(Bool())
 
@@ -170,7 +249,7 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     val delayValidByST = (0 until stDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
     val delayValidByLT = (0 until ltDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
 
-    val idle::st::lt::data::Nil = Enum(4)
+    val idle::st::gi::lt::data::Nil = Enum(4)
 
     def RunVectorCordic[T<:Data:BinaryRepresentation:Real:ConvertableTo](cplx: DspComplex[T]): Boolean = {
       cordic.io.in.bits.x := cplx.real
@@ -189,83 +268,63 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     io.out.bits.pktEnd := io.in.bits.pktEnd
     //io.out.bits.iq(0) := Mux(curState === lt || curState === data, io.in.bits.iq(0), Wire(DspComplex(ConvertableTo[T].fromDouble(0),ConvertableTo[T].fromDouble(0))))
     stfDropper.io.in.iq := io.in.bits.iq(0)
-    stfDropper.io.keep := (curState === lt || curState === data)
+    stfDropper.io.keep := (curState === lt || curState === data) // Put this in FSM
     pulseGen.io.in := (curState === lt || curState === data)
     io.out.bits.iq(0) := stfDropper.io.out.iq
-    io.pErr := coarseOffset + fineOffset
+    io.pErr := (coe.io.out.bits & coe.io.out.valid) + (foe.io.out.bits & foe.io.out.valid)
 
-    estimatorReady := false.B
+    coe.io.in.bits := io.in.bits.iq(0)
+    foe.io.in.bits := io.in.bits.iq(0)
 
-    cordic.io.in.bits.x := ConvertableTo[T].fromDouble(0)
-    cordic.io.in.bits.y := ConvertableTo[T].fromDouble(0)
-    cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
-    cordic.io.in.bits.vectoring := false.B
-    cordic.io.in.valid := false.B
-    cordic.io.out.ready := false.B
+    estimatorReady := io.out.ready
+
+    // cordic.io.in.bits.x := ConvertableTo[T].fromDouble(0)
+    // cordic.io.in.bits.y := ConvertableTo[T].fromDouble(0)
+    // cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
+    // cordic.io.in.bits.vectoring := false.B
+    // cordic.io.in.valid := false.B
+    // cordic.io.out.ready := false.B
 
     stMul := (delayIQByST.conj() * io.in.bits.iq(0))
     ltMul := (delayIQByLT.conj() * io.in.bits.iq(0))
     switch(curState){
       is(idle){
-        estimatorReady := true.B
-        cordic.io.in.valid := false.B
-        when(io.in.bits.pktStart && io.in.fire()){
-          curState := st
-        }.otherwise{
-          curState := idle
-          // stAcc := DspComplex[T](0,0)
-        }
+        giCounter.value := 0.U
+        stCounter.value := 0.U
+        ltCounter.value := 0.U
+        // estimatorReady := io.out.ready
+        coe.io.in.valid := false.B
+        foe.io.in.valid := false.B
+        nxtState := Mux(io.in.bits.pktStart, st, idle)
       }
       is(st){
-        when(stCounter.inc()){
-          RunVectorCordic(stAcc)
-        }.elsewhen(io.in.fire()){
-          curState := st
-          //stMul := (delayIQByST.conj() * io.in.bits.iq(0))
-          when(delayValidByST && io.in.valid){
-            stAcc := stAcc + stMul
-          }.otherwise{
-            stAcc := stAcc
-          }
-        }.otherwise{
-          cordic.io.in.valid := false.B
-          when(cordic.io.out.valid){
-            coarseOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/stDelay)
-            estimatorReady := true.B
-            curState := lt
-          }
+        foe.io.in.valid := false.B
+        when(io.in.fire()){
+          coe.io.in.valid := true.B
+          nxtState := Mux(stCounter.inc(), gi, st)
+        }
+      }
+      is(gi){
+        coe.io.in.valid := false.B
+        when(io.in.fire()){
+          foe.io.in.valid := false.B
+          nxtState := Mux(giCounter.inc(), lt, gi)
         }
       }
       is(lt){
-        when(ltCounter.inc()){
-          RunVectorCordic(ltAcc)
-        }.elsewhen(io.in.fire()){
-          curState := lt
-          //ltMul := (delayIQByLT.conj() * io.in.bits.iq(0))
-          when(delayValidByLT && io.in.valid){
-            ltAcc := ltAcc + ltMul
-          }.otherwise{
-            ltAcc := ltAcc
-          }
-        }
-        .otherwise{
-          cordic.io.in.valid := false.B
-          when(cordic.io.out.valid){
-            fineOffset := cordic.io.out.bits.z * ConvertableTo[T].fromDouble(1/ltDelay)
-            estimatorReady := true.B
-            curState := data
-          }
+        coe.io.in.valid := false.B
+        when(io.in.fire()){
+          foe.io.in.valid := true.B
+          nxtState := Mux(ltCounter.inc(), data, lt)
         }
       }
       is(data){
-        estimatorReady := true.B
-        when(io.in.bits.pktEnd){
-          curState := idle
-        }.otherwise{
-          curState := data
-        }
+        coe.io.in.valid := false.B
+        foe.io.in.valid := false.B
+        nxtState := Mux(io.in.bits.pktEnd, idle, data)
       }
     }
+    curState := nxtState
   }
 }
 
