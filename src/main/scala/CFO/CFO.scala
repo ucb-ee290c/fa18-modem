@@ -41,7 +41,7 @@ case class FixedCFOParams(
   iqWidth: Int,
   stLength: Int = 160,
   ltLength: Int = 160,
-  giLength = 32,
+  giLength: Int = 32,
   preamble: Boolean = true,
   stagesPerCycle: Int = 1
 ) extends CFOParams[FixedPoint] {
@@ -145,8 +145,8 @@ class CoarseOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(params.protoIQ))
     // val counter = Input(Bool())
-    val cordicIn = Decoupled(CordicBundle(params)))
-    val cordicOut = Flipped(Decoupled(CordicBundle(params))
+    val cordicIn = Decoupled(CordicBundle(params))
+    val cordicOut = Flipped(Decoupled(CordicBundle(params)))
     val out = Decoupled(params.protoZ)
   })
 
@@ -183,8 +183,8 @@ class FineOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val p
     val in = Flipped(Decoupled(params.protoIQ))
     // val ltCounter = Input(Bool())
     // val giCounter = Input(Bool())
-    val cordicIn = Decoupled(CordicBundle(params)))
-    val cordicOut = Flipped(Decoupled(CordicBundle(params))
+    val cordicIn = Decoupled(CordicBundle(params))
+    val cordicOut = Flipped(Decoupled(CordicBundle(params)))
     val out = Decoupled(params.protoZ)
   })
   val pulseGen = Module( new OneCyclePulseGen )
