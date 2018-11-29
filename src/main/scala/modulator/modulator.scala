@@ -579,7 +579,7 @@ trait ModFFTParams[T <: Data] extends FFTParams[T] {
   //val length: Int
 }
 object ModFFTParams {
-  def apply[T <: Data](old_params: ModFFTParams[T], new_num_points: Int): ModFFTParams[T] = new ModFFTParams[T] {
+  def apply[T <: Data](old_params: ModFFTParams[T], new_num_points: Int, newDecimType: String): ModFFTParams[T] = new ModFFTParams[T] {
     val protoIQ = old_params.protoIQ
     val protoTwiddle = old_params.protoTwiddle
     val numPoints = new_num_points
@@ -587,6 +587,7 @@ object ModFFTParams {
     val fftType = old_params.fftType
     val Ncbps = old_params.Ncbps
     val Nbpsc = old_params.Nbpsc
+    val decimType    = newDecimType
     //val length = old_params.length
   }
 }
@@ -603,7 +604,8 @@ case class FixedModFFTParams(
   numPoints: Int = 4,
   Ncbps: Int,
   Nbpsc: Int,
-  binPoints : Int,
+  binPoints: Int,
+  decimType: String = "opt",
   fftType: String = "direct",
   pipeline: Boolean = false
 ) extends ModFFTParams[FixedPoint] {

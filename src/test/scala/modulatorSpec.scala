@@ -154,11 +154,11 @@ class modulatorSpec extends FlatSpec with Matchers {
       n = 4
   )
 
-  val baseTrial = IQ(in=1.0, qn=1.0,out=5.0)
-  val anglesi = Seq(0.5, 1)
-  val anglesq = Seq(0.25, -1)
-  val trial1 = anglesi.map { in1 => baseTrial.copy(in = in1)}
-  val trials = List(IQ(1.0, 0.25, 13.0), IQ(1.0, -1.0, 1.0))
+  //val baseTrial = IQ(in=1.0, qn=1.0,out=5.0)
+  //val anglesi = Seq(0.5, 1)
+  //val anglesq = Seq(0.25, -1)
+  //val trial1 = anglesi.map { in1 => baseTrial.copy(in = in1)}
+  //val trials = List(IQ(1.0, 0.25, 13.0), IQ(1.0, -1.0, 1.0))
   //= anglesq.map {qn1 => baseTrial.copy(qn = qn1)}
   //DemapperTester(paramsdemap,trials)
 

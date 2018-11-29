@@ -25,11 +25,11 @@ case class XYZ(
   zout: Option[Double] = None
 )
 
-case class IQ(
-  in: Double,
-  qn: Double,
-  out: Double
-)
+//case class IQ(
+  //in: Double,
+  //qn: Double,
+  //out: Double
+//)
 
 case class IQG(
   in: Double,

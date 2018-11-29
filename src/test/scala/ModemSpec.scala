@@ -45,7 +45,7 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val hardBitsBundleParams = BitsBundleParams(width = bitsWidth, proto = SInt(2.W))
 
-  val hardDemodParams = HardDemodParams(width = 64, iqWidth = iqWidth, bitsWidth = bitsWidth)
+  val hardDemodParams = HardDemodParams(width = 64, datawidth = iqWidth, bitsWidth = bitsWidth, Nbpsc=1, Ncbps =48, hsmod=1)
 
   val hardViterbiParams = FixedCoding()
 
