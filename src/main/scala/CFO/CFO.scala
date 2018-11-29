@@ -1,4 +1,4 @@
-coe.io.cordicpackage modem
+package modem
 
 import chisel3._
 import chisel3.util._
@@ -306,6 +306,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
      cordic.io.in.bits := coe.io.cordicIn.bits
      coe.io.cordicOut.bits := cordic.io.out.bits
      cordic.io.in.valid := coe.io.cordicIn.valid
+     coe.io.out.ready := true.B
+     coe.io.in.valid := false.B
      coe.io.cordicIn.ready := cordic.io.in.ready
      cordic.io.out.ready := coe.io.cordicOut.ready
      coe.io.cordicOut.valid := cordic.io.out.valid
@@ -316,6 +318,10 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
      foe.io.cordicIn.ready := stdbyInRReg
      stdbyOutRReg := foe.io.cordicOut.ready
      foe.io.cordicOut.valid := stdbyOutVReg
+     foe.io.out.ready := true.B
+     foe.io.in.valid := false.B
+
+     nxtState := idle
 
     stMul := (delayIQByST.conj() * io.in.bits.iq(0))
     ltMul := (delayIQByLT.conj() * io.in.bits.iq(0))
@@ -365,6 +371,9 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         when(io.in.fire()){
           coe.io.in.valid := true.B
           nxtState := Mux(stCounter.inc(), gi, st)
+        }.otherwise{
+          coe.io.in.valid := true.B
+          nxtState := st
         }
       }
       is(gi){
@@ -385,6 +394,9 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         when(io.in.fire()){
           foe.io.in.valid := false.B
           nxtState := Mux(giCounter.inc(), lt, gi)
+        }.otherwise{
+          foe.io.in.valid := false.B
+          nxtState := gi
         }
       }
       is(lt){
@@ -405,6 +417,9 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         when(io.in.fire()){
           foe.io.in.valid := true.B
           nxtState := Mux(ltCounter.inc(), data, lt)
+        }.otherwise{
+          foe.io.in.valid := true.B
+          nxtState := lt
         }
       }
       is(data){
