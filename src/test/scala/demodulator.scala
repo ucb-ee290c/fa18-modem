@@ -7,7 +7,7 @@ import dsptools.numbers._
 import breeze.math.{Complex}
 
        
-class BPSKDemodTester[T <: chisel3.Data](c: BPSKDemodulator[T],tolLSBs: Int = 2) extends DspTester(c) {
+class BPSKDemodTester[T <: chisel3.Data,U <: chisel3.Data ](c: BPSKDemodulator[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -53,14 +53,14 @@ class BPSKDemodTester[T <: chisel3.Data](c: BPSKDemodulator[T],tolLSBs: Int = 2)
    }      
 }
 object BPSKDemodTester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: HardDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new BPSKDemodulator(params)) {
       c => new BPSKDemodTester(c)
     }
   }
 }
 
-class BPSKDemodTester1s[T <: chisel3.Data](c: BPSKDemodulator1s[T],tolLSBs: Int = 2) extends DspTester(c) {
+class BPSKDemodTester1s[T <: chisel3.Data, U <: chisel3.Data](c: BPSKDemodulator1s[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -106,7 +106,7 @@ class BPSKDemodTester1s[T <: chisel3.Data](c: BPSKDemodulator1s[T],tolLSBs: Int 
    }      
 }
 object BPSKDemodTester1s {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: SoftDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new BPSKDemodulator1s(params)) {
       c => new BPSKDemodTester1s(c)
     }
@@ -114,7 +114,7 @@ object BPSKDemodTester1s {
 }
 
 
-class BPSKDemodTester1[T <: chisel3.Data](c: BPSKDemodulator1[T],tolLSBs: Int = 2) extends DspTester(c) {
+class BPSKDemodTester1[T <: chisel3.Data, U <: chisel3.Data](c: BPSKDemodulator1[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -160,14 +160,14 @@ class BPSKDemodTester1[T <: chisel3.Data](c: BPSKDemodulator1[T],tolLSBs: Int = 
    }      
 }
 object BPSKDemodTester1 {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: HardDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new BPSKDemodulator1(params)) {
       c => new BPSKDemodTester1(c)
     }
   }
 }
 
-class SermTester[T <: chisel3.Data](c: Serilizerm[T],tolLSBs: Int = 2) extends DspTester(c) {
+class SermTester[T <: chisel3.Data, U <: chisel3.Data](c: Serilizerm[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
    
     poke(c.io.out.ready, 1)
@@ -216,14 +216,14 @@ class SermTester[T <: chisel3.Data](c: Serilizerm[T],tolLSBs: Int = 2) extends D
          
 }
 object SermTester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: HardDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Serilizerm(params)) {
       c => new SermTester(c)
     }
   }
 }
 
-class Serm1Tester[T <: chisel3.Data](c: Serilizerm1[T],tolLSBs: Int = 2) extends DspTester(c) {
+class Serm1Tester[T <: chisel3.Data, U <: chisel3.Data](c: Serilizerm1[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
    
     poke(c.io.out.ready, 1)
@@ -276,13 +276,13 @@ class Serm1Tester[T <: chisel3.Data](c: Serilizerm1[T],tolLSBs: Int = 2) extends
          
 }
 object Serm1Tester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: SoftDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Serilizerm1(params)) {
       c => new Serm1Tester(c)
     }
   }
 }
-class Serms1Tester[T <: chisel3.Data](c: Serilizerms1[T],tolLSBs: Int = 2) extends DspTester(c) {
+class Serms1Tester[T <: chisel3.Data, U <: chisel3.Data](c: Serilizerms1[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
    
     poke(c.io.out.ready, 1)
@@ -335,14 +335,14 @@ class Serms1Tester[T <: chisel3.Data](c: Serilizerms1[T],tolLSBs: Int = 2) exten
          
 }
 object Serms1Tester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: SoftDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Serilizerms1(params)) {
       c => new Serms1Tester(c)
     }
   }
 }
 
-class QPSKDemodSerTester[T <: chisel3.Data](c: QPSKDemodulatorSer[T]) extends DspTester(c) {
+class QPSKDemodSerTester[T <: chisel3.Data, U <: chisel3.Data](c: QPSKDemodulatorSer[T,U]) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -392,14 +392,14 @@ class QPSKDemodSerTester[T <: chisel3.Data](c: QPSKDemodulatorSer[T]) extends Ds
         
 }
 object QPSKDemodSerTester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: SoftDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new QPSKDemodulatorSer(params)) {
       c => new QPSKDemodSerTester(c)
     }
   }
 }
 
-class QPSKDemodSer1Tester[T <: chisel3.Data](c: QPSKDemodulatorSer1[T]) extends DspTester(c) {
+class QPSKDemodSer1Tester[T <: chisel3.Data, U <: chisel3.Data](c: QPSKDemodulatorSer1[T,U]) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -449,14 +449,14 @@ class QPSKDemodSer1Tester[T <: chisel3.Data](c: QPSKDemodulatorSer1[T]) extends 
         
 }
 object QPSKDemodSer1Tester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: HardDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new QPSKDemodulatorSer1(params)) {
       c => new QPSKDemodSer1Tester(c)
     }
   }
 }
 
-class QPSKDemodSer1sTester[T <: chisel3.Data](c: QPSKDemodulatorSer1s[T],tolLSBs: Int = 2) extends DspTester(c) {
+class QPSKDemodSer1sTester[T <: chisel3.Data, U <: chisel3.Data](c: QPSKDemodulatorSer1s[T, U],tolLSBs: Int = 2) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -507,7 +507,7 @@ class QPSKDemodSer1sTester[T <: chisel3.Data](c: QPSKDemodulatorSer1s[T],tolLSBs
         
 }
 object QPSKDemodSer1sTester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: SoftDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new QPSKDemodulatorSer1s(params)) {
       c => new QPSKDemodSer1sTester(c)
     }
@@ -515,7 +515,7 @@ object QPSKDemodSer1sTester {
 }
 
 
-class QAM16DemodSerTester[T <: chisel3.Data](c: QAM16DemodulatorSer[T]) extends DspTester(c) {
+class QAM16DemodSerTester[T <: chisel3.Data, U <: chisel3.Data](c: QAM16DemodulatorSer[T,U]) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -570,14 +570,14 @@ class QAM16DemodSerTester[T <: chisel3.Data](c: QAM16DemodulatorSer[T]) extends 
         
 }
 object QAM16DemodSerTester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: HardDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new QAM16DemodulatorSer(params)) {
       c => new QAM16DemodSerTester(c)
     }
   }
 }
 
-class QAM16DemodSer1Tester[T <: chisel3.Data](c: QAM16DemodulatorSer1[T]) extends DspTester(c) {
+class QAM16DemodSer1Tester[T <: chisel3.Data, U <: chisel3.Data](c: QAM16DemodulatorSer1[T,U]) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -633,14 +633,83 @@ class QAM16DemodSer1Tester[T <: chisel3.Data](c: QAM16DemodulatorSer1[T]) extend
         
 }
 object QAM16DemodSer1Tester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: HardDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new QAM16DemodulatorSer1(params)) {
       c => new QAM16DemodSer1Tester(c)
     }
   }
 }
 
-class QAM16DemodSer1sTester[T <: chisel3.Data](c: QAM16DemodulatorSer1s[T],tolLSBs: Int = 8) extends DspTester(c) {
+class DemodulatorTester[T <: chisel3.Data, U <: chisel3.Data](c: Demodulator[T,U],inp: Seq[Complex]) extends DspTester(c) with HasTesterUtil[Demodulator[T,U]] {
+    
+
+    poke(c.io.out.ready, 1)
+    poke(c.io.in.valid, 1)
+    poke(c.io.in.bits.pktStart, 1)
+    poke(c.io.in.bits.pktEnd, 1)
+
+    
+    //for (i <- 0 until 64) {
+       //poke(c.io.in.bits.iq(i), Complex(0.5,0.5))}
+     poke_seq(c.io.in.bits.iq, inp)
+     
+    
+      // wait until input is accepted
+   
+      
+    
+    while (!peek(c.io.in.ready)) {
+      
+       step(1)
+      
+
+      }
+                 
+    
+    while (!peek(c.io.out.valid) ) {
+     
+
+      peek(c.io.in.ready)
+      peek(c.io.out.valid)
+            
+      step(1)
+    }
+      
+       for (i <- 6 until 10) {
+         expect(c.io.out.bits.bits(i), -1) 
+         }
+        for (i <- 10 until 22) {
+         expect(c.io.out.bits.bits(i), 1) 
+         }
+       //step(1)
+       //for (i <- 0 until 48) {
+        // expect(c.io.out.bits.bits(i), 1) 
+        // }
+       //step(1)
+      // for (i <- 0 until 48) {
+        // expect(c.io.out.bits.bits(i), 1)} 
+         step(1)
+       //for (i <- 0 until 48) {
+         //expect(c.io.out.bits.bits(i), 1) 
+         //}
+        expect(c.io.out.bits.pktStart,1)
+
+      
+       
+    
+        
+}
+object DemodulatorTester {
+  def apply(params: HardDemodParams,inp: Seq[Complex]): Boolean = {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Demodulator(params)) {
+      c => new DemodulatorTester(c,inp)
+    }
+  }
+}
+
+
+
+class QAM16DemodSer1sTester[T <: chisel3.Data, U <: chisel3.Data](c: QAM16DemodulatorSer1s[T,U],tolLSBs: Int = 8) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -696,7 +765,7 @@ class QAM16DemodSer1sTester[T <: chisel3.Data](c: QAM16DemodulatorSer1s[T],tolLS
         
 }
 object QAM16DemodSer1sTester {
-  def apply(params: FixedDemodParams): Boolean = {
+  def apply(params: SoftDemodParams): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new QAM16DemodulatorSer1s(params)) {
       c => new QAM16DemodSer1sTester(c)
     }

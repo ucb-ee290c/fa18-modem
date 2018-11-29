@@ -17,7 +17,7 @@ import freechips.rocketchip.subsystem.BaseSubsystem
 
 
 // deinterleaver
-class Deinterleaver[T <: Data](params: DemodParams[T]) extends Module {
+class Deinterleaver[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends Module {
     val io = IO(new Bundle {
     
     val in  = Flipped(Decoupled(Vec(params.Ncbps,Bool())))
@@ -57,7 +57,7 @@ class Deinterleaver[T <: Data](params: DemodParams[T]) extends Module {
 }
 
 // deinterleaver modify
-class Deinterleaver1[T <: Data](params: DemodParams[T]) extends Module {
+class Deinterleaver1[T <: Data,U <: Data ](params: DemodulationParams[T,U]) extends Module {
     val io = IO(new Bundle {
     
     val in  = Flipped(Decoupled(BitsBundle2(params)))
@@ -106,7 +106,7 @@ class Deinterleaver1[T <: Data](params: DemodParams[T]) extends Module {
 }
 
 // deinterleaver modify soft 
-class Deinterleaver1s[T <: Data](params: DemodParams[T]) extends Module {
+class Deinterleaver1s[T <: Data,U <: Data](params: DemodulationParams[T,U]) extends Module {
     val io = IO(new Bundle {
     
     val in  = Flipped(Decoupled(PacketBundle(params.Ncbps,params.protoIQ.cloneType )))
@@ -159,7 +159,7 @@ class Deinterleaver1s[T <: Data](params: DemodParams[T]) extends Module {
 
 
 // QPSK DEMAPPER
-class QPSKDemapper[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QPSKDemapper[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
         val in  = Flipped(Decoupled(Vec(params.Ncbps/params.Nbpsc,params.protoIQ.cloneType)))
         val out = Decoupled(Vec(params.Ncbps, Bool()))
@@ -211,7 +211,7 @@ class QPSKDemapper[T <: Data :Real:BinaryRepresentation](val params: DemodParams
 // QPSK DEMAPPER modify
   //val in = Flipped(Decoupled(DeserialPacketBundle(params)))
   //val out = Decoupled(BitsBundle1(params))
-class QPSKDemapper1[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QPSKDemapper1[T <: Data :Real:BinaryRepresentation,U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48,params.protoIQ.cloneType )))
         val out = Decoupled(BitsBundle2(params))
@@ -267,7 +267,7 @@ class QPSKDemapper1[T <: Data :Real:BinaryRepresentation](val params: DemodParam
        }
 }
 // QPSK SOFT demod
-class QPSKDemapper1s[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QPSKDemapper1s[T <: Data :Real:BinaryRepresentation,U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48, params.protoIQ.cloneType)))
         val out = Decoupled(PacketBundle(params.Ncbps, params.protoIQ.cloneType))
@@ -312,7 +312,7 @@ class QPSKDemapper1s[T <: Data :Real:BinaryRepresentation](val params: DemodPara
 
 // 16QAM DEMAPPER pkt
 // 
-class QAM16Demapper1[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QAM16Demapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48, params.protoIQ.cloneType)))
 	//Flipped(Decoupled(Vec(params.Ncbps/params.Nbpsc,params.protoIQ.cloneType)))
@@ -457,7 +457,7 @@ class QAM16Demapper1[T <: Data :Real:BinaryRepresentation](val params: DemodPara
 }
 // 16QAM DEMAPPER pkt
 // 
-class QAM16Demapper1s[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QAM16Demapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48, params.protoIQ.cloneType)))
 	//Flipped(Decoupled(Vec(params.Ncbps/params.Nbpsc,params.protoIQ.cloneType)))
@@ -510,7 +510,7 @@ class QAM16Demapper1s[T <: Data :Real:BinaryRepresentation](val params: DemodPar
 }
 // 16QAM DEMAPPER
 // 
-class QAM16Demapper[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QAM16Demapper[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
         val in  = Flipped(Decoupled(Vec(params.Ncbps/params.Nbpsc,params.protoIQ.cloneType)))
         val out = Decoupled(Vec(params.Ncbps, Bool()))
@@ -647,7 +647,7 @@ class QAM16Demapper[T <: Data :Real:BinaryRepresentation](val params: DemodParam
 
 // BPSK DEMAPPER
 
-class BPSKDemapper[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class BPSKDemapper[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
         val in  = Flipped(Decoupled(Vec(params.Ncbps/params.Nbpsc,params.protoIQ.cloneType)))
         val out = Decoupled(Vec(params.Ncbps, Bool()))
@@ -683,7 +683,7 @@ class BPSKDemapper[T <: Data :Real:BinaryRepresentation](val params: DemodParams
 
 // BPSK DEMAPPER modify
 
-class BPSKDemapper1[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class BPSKDemapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
          val in  = Flipped(Decoupled(PacketBundle(48, params.protoIQ.cloneType)))
         val out = Decoupled(BitsBundle2(params))
@@ -726,7 +726,7 @@ class BPSKDemapper1[T <: Data :Real:BinaryRepresentation](val params: DemodParam
    }
 }
 
-class BPSKDemapper1s[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class BPSKDemapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
          val in  = Flipped(Decoupled(PacketBundle(48, params.protoIQ.cloneType)))
         val out = Decoupled(PacketBundle(params.Ncbps, params.protoIQ.cloneType))
@@ -787,6 +787,54 @@ object DemodParams {
   }
 }
 
+// demod params modify
+trait DemodulationParams[T <: Data, U <: Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
+      val bitsWidth: Int
+      val Ncbps: Int
+      val Nbpsc: Int
+      val hsmod: Int
+}
+
+object DemodulationParams {
+  def apply[T <: Data, U <: Data ](old_params: DemodulationParams[T,U]): DemodulationParams[T,U] = new DemodulationParams[T,U] {
+    val protoIQ = old_params.protoIQ
+    val width = old_params.width
+    val bitsWidth = old_params.bitsWidth
+    val protoBits = old_params.protoBits
+    val Ncbps = old_params.Ncbps
+    val Nbpsc = old_params.Nbpsc
+    val hsmod = old_params.hsmod
+  }
+}
+
+case class HardDemodParams(
+  // width of Input and Output
+  datawidth: Int,
+  width: Int,
+  bitsWidth: Int,
+  hsmod: Int,
+  Ncbps: Int,
+  Nbpsc: Int
+ ) extends DemodulationParams[FixedPoint, SInt] {
+  val protoIQ = DspComplex(FixedPoint(datawidth.W, (datawidth-2).BP))
+  val protoBits = SInt(2.W)
+ 
+}
+
+case class SoftDemodParams(
+  // width of Input and Output
+  datawidth: Int,
+  width: Int,
+  bitsWidth: Int,
+  hsmod: Int,
+  Ncbps: Int,
+  Nbpsc: Int
+ ) extends DemodulationParams[FixedPoint,FixedPoint] {
+  val protoIQ = DspComplex(FixedPoint(datawidth.W, (datawidth-2).BP))
+  val protoBits = FixedPoint(datawidth.W, (datawidth-2).BP)  
+}
+
+
 
 case class FixedDemodParams(
   // width of Input and Output
@@ -801,8 +849,84 @@ case class FixedDemodParams(
  
 }
 
+class Demodulator[T <: Data:Real:BinaryRepresentation,U <: Data:Real:BinaryRepresentation](val params: DemodulationParams[T,U]) extends Module {
+     val io = IO(new Bundle{
+         val in = Flipped(Decoupled(DeserialPacketBundle(params)))
+         val out = Decoupled(BitsBundle(params))     
+        })
+   if ( params.hsmod==1){
+    if(params.Nbpsc ==1){
+       val bpskhdemod = Module( new BPSKDemodulator1(params) )
+       bpskhdemod.io.in.bits := io.in.bits
+       bpskhdemod.io.in.valid := io.in.valid
+       bpskhdemod.io.out.ready := io.out.ready
+       io.out.bits := bpskhdemod.io.out.bits
+       io.out.valid := bpskhdemod.io.out.valid
+       io.in.ready := bpskhdemod.io.in.ready
+    } else if(params.Nbpsc ==2){
+       val qpskhdemod =  Module( new QPSKDemodulatorSer1(params) )
+       qpskhdemod.io.in.bits := io.in.bits
+       qpskhdemod.io.in.valid := io.in.valid
+       qpskhdemod.io.out.ready := io.out.ready
+       io.out.bits := qpskhdemod.io.out.bits
+       io.out.valid := qpskhdemod.io.out.valid
+       io.in.ready := qpskhdemod.io.in.ready
+      } else{
+        val qam16hdemod = Module( new QAM16DemodulatorSer1(params) )        
+	qam16hdemod.io.in.bits := io.in.bits
+        qam16hdemod.io.in.valid := io.in.valid
+	qam16hdemod.io.out.ready := io.out.ready
+        io.out.bits := qam16hdemod.io.out.bits
+        io.out.valid := qam16hdemod.io.out.valid
+        io.in.ready := qam16hdemod.io.in.ready    
+      }
+   
+   } else{
+     if(params.Nbpsc ==1){
+       val bpsksdemod = Module( new BPSKDemodulator1s(params) )
+       bpsksdemod.io.in.bits := io.in.bits
+       bpsksdemod.io.in.valid := io.in.valid
+       bpsksdemod.io.out.ready := io.out.ready
+       for (i <- 0 until params.Ncbps / params.Nbpsc){
+          io.out.bits.bits(i) := bpsksdemod.io.out.bits.iq(i).real }
+       io.out.bits.pktStart := bpsksdemod.io.out.bits.pktStart
+       io.out.bits.pktEnd := bpsksdemod.io.out.bits.pktEnd
+       io.out.valid := bpsksdemod.io.out.valid
+       io.in.ready := bpsksdemod.io.in.ready
+     } else if(params.Nbpsc ==2){
+       val qpsksdemod = Module( new QPSKDemodulatorSer1s(params) )
+       qpsksdemod.io.in.bits := io.in.bits
+       qpsksdemod.io.in.valid := io.in.valid
+       qpsksdemod.io.out.ready := io.out.ready
+       for (i <- 0 until params.Ncbps / params.Nbpsc){
+          io.out.bits.bits(i) := qpsksdemod.io.out.bits.iq(i).real }
+       io.out.bits.pktStart := qpsksdemod.io.out.bits.pktStart
+       io.out.bits.pktEnd := qpsksdemod.io.out.bits.pktEnd
+       io.out.valid := qpsksdemod.io.out.valid
+       io.in.ready := qpsksdemod.io.in.ready
+     } else{
+       val qam16sdemod = Module( new QAM16DemodulatorSer1s(params) )
+       qam16sdemod.io.in.bits := io.in.bits
+       qam16sdemod.io.in.valid := io.in.valid
+       qam16sdemod.io.out.ready := io.out.ready
+       for (i <- 0 until params.Ncbps / params.Nbpsc){
+          io.out.bits.bits(i) := qam16sdemod.io.out.bits.iq(i).real }
+       io.out.bits.pktStart := qam16sdemod.io.out.bits.pktStart
+       io.out.bits.pktEnd := qam16sdemod.io.out.bits.pktEnd
+       io.out.valid := qam16sdemod.io.out.valid
+       io.in.ready := qam16sdemod.io.in.ready
+        
+     }
 
-class BitsBundle1[T<:Data](params: DemodParams[T] ) extends Bundle {
+
+   
+   }   
+  
+   
+
+}
+
+class BitsBundle1[T<:Data,U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
  
@@ -811,11 +935,11 @@ class BitsBundle1[T<:Data](params: DemodParams[T] ) extends Bundle {
 }
 
 object BitsBundle1  {
-  def apply[T <: Data](params: DemodParams[T]): BitsBundle1[T] =
+  def apply[T <: Data, U <: Data](params: DemodulationParams[T,U]): BitsBundle1[T,U] =
     new BitsBundle1(params)
 }
 
-class BitsBundle1b[T<:Data](params: DemodParams[T] ) extends Bundle {
+class BitsBundle1b[T<:Data, U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
  
@@ -824,7 +948,7 @@ class BitsBundle1b[T<:Data](params: DemodParams[T] ) extends Bundle {
 }
 
 object BitsBundle1b  {
-  def apply[T <: Data](params: DemodParams[T]): BitsBundle1b[T] =
+  def apply[T <: Data, U <: Data](params: DemodulationParams[T,U]): BitsBundle1b[T,U] =
     new BitsBundle1b(params)
 }
 
@@ -842,7 +966,7 @@ object BitsBundle1bt  {
 }
 
 
-class BitsBundle1s[T<:Data](params: DemodParams[T] ) extends Bundle {
+class BitsBundle1s[T<:Data, U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
  
@@ -851,12 +975,12 @@ class BitsBundle1s[T<:Data](params: DemodParams[T] ) extends Bundle {
 }
 
 object BitsBundle1s  {
-  def apply[T <: Data](params: DemodParams[T]): BitsBundle1s[T] =
+  def apply[T <: Data, U <: Data](params: DemodulationParams[T,U]): BitsBundle1s[T,U] =
     new BitsBundle1s(params)
 }
 
 
-class BitsBundle2[T<:Data](params: DemodParams[T] ) extends Bundle {
+class BitsBundle2[T<:Data, U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
  
@@ -865,7 +989,7 @@ class BitsBundle2[T<:Data](params: DemodParams[T] ) extends Bundle {
 }
 
 object BitsBundle2  {
-  def apply[T <: Data](params: DemodParams[T]): BitsBundle2[T] =
+  def apply[T <: Data, U <: Data](params: DemodulationParams[T,U]): BitsBundle2[T,U] =
     new BitsBundle2(params)
 }
 
@@ -883,7 +1007,7 @@ object BitsBundle2t  {
 }
 
 
-class BitsBundle2s[T<:Data](params: DemodParams[T] ) extends Bundle {
+class BitsBundle2s[T<:Data, U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
  
@@ -892,35 +1016,35 @@ class BitsBundle2s[T<:Data](params: DemodParams[T] ) extends Bundle {
 }
 
 object BitsBundle2s  {
-  def apply[T <: Data](params: DemodParams[T]): BitsBundle2s[T] =
+  def apply[T <: Data, U <: Data](params: DemodulationParams[T,U]): BitsBundle2s[T,U] =
     new BitsBundle2s(params)
 }
 
 
 
 
-class DEMODIO[T <: Data](params: DemodParams[T]) extends Bundle {
+class DEMODIO[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends Bundle {
   val in = Flipped(Decoupled(DeserialPacketBundle(params)))
   val out = Decoupled(BitsBundle1(params))
 
   override def cloneType: this.type = DEMODIO(params).asInstanceOf[this.type]
 }
 object DEMODIO {
-  def apply[T <: Data](params: DemodParams[T]): DEMODIO[T] = new DEMODIO(params)
+  def apply[T <: Data, U <: Data](params: DemodulationParams[T,U]): DEMODIO[T,U] = new DEMODIO(params)
 }
-class DEMODIOS[T <: Data](params: DemodParams[T]) extends Bundle {
+class DEMODIOS[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends Bundle {
   val in = Flipped(Decoupled(DeserialPacketBundle(params)))
   val out = Decoupled(PacketBundle(48,params.protoIQ.cloneType ))
 
   override def cloneType: this.type = DEMODIOS(params).asInstanceOf[this.type]
 }
 object DEMODIOS {
-  def apply[T <: Data](params: DemodParams[T]): DEMODIOS[T] = new DEMODIOS(params)
+  def apply[T <: Data, U <: Data](params: DemodulationParams[T,U]): DEMODIOS[T,U] = new DEMODIOS(params)
 }
 
 
 // BPSK DEMOUDLATOR
-class BPSKDemodulator[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class BPSKDemodulator[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
   val io = IO(DEMODIO(params))
   val demapping = Module( new BPSKDemapper(params) )
   val deinterleaving =  Module( new Deinterleaver(params) )
@@ -966,7 +1090,7 @@ class BPSKDemodulator[T <: Data :Real:BinaryRepresentation](val params: DemodPar
 }
 
 // BPSK DEMOUDLATOR modify
-class BPSKDemodulator1[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class BPSKDemodulator1[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
   val io = IO(DEMODIO(params))
   val demapping = Module( new BPSKDemapper1(params) )
   val deinterleaving =  Module( new Deinterleaver1(params) )
@@ -1019,7 +1143,7 @@ class BPSKDemodulator1[T <: Data :Real:BinaryRepresentation](val params: DemodPa
 
 
 // BPSK DEMOUDLATOR modify soft
-class BPSKDemodulator1s[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class BPSKDemodulator1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
   val io = IO(DEMODIOS(params))
   val demapping = Module( new BPSKDemapper1s(params) )
   val deinterleaving =  Module( new Deinterleaver1s(params) )
@@ -1071,7 +1195,7 @@ class BPSKDemodulator1s[T <: Data :Real:BinaryRepresentation](val params: DemodP
 }
 
 
-class QPSKDemodulatorSer[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QPSKDemodulatorSer[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
 
   val io = IO(DEMODIO(params))
   val demod = Module( new QPSKDemodulator (params) )
@@ -1116,7 +1240,7 @@ class QPSKDemodulatorSer[T <: Data :Real:BinaryRepresentation](val params: Demod
 
 }
 
-class QAM16DemodulatorSer1[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QAM16DemodulatorSer1[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
 
   val io = IO(DEMODIO(params))
   val demod = Module( new QAM16Demodulator1 (params) )
@@ -1166,7 +1290,7 @@ class QAM16DemodulatorSer1[T <: Data :Real:BinaryRepresentation](val params: Dem
 }
 
 
-class QPSKDemodulatorSer1[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QPSKDemodulatorSer1[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
 
   val io = IO(DEMODIO(params))
   val demod = Module( new QPSKDemodulator1 (params) )
@@ -1216,7 +1340,7 @@ class QPSKDemodulatorSer1[T <: Data :Real:BinaryRepresentation](val params: Demo
 }
 
 
-class QAM16DemodulatorSer1s[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QAM16DemodulatorSer1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
 
   val io = IO(DEMODIOS(params))
   val demod = Module( new QAM16Demodulator1s (params) )
@@ -1266,7 +1390,7 @@ class QAM16DemodulatorSer1s[T <: Data :Real:BinaryRepresentation](val params: De
 }
 
 
-class QPSKDemodulatorSer1s[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QPSKDemodulatorSer1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
 
   val io = IO(DEMODIOS(params))
   val demod = Module( new QPSKDemodulator1s (params) )
@@ -1317,7 +1441,7 @@ class QPSKDemodulatorSer1s[T <: Data :Real:BinaryRepresentation](val params: Dem
 
 
 
-class QPSKDemodulator[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QPSKDemodulator[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
       val io = IO(new Bundle {
        val in  = Flipped(Decoupled(Vec(params.Ncbps/params.Nbpsc,params.protoIQ.cloneType)))
        val out = Decoupled(Vec(params.Ncbps, Bool()))
@@ -1336,7 +1460,7 @@ class QPSKDemodulator[T <: Data :Real:BinaryRepresentation](val params: DemodPar
  io.in.ready := demapping.io.in.ready
  
 }
-class QPSKDemodulator1[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QPSKDemodulator1[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
       val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48,params.protoIQ.cloneType )))
         val out = Decoupled(BitsBundle2(params))
@@ -1358,7 +1482,7 @@ class QPSKDemodulator1[T <: Data :Real:BinaryRepresentation](val params: DemodPa
  
 }
 
-class QAM16Demodulator1[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QAM16Demodulator1[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
       val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48,params.protoIQ.cloneType )))
         val out = Decoupled(BitsBundle2(params))
@@ -1381,7 +1505,7 @@ class QAM16Demodulator1[T <: Data :Real:BinaryRepresentation](val params: DemodP
 }
 
 
-class QPSKDemodulator1s[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QPSKDemodulator1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
       val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48,params.protoIQ.cloneType )))
         val out = Decoupled(PacketBundle(params.Ncbps,params.protoIQ.cloneType ))
@@ -1403,7 +1527,7 @@ class QPSKDemodulator1s[T <: Data :Real:BinaryRepresentation](val params: DemodP
  
 }
 
-class QAM16Demodulator1s[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QAM16Demodulator1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
       val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48,params.protoIQ.cloneType )))
         val out = Decoupled(PacketBundle(params.Ncbps,params.protoIQ.cloneType ))
@@ -1428,7 +1552,7 @@ class QAM16Demodulator1s[T <: Data :Real:BinaryRepresentation](val params: Demod
 
 
 // QAM demodulator
-class QAM16Demodulator[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QAM16Demodulator[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
       val io = IO(new Bundle {
        val in  = Flipped(Decoupled(Vec(params.Ncbps/params.Nbpsc,params.protoIQ.cloneType)))
        val out = Decoupled(Vec(params.Ncbps, Bool()))
@@ -1448,7 +1572,7 @@ class QAM16Demodulator[T <: Data :Real:BinaryRepresentation](val params: DemodPa
  
 }
 
-class QAM16DemodulatorSer[T <: Data :Real:BinaryRepresentation](val params: DemodParams[T]) extends Module {
+class QAM16DemodulatorSer[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
 
   val io = IO(DEMODIO(params))
   val demod = Module( new QAM16Demodulator (params) )
@@ -1494,7 +1618,7 @@ class QAM16DemodulatorSer[T <: Data :Real:BinaryRepresentation](val params: Demo
 
 
 // serilizer modify 
-class Serilizerm[T <: Data](params: DemodParams[T]) extends Module {
+class Serilizerm[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends Module {
     val io = IO(new Bundle {
     
     val in  = Flipped(Decoupled(Vec(params.Ncbps,Bool())))
@@ -1541,7 +1665,7 @@ class Serilizerm[T <: Data](params: DemodParams[T]) extends Module {
 
 }
 // serilizer modify packetstart/end
-class Serilizerm1[T <: Data](params: DemodParams[T]) extends Module {
+class Serilizerm1[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends Module {
     val io = IO(new Bundle {
     val in = Flipped( Decoupled(BitsBundle2(params)))
     val out =  Decoupled(BitsBundle1b(params))
@@ -1598,7 +1722,7 @@ class Serilizerm1[T <: Data](params: DemodParams[T]) extends Module {
 }
 
 // serilizer modify packetstart/end
-class Serilizerms1[T <: Data](params: DemodParams[T]) extends Module {
+class Serilizerms1[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends Module {
     val io = IO(new Bundle {
     //val in = Flipped( Decoupled(BitsBundle2(params)))
     //val out =  Decoupled(BitsBundle1b(params))
@@ -1660,7 +1784,7 @@ class Serilizerms1[T <: Data](params: DemodParams[T]) extends Module {
 
 
 //-- Interleaver modify(serial input)
-class Deserilizer[T <: Data](params: DemodParams[T]) extends Module {
+class Deserilizer[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends Module {
     val io = IO(new Bundle {
     
     val in  = Flipped(Decoupled(Bool()))
