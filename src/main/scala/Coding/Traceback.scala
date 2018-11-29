@@ -23,6 +23,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   val L   = params.L
   val D   = params.D
   val m   = params.m
+  val pmBits = params.pmBits
 
   // Memory Configuration
   val outValid    = RegInit(false.B)
@@ -32,7 +33,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   val mem         = Reg(Vec(addrSize * 2, UInt(m.W)))
 
   // declare variables for decoding process
-  val tmpPMMinReg       = RegInit(VecInit(Seq.fill(params.nStates - 1)(0.U(m.W))))
+  val tmpPMMinReg       = RegInit(VecInit(Seq.fill(params.nStates - 1)(0.U(pmBits.W))))
   val tmpPMMinIndexReg  = RegInit(VecInit(Seq.fill(params.nStates - 1)(0.U(m.W))))
   val tmpSPReg          = RegInit(VecInit(Seq.fill(params.nStates)(0.U(m.W))))
   val trackValid        = RegInit(VecInit(Seq.fill(3)(0.U(1.W))))
@@ -49,7 +50,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
     val addr              = Wire(UInt(addrWidth.W))
     val tmpSP             = Wire(Vec(D+L, UInt(m.W)))
     val memWire           = Wire(Vec(params.nStates * (D+L-1), UInt(m.W)))
-    val tmpPMMin          = Wire(Vec(params.nStates - 1, UInt(m.W)))
+    val tmpPMMin          = Wire(Vec(params.nStates - 1, UInt(pmBits.W)))
     val tmpPMMinIndex     = Wire(Vec(params.nStates - 1, UInt(m.W)))
     addr    := addrReg
 
@@ -58,7 +59,6 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
     }.otherwise{
       addrReg := 0.U
     }
-    printf(p"addrReg = ${addrReg} ******* \n")
     // TODO: currently using register file but later I will come back and try to use SyncReadMem instead
     for (i <- 0 until params.nStates){
       mem(addrReg + i.U) := io.inSP(i)
@@ -71,7 +71,6 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
       tmpPMMin(i)         := Mux(tmpPMMin(i - 1) < io.inPM(i + 1), tmpPMMin(i - 1), io.inPM(i + 1))
       tmpPMMinIndex(i)    := Mux(tmpPMMin(i - 1) < io.inPM(i + 1), tmpPMMinIndex(i - 1), (i + 1).U)
     }
-    cntLenReg := cntLenReg + 1.U
 
     // when the decoding just started, it starts decoding after it receives D+L bits
     when((addrReg % (params.nStates * (D+L)).U === (params.nStates * (D+L-1)).U) && (decodeStart === 0.U)) {
@@ -81,17 +80,19 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
       trackValid(0)       := 1.U                // trackValid is used to raise/lower io.out.valid signal
       decodeStart         := 1.U                // decodeStart indicates whether this is the first time decoding
       counterD            := 0.U                // counterD tracks number of received bits (count up to params.D)
+      cntLenReg           := cntLenReg + D.U
     }.elsewhen((counterD === (params.D-1).U) && (decodeStart === 1.U)){   // decodes every D bits
       tmpPMMinReg         := tmpPMMin
       tmpPMMinIndexReg    := tmpPMMinIndex
       tmpSPReg            := io.inSP
       trackValid(0)       := 1.U
       counterD            := 0.U
+      cntLenReg           := cntLenReg + D.U
       addrOffset := addrOffset + (params.nStates * D).U
     }.otherwise{
       counterD := counterD + 1.U
     }
-    when(trackValid(0) === 1.U){
+    when(trackValid(0) === 1.U){                // raise outValid 2 clk cycle after receiving D+L or D bits
       (2 to 1 by -1).map(i => {trackValid(i) := trackValid(i-1)})
     }
     // Start decoding
@@ -110,7 +111,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
         memWire(i) := mem(addrOffset + i.U - (addrSize*2).U)
       }
     }
-    for (i <- D+L-2 to 0 by -1) {
+    for (i <- D+L-2 to 0 by -1) {                                   // decode data
       tmpSP(i) := memWire((params.nStates * i).U + tmpSP(i + 1))
       if(i < D) {
         decodeReg(i) := tmpSP(i+1) >> (m-1) // get MSB

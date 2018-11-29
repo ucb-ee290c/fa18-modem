@@ -80,7 +80,6 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
       (0 until 3).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum3(i).U })
     }.otherwise
     { // rate = 1/2
-      printf("ajklasdjfkla;sjkflasjl;faadfjklasjfklas;klf l \n ")
       puncMatBitWidth := 1.U
       (0 until params.n).map(i => {
         (0 until 2).map(j => {
@@ -102,8 +101,8 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
   val lenCntReg     = RegInit(true.B)
   val bitCntReg     = RegInit((params.n * params.H).U(log2Ceil(params.n * params.H).W))
   val enReg         = RegInit(false.B)
+  val inReg         = Reg(Vec(params.n * params.H, SInt(2.W)))
 
-  val inReg       = Reg(Vec(params.n * params.H, SInt(2.W)))
   when(io.in.fire()){
     inReg := io.in_hard
     when((io.in.bits.pktStart === true.B) && (pktLatch === false.B)){
@@ -121,7 +120,7 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
     enReg := false.B
   }
 
-  when(pktLatch === true.B && bitCntReg < (params.n * params.H).U){
+  when(pktLatch === true.B && bitCntReg < (params.n * params.H).U) {
     // hdrEnd triggers one cycle before the end of header block
     // -> needs to reset o_cnt and p_cnt registers.
     // -> below may not be necessary if params.n * params.H is set to 96 or higher.
@@ -132,10 +131,12 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
       enReg     := false.B
       lenCntReg := false.B
       bitCntReg := (params.n * params.H).U
-    // when it starts receiving payload
+      printf("io.hdrEnd === true \n")
+      // when it starts receiving payload
     // need to count number of bits it has received.
     // Once all the data has been received, raise 'lenCntReg' and 'headInfoReady' registers
-    }.elsewhen(io.isHead === false.B && lenCntReg === false.B){
+    }
+    when(io.isHead === false.B && lenCntReg === false.B){
       // puncturing Matrix: [1,1,0],[1,0,1]
       // Input Matrix: [A0,A1,A2], [B0, B1, B2] -> Output Matrix: [A0, B0, A1, B2]
       for (i <- 0 until params.n) {
@@ -157,7 +158,7 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
       }
 
       when(pktCntReg < io.headInfo.bits.dataLen){
-        pktCntReg := pktCntReg + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)  // count # of processed bits
+        pktCntReg := pktCntReg + 1.U
       }
       bitCntReg := bitCntReg + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)    // count # of processed bits
     }
@@ -166,8 +167,12 @@ class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
     lenCntReg := true.B
     headInfoReady := true.B
   }
-
-  printf(p"bitCntReg = ${bitCntReg} *********\n")
+  printf(p"pktCntReg = ${pktCntReg} \n")
+  printf(p"pktLatch = ${pktLatch} \n")
+  printf(p"bitCntReg = ${bitCntReg} \n")
+  printf(p"lenCntReg = ${lenCntReg} \n")
+  printf(p"enReg = ${enReg} \n")
+  printf(p"io.head = ${io.isHead}\n")
 
   // connect registers to output
   io.in.ready       := bitCntReg >= (params.n * params.H).U

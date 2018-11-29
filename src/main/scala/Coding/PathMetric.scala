@@ -23,7 +23,7 @@ class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   val survivalPath        = RegInit(VecInit(Seq.fill(params.nStates)(0.U(params.m.W))))
   val pmRegs              = RegInit(VecInit(Seq.fill(params.nStates)(0.U(params.pmBits.W))))
-  val initVal             = 100.U(params.pmBits.W)
+  val initVal             = 16.U(params.pmBits.W)
 
   val numRows             = math.pow(2.0, (params.m-1).asInstanceOf[Double]).asInstanceOf[Int]
   val tmpSP               = Wire(Vec(params.nStates, Vec(params.numInputs, UInt(params.m.W))))
@@ -54,6 +54,9 @@ class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
       // temporary matrix for ACS (mainly for accumulation)
       val tmpAcc  = Wire(Vec(params.nStates, Vec(params.numInputs, UInt(params.pmBits.W))))
 
+      val minPM   = Wire(Vec(params.nStates, UInt(params.pmBits.W)))
+      val tmpPMMin  = Wire(Vec(params.nStates - 1, UInt(params.m.W)))
+
       for (currentInput <- 0 until params.numInputs){
         for (currentStates <- 0 until params.nStates){
           tmpPM(currentStates/2+currentInput*numRows)(currentStates%2)      := pmRegs(currentStates)
@@ -64,11 +67,26 @@ class PathMetric[T <: Data: Real](params: CodingParams[T]) extends Module {
 
       for (nRow <- 0 until params.nStates){
         when(tmpAcc(nRow)(0) < tmpAcc(nRow)(1)){
-          pmRegs(nRow)        := tmpAcc(nRow)(0)
+//          pmRegs(nRow)        := tmpAcc(nRow)(0)
+          minPM(nRow)         := tmpAcc(nRow)(0)
           survivalPath(nRow)  := tmpSP(nRow)(0)
         }.otherwise{
-          pmRegs(nRow)        := tmpAcc(nRow)(1)
+//          pmRegs(nRow)        := tmpAcc(nRow)(1)
+          minPM(nRow)        := tmpAcc(nRow)(1)
           survivalPath(nRow)  := tmpSP(nRow)(1)
+        }
+      }
+
+      tmpPMMin(0)           := Mux(minPM(0) < minPM(1), minPM(0), minPM(1))
+      for (i <- 1 until params.nStates - 1) {
+        tmpPMMin(i)         := Mux(tmpPMMin(i - 1) < minPM(i + 1), tmpPMMin(i - 1), minPM(i + 1))
+      }
+
+      for (nRow <- 0 until params.nStates){
+        when(tmpPMMin(params.nStates - 2) >= 16.U){
+          pmRegs(nRow)  := minPM(nRow) - 16.U
+        }.otherwise{
+          pmRegs(nRow)  := minPM(nRow)
         }
       }
     }

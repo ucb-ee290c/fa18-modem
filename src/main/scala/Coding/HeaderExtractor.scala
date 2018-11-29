@@ -122,7 +122,6 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   when(trackValid(0) === 1.U){
     (2 to 1 by -1).map(i => {trackValid(i) := trackValid(i-1)})
   }
-//  printf(p"**************** trackValid(2) = ${trackValid(2)} **************** \n")
 
   when(trackValid(2) === 1.U) {
     outValid        := true.B

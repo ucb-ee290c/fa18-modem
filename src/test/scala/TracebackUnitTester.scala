@@ -123,9 +123,9 @@ class TracebackUnitTester[T <: chisel3.Data](c: Traceback[T]) extends DspTester(
   step(1)
   // addr = nState * 11
   poke(c.io.inPM(0), 2)
-  poke(c.io.inPM(1), 100)
+  poke(c.io.inPM(1), 16)
   poke(c.io.inPM(2), 0)
-  poke(c.io.inPM(3), 100)
+  poke(c.io.inPM(3), 16)
   poke(c.io.inSP(0), 0)
   poke(c.io.inSP(1), 3)
   poke(c.io.inSP(2), 0)

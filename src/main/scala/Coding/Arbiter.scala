@@ -39,7 +39,6 @@ class Arbiter[T <: Data: Real](params: CodingParams[T]) extends Module {
     hdrEndReg   := false.B
   }
 
-  printf(p"hdrCounter = ${hdrCounter} ********* \n")
   io.isHead         := isHeadReg
   io.hdrEnd         := hdrEndReg
 }
