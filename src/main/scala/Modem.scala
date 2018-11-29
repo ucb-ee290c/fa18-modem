@@ -19,7 +19,7 @@ import dsptools.numbers._
 // //  val equalizerChain = LazyModule(new EqualizerThing(FixedEqualizerParams(8, 10)))
 //   // connect memory interfaces to pbus
 // //  pbus.toVariableWidthSlave(Some("modemWrite")) { modemChain.writeQueue.mem.get }
-// //  pbus.toVariableWidthSlave(Some("modemRead")) { modemChain.readQueue.mem.get }
+// //  pbus.toVarbleWidthSlave(Some("modemRead")) { modemChain.readQueue.mem.get }
 // }
 
 class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Module {
@@ -27,15 +27,7 @@ class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Mod
 }
 
 class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real](
-  val iqBundleParams: IQBundleParams[T],
-  val pktDetectParams: PacketDetectParams[T],
-  val cyclicPrefixParams: CyclicPrefixParams[T],
-  val equalizerParams: EqualizerParams[T],
-  val cfoParams: CFOParams[T],
-  val fftParams: FFTParams[T],
-  val bitsBundleParams: BitsBundleParams[U],
-  val demodParams: DemodulationParams[T,U],
-  val viterbiParams: CodingParams[V],
+  RXParams[T, U, V]
 ) extends Module {
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(IQBundle(iqBundleParams)))
@@ -69,7 +61,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real](
   cyclicPrefix.io.add := false.B
 
   // FFT
-  vecToSerial.io.in <> cyclicPrefix.io.out 
+  vecToSerial.io.in <> cyclicPrefix.io.out
   fft.io.in <> vecToSerial.io.out
 
   // EQ
@@ -87,6 +79,10 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real](
   io.out <> decode.io.out
 }
 
+trait HasPeripheryModem extends BaseSubsystem {
+  // Instantiate rx chain
+  val rxChain = LazyModule(new RXThing())
+}
 // trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
 //   val foo: Int
 // }

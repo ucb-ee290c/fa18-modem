@@ -23,3 +23,4 @@ class ExampleTopWithModem(implicit p: Parameters) extends ExampleTop
     // mix in modem
     with HasPeripheryModem {
   override lazy val module = new ExampleTopModule(this)
+}
