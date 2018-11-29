@@ -7,11 +7,11 @@ import dsptools.numbers._
 
 
 trait EqualizerParams[T <: Data] {
-  val protoIQ: DspComplex[T]
-  val mu: Double
-  val pilots: Seq[Int]
-  val carrierMask: Seq[Boolean]
-  val nSubcarriers: Int
+  val protoIQ: DspComplex[T]      // Prototype for the IQ data the qualizer will operate on
+  val mu: Double                  // Unused. In place for pilot-based equalization later.
+  val pilots: Seq[Int]            // Unused. List of subcarrier indices containing channel pilots.
+  val carrierMask: Seq[Boolean]   // Mask of subcarriers containing data or a pilot, which should be equalized.
+  val nSubcarriers: Int           // Total number of subcarriers coming from the FFT.
 }
 
 case class FixedEqualizerParams(
@@ -53,6 +53,10 @@ object ChannelInverterIO {
 
 /**
  * ChannelInverter module
+ * Input: An IQ sample v representing a channel tap
+ * Output: 1/v, the correction factor for the channel tap
+ *         Equivalently, |v|^1 * exp(-angle(v))
+ * Valid interface since this module is pipelined to reduce latency when inverting multiple channel taps.
  */
 class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: EqualizerParams[T]) extends Module {
   val io = IO(ChannelInverterIO(params))
@@ -121,6 +125,12 @@ object ChannelInverter {
   }
 }
 
+/**
+ * Channel Equalizer Module
+ *
+ * Parameters specified in EqualizerParams above.
+ * Implements zero-forcing equalization based on the IEEE 802.11a LTF preamble.
+ */
 class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams[T]) extends Module {
   // Calculate useful stuff based on params
   val nLTFCarriers = params.carrierMask.map(c => if (c) 1 else 0).reduce(_ + _)
