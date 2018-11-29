@@ -32,9 +32,8 @@ class CFOEstimationSpec extends FlatSpec with Matchers {
   val vecs = CFOTestVectors()
   behavior of "Estimate CFO"
 
-  val fixedCFOParams = FixedCFOParams(
-    iqWidth = 16
-  )
+  val fixedCFOParams = FixedCFOParams(iqWidth = 16)
+
   it should "detect no offset" in {
     val trials = Seq(IQ(vecs.cleanTV, None))
     FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)

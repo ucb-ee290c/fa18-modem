@@ -162,6 +162,7 @@ class CoarseOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val
   io.cordicIn.bits.y := stAcc.imag
   io.cordicIn.bits.z := ConvertableTo[T].fromDouble(0)
   io.cordicIn.bits.vectoring := true.B
+  io.cordicOut.ready := io.out.ready
   stMul := (delayIQByST * io.in.bits.conj())
 
   when(delayValidByST && io.in.valid){
@@ -198,6 +199,7 @@ class FineOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val p
   io.cordicIn.bits.y := ltAcc.imag
   io.cordicIn.bits.z := ConvertableTo[T].fromDouble(0)
   io.cordicIn.bits.vectoring := true.B
+  io.cordicOut.ready := io.out.ready
   ltMul := (delayIQByLT * io.in.bits.conj())
 
   when(delayValidByLT && io.in.valid){
@@ -232,8 +234,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     
     val curState = Reg(UInt(3.W))
     val nxtState = Wire(UInt(3.W))
-    val coarseOffset = RegInit(params.protoZ, ConvertableTo[T].fromDouble(0))
-    val fineOffset = RegInit(params.protoZ, ConvertableTo[T].fromDouble(0))
+    val coarseOffset = RegEnable(next=coe.io.out.bits, init=ConvertableTo[T].fromDouble(0), enable=coe.io.out.valid)
+    val fineOffset = RegEnable(next=foe.io.out.bits, init=ConvertableTo[T].fromDouble(0), enable=foe.io.out.valid)
 
     val stMul = Wire(params.protoIQ)
     val stAcc = Reg(params.protoIQ)
@@ -244,22 +246,35 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     val giCounter = Counter(params.giLength)
 
     val estimatorReady = Wire(Bool())
+    val stdbyInReg = Reg(CordicBundle(params))
+    val stdbyOutReg = Reg(CordicBundle(params))
+    val stdbyInVReg = Reg(Bool())
+    val stdbyInRReg = Reg(Bool())
+    val stdbyOutVReg = Reg(Bool())
+    val stdbyOutRReg = Reg(Bool())
 
     val delayIQByST = (0 until stDelay).foldLeft(io.in.bits.iq(0)){(prev, curr) => RegNext(prev)}
     val delayIQByLT = (0 until ltDelay).foldLeft(io.in.bits.iq(0)){(prev, curr) => RegNext(prev)}
     val delayValidByST = (0 until stDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
     val delayValidByLT = (0 until ltDelay).foldLeft(io.in.valid){(prev, curr) => RegNext(prev)}
 
-    val idle::st::gi::lt::data::Nil = Enum(4)
+    val idle::st::gi::lt::data::Nil = Enum(5)
 
-    def RunVectorCordic[T<:Data:BinaryRepresentation:Real:ConvertableTo](cplx: DspComplex[T]): Boolean = {
-      cordic.io.in.bits.x := cplx.real
-      cordic.io.in.bits.y := cplx.imag
-      cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
-      cordic.io.in.bits.vectoring := true.B
-      cordic.io.in.valid := true.B
-      estimatorReady := false.B
-      cordic.io.out.ready := true.B
+    def ConnectToCordic[T<:Data:BinaryRepresentation:Real:ConvertableTo](c, d): Boolean = {
+      cordic.io.in.bits := c.io.cordicIn.bits
+      c.io.cordicOut.bits := cordic.io.out.bits
+      cordic.io.in.valid := c.io.cordicIn.valid
+      c.io.cordicIn.ready := cordic.io.in.ready
+      cordic.io.out.ready := c.io.cordicOut.ready
+      c.io.cordicOut.valid := cordic.io.out.valid
+      
+      stdbyInReg := d.io.cordicIn.bits
+      d.io.cordicOut.bits := stdbyOutReg 
+      stdbyInVReg := d.io.cordicIn.valid
+      d.io.cordicIn.ready := stdbyInRReg
+      stdbyOutRReg := d.io.cordicOut.ready
+      d.io.cordicOut.valid := stdbyOutVReg
+
       true
     }
 
@@ -281,12 +296,12 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
     estimatorReady := io.out.ready
 
-    // cordic.io.in.bits.x := ConvertableTo[T].fromDouble(0)
-    // cordic.io.in.bits.y := ConvertableTo[T].fromDouble(0)
-    // cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
-    // cordic.io.in.bits.vectoring := false.B
-    // cordic.io.in.valid := false.B
-    // cordic.io.out.ready := false.B
+     cordic.io.in.bits.x := ConvertableTo[T].fromDouble(0)
+     cordic.io.in.bits.y := ConvertableTo[T].fromDouble(0)
+     cordic.io.in.bits.z := ConvertableTo[T].fromDouble(0)
+     cordic.io.in.bits.vectoring := false.B
+     cordic.io.in.valid := false.B
+     cordic.io.out.ready := false.B
 
     stMul := (delayIQByST.conj() * io.in.bits.iq(0))
     ltMul := (delayIQByLT.conj() * io.in.bits.iq(0))
@@ -298,9 +313,20 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         // estimatorReady := io.out.ready
         coe.io.in.valid := false.B
         foe.io.in.valid := false.B
+        cordic.io.in.valid := false.B
+        cordic.io.out.ready := true.B
+
+        ConnectToCordic(coe, foe)
+
         nxtState := Mux(io.in.bits.pktStart, st, idle)
       }
       is(st){
+        cordic.io.in.bits := coe.io.cordicIn.bits
+        coe.io.cordicOut.bits := cordic.io.out.bits
+        cordic.io.in.valid := coe.io.cordicIn.valid
+        coe.io.cordicIn.ready := cordic.io.in.ready
+        cordic.io.out.ready := coe.io.cordicOut.ready
+        coe.io.cordicOut.valid := cordic.io.out.valid
         foe.io.in.valid := false.B
         when(io.in.fire()){
           coe.io.in.valid := true.B
@@ -315,6 +341,12 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(lt){
+        cordic.io.in.bits := foe.io.cordicIn.bits
+        foe.io.cordicOut.bits := cordic.io.out.bits
+        cordic.io.in.valid := foe.io.cordicIn.valid
+        foe.io.cordicIn.ready := cordic.io.in.ready
+        cordic.io.out.ready := foe.io.cordicOut.ready
+        foe.io.cordicOut.valid := cordic.io.out.valid
         coe.io.in.valid := false.B
         when(io.in.fire()){
           foe.io.in.valid := true.B
