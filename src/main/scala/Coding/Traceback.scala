@@ -29,7 +29,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   val addrSize    = params.nStates * (D+L)
   val addrWidth   = log2Ceil(addrSize) + 2
   val addrReg     = RegInit(0.U(addrWidth.W))
-  val mem         = Reg(Vec(addrSize * 2, UInt(m.W)))
+  val mem         = SyncReadMem(addrSize * 2, UInt(m.W))
 
   // declare variables for decoding process
   val tmpPMMinReg       = RegInit(VecInit(Seq.fill(params.nStates - 1)(0.U(m.W))))
@@ -39,11 +39,12 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   val addrOffset        = RegInit(0.U(addrWidth.W))
   val decodeStart       = RegInit(0.U(2.W))
   val counterD          = RegInit(0.U((log2Ceil(params.D)+1).W))      // counter for D
-  val decodeReg         = Reg(Vec(D, UInt(params.k.W)))
+  val decodeWire        = Wire(Vec(D, UInt(params.k.W)))
   val memReg            = RegInit(VecInit(Seq.fill(params.nStates * (D+L-1))(0.U(m.W))))
   val cntLenReg         = RegInit(0.U(6.W))
   val allDataRecvReg    = RegInit(0.U(1.W))
 
+  decodeWire.foreach(_ := 0.U(params.k.W))
   // setup registers for address
   when(io.enable === true.B){
     val addr              = Wire(UInt(addrWidth.W))
@@ -61,7 +62,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
     printf(p"addrReg = ${addrReg} ******* \n")
     // TODO: currently using register file but later I will come back and try to use SyncReadMem instead
     for (i <- 0 until params.nStates){
-      mem(addrReg + i.U) := io.inSP(i)
+      mem.write(addrReg + i.U, io.inSP(i))
     }
 
     // find minimum in PM
@@ -105,15 +106,15 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
     tmpSP(D+L-1) := tmpSPReg(tmpPMMinIndexReg(params.nStates-2))    // grab the minimum PM
     for (i <- 0 until (params.nStates * (D+L-1))){
       when((addrOffset + i.U) <= ((addrSize*2) - 1).U ) {
-        memWire(i) := mem(addrOffset + i.U)
+        memWire(i) := mem.read(addrOffset + i.U)
       }.otherwise {
-        memWire(i) := mem(addrOffset + i.U - (addrSize*2).U)
+        memWire(i) := mem.read(addrOffset + i.U - (addrSize*2).U)
       }
     }
     for (i <- D+L-2 to 0 by -1) {
       tmpSP(i) := memWire((params.nStates * i).U + tmpSP(i + 1))
       if(i < D) {
-        decodeReg(i) := tmpSP(i+1) >> (m-1) // get MSB
+        decodeWire(i) := tmpSP(i+1) >> (m-1) // get MSB
       }
     }
 
@@ -128,5 +129,5 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
   }
 
   io.out.valid    := outValid
-  io.out.bits     := decodeReg    // output is available 3 clk cycles after.
+  io.out.bits     := decodeWire    // output is available 3 clk cycles after.
 }
