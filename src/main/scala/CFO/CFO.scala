@@ -1,4 +1,4 @@
-package modem
+coe.io.cordicpackage modem
 
 import chisel3._
 import chisel3.util._
@@ -260,23 +260,23 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
     val idle::st::gi::lt::data::Nil = Enum(5)
 
-    def ConnectToCordic[T<:Data:BinaryRepresentation:Real:ConvertableTo](c, d): Boolean = {
-      cordic.io.in.bits := c.io.cordicIn.bits
-      c.io.cordicOut.bits := cordic.io.out.bits
-      cordic.io.in.valid := c.io.cordicIn.valid
-      c.io.cordicIn.ready := cordic.io.in.ready
-      cordic.io.out.ready := c.io.cordicOut.ready
-      c.io.cordicOut.valid := cordic.io.out.valid
-      // Connect unused block to some placeholder registers so FIRRTL is happy
-      stdbyInReg := d.io.cordicIn.bits
-      d.io.cordicOut.bits := stdbyOutReg
-      stdbyInVReg := d.io.cordicIn.valid
-      d.io.cordicIn.ready := stdbyInRReg
-      stdbyOutRReg := d.io.cordicOut.ready
-      d.io.cordicOut.valid := stdbyOutVReg
-
-      true
-    }
+    // def ConnectToCordic[T<:Data:BinaryRepresentation:Real:ConvertableTo](c, d): Boolean = {
+    //   cordic.io.in.bits := c.io.cordicIn.bits
+    //   c.io.cordicOut.bits := cordic.io.out.bits
+    //   cordic.io.in.valid := c.io.cordicIn.valid
+    //   c.io.cordicIn.ready := cordic.io.in.ready
+    //   cordic.io.out.ready := c.io.cordicOut.ready
+    //   c.io.cordicOut.valid := cordic.io.out.valid
+    //   // Connect unused block to some placeholder registers so FIRRTL is happy
+    //   stdbyInReg := d.io.cordicIn.bits
+    //   d.io.cordicOut.bits := stdbyOutReg
+    //   stdbyInVReg := d.io.cordicIn.valid
+    //   d.io.cordicIn.ready := stdbyInRReg
+    //   stdbyOutRReg := d.io.cordicOut.ready
+    //   d.io.cordicOut.valid := stdbyOutVReg
+    //
+    //   true
+    // }
 
     io.in.ready := estimatorReady
     io.out.valid := cordic.io.out.valid
@@ -303,7 +303,19 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
      cordic.io.in.valid := false.B
      cordic.io.out.ready := false.B
 
-     ConnectToCordic(coe,foe)
+     cordic.io.in.bits := coe.io.cordicIn.bits
+     coe.io.cordicOut.bits := cordic.io.out.bits
+     cordic.io.in.valid := coe.io.cordicIn.valid
+     coe.io.cordicIn.ready := cordic.io.in.ready
+     cordic.io.out.ready := coe.io.cordicOut.ready
+     coe.io.cordicOut.valid := cordic.io.out.valid
+     // Connect unused block to some placeholder registers so FIRRTL is happy
+     stdbyInReg := foe.io.cordicIn.bits
+     foe.io.cordicOut.bits := stdbyOutReg
+     stdbyInVReg := foe.io.cordicIn.valid
+     foe.io.cordicIn.ready := stdbyInRReg
+     stdbyOutRReg := foe.io.cordicOut.ready
+     foe.io.cordicOut.valid := stdbyOutVReg
 
     stMul := (delayIQByST.conj() * io.in.bits.iq(0))
     ltMul := (delayIQByLT.conj() * io.in.bits.iq(0))
@@ -318,12 +330,37 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         cordic.io.in.valid := false.B
         cordic.io.out.ready := true.B
 
-        ConnectToCordic(coe,foe)
+        cordic.io.in.bits := coe.io.cordicIn.bits
+        coe.io.cordicOut.bits := cordic.io.out.bits
+        cordic.io.in.valid := coe.io.cordicIn.valid
+        coe.io.cordicIn.ready := cordic.io.in.ready
+        cordic.io.out.ready := coe.io.cordicOut.ready
+        coe.io.cordicOut.valid := cordic.io.out.valid
+        // Connect unused block to some placeholder registers so FIRRTL is happy
+        stdbyInReg := foe.io.cordicIn.bits
+        foe.io.cordicOut.bits := stdbyOutReg
+        stdbyInVReg := foe.io.cordicIn.valid
+        foe.io.cordicIn.ready := stdbyInRReg
+        stdbyOutRReg := foe.io.cordicOut.ready
+        foe.io.cordicOut.valid := stdbyOutVReg
+
 
         nxtState := Mux(io.in.bits.pktStart, st, idle)
       }
       is(st){
-        ConnectToCordic(coe,foe)
+        cordic.io.in.bits := coe.io.cordicIn.bits
+        coe.io.cordicOut.bits := cordic.io.out.bits
+        cordic.io.in.valid := coe.io.cordicIn.valid
+        coe.io.cordicIn.ready := cordic.io.in.ready
+        cordic.io.out.ready := coe.io.cordicOut.ready
+        coe.io.cordicOut.valid := cordic.io.out.valid
+        // Connect unused block to some placeholder registers so FIRRTL is happy
+        stdbyInReg := foe.io.cordicIn.bits
+        foe.io.cordicOut.bits := stdbyOutReg
+        stdbyInVReg := foe.io.cordicIn.valid
+        foe.io.cordicIn.ready := stdbyInRReg
+        stdbyOutRReg := foe.io.cordicOut.ready
+        foe.io.cordicOut.valid := stdbyOutVReg
         foe.io.in.valid := false.B
         when(io.in.fire()){
           coe.io.in.valid := true.B
@@ -331,7 +368,19 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(gi){
-        ConnectToCordic(coe,foe)
+        cordic.io.in.bits := coe.io.cordicIn.bits
+        coe.io.cordicOut.bits := cordic.io.out.bits
+        cordic.io.in.valid := coe.io.cordicIn.valid
+        coe.io.cordicIn.ready := cordic.io.in.ready
+        cordic.io.out.ready := coe.io.cordicOut.ready
+        coe.io.cordicOut.valid := cordic.io.out.valid
+        // Connect unused block to some placeholder registers so FIRRTL is happy
+        stdbyInReg := foe.io.cordicIn.bits
+        foe.io.cordicOut.bits := stdbyOutReg
+        stdbyInVReg := foe.io.cordicIn.valid
+        foe.io.cordicIn.ready := stdbyInRReg
+        stdbyOutRReg := foe.io.cordicOut.ready
+        foe.io.cordicOut.valid := stdbyOutVReg
         coe.io.in.valid := false.B
         when(io.in.fire()){
           foe.io.in.valid := false.B
@@ -339,7 +388,19 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(lt){
-        ConnectToCordic(foe,coe)
+        cordic.io.in.bits := foe.io.cordicIn.bits
+        foe.io.cordicOut.bits := cordic.io.out.bits
+        cordic.io.in.valid := foe.io.cordicIn.valid
+        foe.io.cordicIn.ready := cordic.io.in.ready
+        cordic.io.out.ready := foe.io.cordicOut.ready
+        foe.io.cordicOut.valid := cordic.io.out.valid
+        // Connect unused block to some placeholder registers so FIRRTL is happy
+        stdbyInReg := coe.io.cordicIn.bits
+        coe.io.cordicOut.bits := stdbyOutReg
+        stdbyInVReg := coe.io.cordicIn.valid
+        coe.io.cordicIn.ready := stdbyInRReg
+        stdbyOutRReg := coe.io.cordicOut.ready
+        coe.io.cordicOut.valid := stdbyOutVReg
         coe.io.in.valid := false.B
         when(io.in.fire()){
           foe.io.in.valid := true.B
@@ -347,7 +408,19 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         }
       }
       is(data){
-        ConnectToCordic(foe,coe)
+        cordic.io.in.bits := foe.io.cordicIn.bits
+        foe.io.cordicOut.bits := cordic.io.out.bits
+        cordic.io.in.valid := foe.io.cordicIn.valid
+        foe.io.cordicIn.ready := cordic.io.in.ready
+        cordic.io.out.ready := foe.io.cordicOut.ready
+        foe.io.cordicOut.valid := cordic.io.out.valid
+        // Connect unused block to some placeholder registers so FIRRTL is happy
+        stdbyInReg := coe.io.cordicIn.bits
+        coe.io.cordicOut.bits := stdbyOutReg
+        stdbyInVReg := coe.io.cordicIn.valid
+        coe.io.cordicIn.ready := stdbyInRReg
+        stdbyOutRReg := coe.io.cordicOut.ready
+        coe.io.cordicOut.valid := stdbyOutVReg
         coe.io.in.valid := false.B
         foe.io.in.valid := false.B
         nxtState := Mux(io.in.bits.pktEnd, idle, data)
