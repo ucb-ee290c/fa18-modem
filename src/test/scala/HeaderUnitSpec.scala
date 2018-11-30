@@ -12,7 +12,7 @@ class HeaderUnitSpec extends FlatSpec with Matchers {
     L = 3,
     O = 6,
     D = 4,
-    H = 24,
+    H = 6,
     genPolynomial = List(7, 6), // generator polynomial
     tailBitingEn = false,
     tailBitingScheme = 0,

@@ -68,7 +68,7 @@ case class HardCoding(
   bitsWidth: Int = 48,
   softDecision: Boolean = false,
 ) extends CodingParams[SInt] {
-  val protoBits = SInt(2.W)
+  val protoBits = SInt((log2Ceil(n)+2).W)
   val m = K - 1
   val nStates = math.pow(2.0, m.asInstanceOf[Double]).asInstanceOf[Int]
   val numInputs   = math.pow(2.0, k.asInstanceOf[Double]).asInstanceOf[Int]
