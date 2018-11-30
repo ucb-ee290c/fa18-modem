@@ -94,7 +94,7 @@ object SISOIO {
 // serial input, deserial output
 class SIDOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
   val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(DeserialPacketBundle(params))
+  val out = Decoupled(PacketBundle(params.numPoints, params.protoIQ))
 
   override def cloneType: this.type = SIDOIO(params).asInstanceOf[this.type]
 }
@@ -104,7 +104,7 @@ object SIDOIO {
 
 // deserial input, serial output
 class DISOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(DeserialPacketBundle(params)))
+  val in = Flipped(Decoupled(PacketBundle(params.numPoints, params.protoIQ)))
   val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = DISOIO(params).asInstanceOf[this.type]
@@ -115,8 +115,8 @@ object DISOIO {
 
 // deserial input, deserial output
 class DIDOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(DeserialPacketBundle(params)))
-  val out = Decoupled(DeserialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(params.numPoints, params.protoIQ)))
+  val out = Decoupled(PacketBundle(params.numPoints, params.protoIQ))
 
   override def cloneType: this.type = DIDOIO(params).asInstanceOf[this.type]
 }
@@ -225,8 +225,8 @@ class DirectFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T
  * Bundle type as IO for direct FFT stage
  */
 class DirectStageIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Valid(DeserialPacketBundle(params)))
-  val out = Valid(DeserialPacketBundle(params))
+  val in = Flipped(Valid(PacketBundle(params.numPoints, params.protoIQ)))
+  val out = Valid(PacketBundle(params.numPoints, params.protoIQ))
 
   override def cloneType: this.type = DirectStageIO(params).asInstanceOf[this.type]
 }

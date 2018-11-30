@@ -21,6 +21,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
      datawidth = 16,
      width = 64,
      hsmod = 1,
+     dataBinaryPoint = 14,
      bitsWidth = 48
      )
   val paramsbpskdemods = SoftDemodParams(
@@ -68,6 +69,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
      datawidth = 16,
      width = 64,
      hsmod =1,
+     dataBinaryPoint = 14,
      bitsWidth = 48
      //Ncbps = 8,
      //Nbpsc = 4
@@ -77,6 +79,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
   val paramsser1 = HardDemodParams(
      datawidth = 16,
      width = 64,
+     dataBinaryPoint = 14,
      hsmod = 1,
      bitsWidth = 48
      //Ncbps = 8,
@@ -88,6 +91,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
      datawidth = 16,
      width = 64,
      hsmod =0,
+     dataBinaryPoint = 14,
      bitsWidth = 48
      //Ncbps = 8,
      //Nbpsc = 4
@@ -99,6 +103,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
      datawidth = 16,
      width = 64,
      hsmod = 1,
+     dataBinaryPoint = 14,
      bitsWidth = 48
      //Ncbps = 96,
      //Nbpsc = 2
@@ -107,6 +112,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
      datawidth = 16,
      width = 64,
      hsmod = 0,
+     dataBinaryPoint = 14,
      bitsWidth = 48
      //Ncbps = 96,
      //Nbpsc = 2
@@ -127,6 +133,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
      datawidth = 16,
      width = 64,
      hsmod = 1,
+     dataBinaryPoint = 14,
      bitsWidth = 48
      //Ncbps = 192,
      //Nbpsc = 4
@@ -135,6 +142,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
      datawidth = 16,
      width = 64,
      hsmod = 0,
+     dataBinaryPoint = 14,
      bitsWidth = 48
      //Ncbps = 192,
      //Nbpsc = 4

@@ -21,8 +21,7 @@ import freechips.rocketchip.subsystem.BaseSubsystem
 // deinterleaver bpsk
 
 class Deinterleaver1bpsk[T <: Data,U <: Data ](params: DemodulationParams[T,U]) extends Module {
-    val io = IO(new Bundle {
-    
+    val io = IO(new Bundle {    
     val in  = Flipped(Decoupled(BitsBundle2bpsk(params)))
     val out = Decoupled(BitsBundle2bpsk(params))
       })
@@ -34,8 +33,8 @@ class Deinterleaver1bpsk[T <: Data,U <: Data ](params: DemodulationParams[T,U]) 
      val sInit = 0.U(1.W)
      val sDone = 1.U(1.W)
      val state = RegInit(sInit)
-   
-   
+
+
       when (state === sInit && io.in.fire()) {
           state := sDone
           reg_pktstart :=io.in.bits.pktStart
@@ -46,9 +45,9 @@ class Deinterleaver1bpsk[T <: Data,U <: Data ](params: DemodulationParams[T,U]) 
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
    
    io.out.bits.pktStart := reg_pktstart
@@ -71,8 +70,7 @@ class Deinterleaver1bpsk[T <: Data,U <: Data ](params: DemodulationParams[T,U]) 
 
 // deinterleaver modify qpsk
 class Deinterleaver1qpsk[T <: Data,U <: Data ](params: DemodulationParams[T,U]) extends Module {
-    val io = IO(new Bundle {
-    
+    val io = IO(new Bundle {   
     val in  = Flipped(Decoupled(BitsBundle2qpsk(params)))
     val out = Decoupled(BitsBundle2qpsk(params))
       })
@@ -83,8 +81,8 @@ class Deinterleaver1qpsk[T <: Data,U <: Data ](params: DemodulationParams[T,U]) 
      val sInit = 0.U(1.W)
      val sDone = 1.U(1.W)
      val state = RegInit(sInit)
-   
-   
+
+
       when (state === sInit && io.in.fire()) {
           state := sDone
           reg_pktstart :=io.in.bits.pktStart
@@ -95,11 +93,11 @@ class Deinterleaver1qpsk[T <: Data,U <: Data ](params: DemodulationParams[T,U]) 
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
-   
+
    io.out.bits.pktStart := reg_pktstart
    io.out.bits.pktEnd := reg_pktend
 
@@ -188,8 +186,8 @@ class Deinterleaver1sbpsk[T <: Data,U <: Data](params: DemodulationParams[T,U]) 
      val sInit = 0.U(1.W)
      val sDone = 1.U(1.W)
      val state = RegInit(sInit)
-   
-   
+
+
       when (state === sInit && io.in.fire()) {
           state := sDone
           reg_pktstart :=io.in.bits.pktStart
@@ -200,11 +198,11 @@ class Deinterleaver1sbpsk[T <: Data,U <: Data](params: DemodulationParams[T,U]) 
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
-   
+
    io.out.bits.pktStart := reg_pktstart
    io.out.bits.pktEnd := reg_pktend
 
@@ -251,9 +249,9 @@ class Deinterleaver1sqpsk[T <: Data,U <: Data](params: DemodulationParams[T,U]) 
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
    
    io.out.bits.pktStart := reg_pktstart
@@ -343,8 +341,8 @@ class QPSKDemapper1[T <: Data :Real:BinaryRepresentation,U <: Data](val params: 
       val sInit = 0.U(1.W)
       val sDone = 1.U(1.W)
       val state = RegInit(sInit)
-   
-   
+
+
       when (state === sInit && io.in.fire()) {
           state := sDone
 	  reg_pktstart :=io.in.bits.pktStart
@@ -356,9 +354,9 @@ class QPSKDemapper1[T <: Data :Real:BinaryRepresentation,U <: Data](val params: 
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
    io.out.bits.pktStart := reg_pktstart
    io.out.bits.pktEnd := reg_pktend
@@ -399,8 +397,8 @@ class QPSKDemapper1s[T <: Data :Real:BinaryRepresentation,U <: Data](val params:
       val sInit = 0.U(1.W)
       val sDone = 1.U(1.W)
       val state = RegInit(sInit)
-   
-   
+
+
       when (state === sInit && io.in.fire()) {
           state := sDone
 	  reg_pktstart :=io.in.bits.pktStart
@@ -412,9 +410,9 @@ class QPSKDemapper1s[T <: Data :Real:BinaryRepresentation,U <: Data](val params:
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
    io.out.bits.pktStart := reg_pktstart
    io.out.bits.pktEnd := reg_pktend
@@ -431,7 +429,7 @@ class QPSKDemapper1s[T <: Data :Real:BinaryRepresentation,U <: Data](val params:
 }
 
 // 16QAM DEMAPPER pkt
-// 
+//
 class QAM16Demapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48, params.protoIQ.cloneType)))
@@ -445,8 +443,8 @@ class QAM16Demapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params
       val state = RegInit(sInit)
      val reg_pktstart = Reg(Bool())
      val reg_pktend = Reg(Bool())
-   
-   
+
+
       when (state === sInit && io.in.fire()) {
           state := sDone
 	  reg_pktstart :=io.in.bits.pktStart
@@ -457,9 +455,9 @@ class QAM16Demapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
    val z2d = ConvertableTo[T].fromDouble(0.633)
    val z0 = Ring[T].zero
@@ -516,7 +514,7 @@ class QAM16Demapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params
            io.out.bits.bits(4*i +1 ) := false.B
            io.out.bits.bits(4*i +2 ) := false.B
 	   io.out.bits.bits(4*i +3 ) := false.B
-       
+
        }.elsewhen(rin(i).real > -z2d&& rin(i).real <= z0 && rin(i).imag > z0 && rin(i).imag <= z2d){
            //io.out := 14.U
            io.out.bits.bits(4*i) := false.B
@@ -571,12 +569,12 @@ class QAM16Demapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params
            io.out.bits.bits(4*i +2 ) := false.B
 	   io.out.bits.bits(4*i +3 ) := false.B
 
-       } 
-     
+       }
+
        }
 }
 // 16QAM DEMAPPER pkt
-// 
+//
 class QAM16Demapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
    val io = IO(new Bundle {
         val in  = Flipped(Decoupled(PacketBundle(48, params.protoIQ.cloneType)))
@@ -590,8 +588,8 @@ class QAM16Demapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val param
       val state = RegInit(sInit)
      val reg_pktstart = Reg(Bool())
      val reg_pktend = Reg(Bool())
-   
-   
+
+
       when (state === sInit && io.in.fire()) {
           state := sDone
 	  reg_pktstart :=io.in.bits.pktStart
@@ -602,9 +600,9 @@ class QAM16Demapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val param
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
    val z2d = ConvertableTo[T].fromDouble(0.633)
    val zd = ConvertableTo[T].fromDouble(0.316)
@@ -622,9 +620,9 @@ class QAM16Demapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val param
            io.out.bits.iq(4*i + 2).imag := z0
 	   io.out.bits.iq(4*i+3).real :=  Mux( rin(i).imag>=0,(-rin(i).imag + z2d)*zd, (rin(i).imag + z2d)*zd )
 	   io.out.bits.iq(4*i +3).imag := z0
-     
+
          }
-  
+
 
 
 }
@@ -644,9 +642,9 @@ class BPSKDemapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params:
       val state = RegInit(sInit)
       val reg_pktstart = Reg(Bool())
      val reg_pktend = Reg(Bool())
-      
-   
-   
+
+
+
       when (state === sInit && io.in.fire()) {
           state := sDone
 	  reg_pktstart :=io.in.bits.pktStart
@@ -657,9 +655,9 @@ class BPSKDemapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params:
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
    io.out.bits.pktStart := reg_pktstart
    io.out.bits.pktEnd := reg_pktend
@@ -667,9 +665,9 @@ class BPSKDemapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params:
    val z0 = Ring[T].zero
    for (i <- 0 until 48) {
      when(rin(i).real < z0){
-	  io.out.bits.bits(i) := false.B 
+	  io.out.bits.bits(i) := false.B
 	}.otherwise {
-	  io.out.bits.bits(i) := true.B 
+	  io.out.bits.bits(i) := true.B
 	}
    }
 }
@@ -687,9 +685,9 @@ class BPSKDemapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params
       val state = RegInit(sInit)
       val reg_pktstart = Reg(Bool())
      val reg_pktend = Reg(Bool())
-      
-   
-   
+
+
+
       when (state === sInit && io.in.fire()) {
           state := sDone
 	  reg_pktstart :=io.in.bits.pktStart
@@ -700,9 +698,9 @@ class BPSKDemapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params
       when (state === sDone && io.out.fire()) {
           state := sInit
       }
-      
+
    //mapping.io.in := rin.asUInt
-   io.in.ready := state === sInit 
+   io.in.ready := state === sInit
    io.out.valid := state === sDone
    io.out.bits.pktStart := reg_pktstart
    io.out.bits.pktEnd := reg_pktend
@@ -739,29 +737,30 @@ object DemodulationParams {
 
 case class HardDemodParams(
   // width of Input and Output
-  datawidth: Int,
+  dataWidth: Int,
+  dataBinaryPoint: Int,
   width: Int,
   bitsWidth: Int,
   hsmod: Int
   //Ncbps: Int,
   //Nbpsc: Int
  ) extends DemodulationParams[FixedPoint, SInt] {
-  val protoIQ = DspComplex(FixedPoint(datawidth.W, (datawidth-2).BP))
+  val protoIQ = DspComplex(FixedPoint(dataWidth.W, dataBinaryPoint.BP))
   val protoBits = SInt(2.W)
- 
 }
 
 case class SoftDemodParams(
   // width of Input and Output
-  datawidth: Int,
+  dataWidth: Int,
+  dataBinaryPoint: Int,
   width: Int,
   bitsWidth: Int,
   hsmod: Int
   //Ncbps: Int,
   //Nbpsc: Int
  ) extends DemodulationParams[FixedPoint,FixedPoint] {
-  val protoIQ = DspComplex(FixedPoint(datawidth.W, (datawidth-2).BP))
-  val protoBits = FixedPoint(datawidth.W, (datawidth-2).BP)  
+  val protoIQ = DspComplex(FixedPoint(dataWidth.W, dataBinaryPoint.BP))
+  val protoBits = FixedPoint(dataWidth.W, dataBinaryPoint.BP)
 }
 
 
@@ -794,6 +793,7 @@ class Demodulator[T <: Data:Real:BinaryRepresentation,U <: Data:Real:BinaryRepre
        
    } else{
 
+
        val bpsksdemod = Module( new BPSKDemodulator1s(params) )
       bpsksdemod.io.in.bits := io.in.bits
       bpsksdemod.io.in.valid := io.in.valid
@@ -818,13 +818,16 @@ class Demodulator[T <: Data:Real:BinaryRepresentation,U <: Data:Real:BinaryRepre
       }   
     
 
+
 }
 
 class BitsBundle1[T<:Data,U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
+
  
   val bits = Vec(48, SInt(2.W) )
+
   override def cloneType: this.type = BitsBundle1(params).asInstanceOf[this.type]
 }
 
@@ -836,8 +839,10 @@ object BitsBundle1  {
 class BitsBundle1b[T<:Data, U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
+
  
   val bits = Vec(48, Bool() )
+
   override def cloneType: this.type = BitsBundle1b(params).asInstanceOf[this.type]
 }
 
@@ -849,8 +854,10 @@ object BitsBundle1b  {
 class BitsBundle1bt[T<:Data](params: ModFFTParams[T] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
+
  
   val bits = Vec(48, Bool() )
+
   override def cloneType: this.type = BitsBundle1bt(params).asInstanceOf[this.type]
 }
 
@@ -863,8 +870,10 @@ object BitsBundle1bt  {
 class BitsBundle1s[T<:Data, U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
+
  
   val bits = Vec(48,params.protoIQ.cloneType  )
+
   override def cloneType: this.type = BitsBundle1b(params).asInstanceOf[this.type]
 }
 
@@ -878,9 +887,11 @@ object BitsBundle1s  {
 class BitsBundle2bpsk[T<:Data, U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
+
  
   val bits = Vec(48, Bool() )
   override def cloneType: this.type = BitsBundle2bpsk(params).asInstanceOf[this.type]
+
 }
 
 object BitsBundle2bpsk  {
@@ -891,6 +902,7 @@ object BitsBundle2bpsk  {
 class BitsBundle2qpsk[T<:Data, U <: Data](params: DemodulationParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
+
  
   val bits = Vec(96, Bool() )
   override def cloneType: this.type = BitsBundle2qpsk(params).asInstanceOf[this.type]
@@ -919,9 +931,11 @@ object BitsBundle2qam16  {
 class BitsBundle2t[T<:Data](params: ModFFTParams[T] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
+
  
   val bits = Vec(params.Ncbps, Bool() )
   override def cloneType: this.type = BitsBundle2t(params).asInstanceOf[this.type]
+
 }
 
 object BitsBundle2t  {
@@ -1004,7 +1018,7 @@ class BPSKDemodulator1[T <: Data :Real:BinaryRepresentation, U <: Data](val para
 
  io.out.valid := deinterleaving.io.out.valid
  io.in.ready := demapping.io.in.ready
- 
+
 }
 
 
@@ -1057,7 +1071,7 @@ class BPSKDemodulator1s[T <: Data :Real:BinaryRepresentation, U <: Data](val par
 
  io.out.valid := deinterleaving.io.out.valid
  io.in.ready := demapping.io.in.ready
- 
+
 }
 
 
@@ -1108,7 +1122,7 @@ class QAM16DemodulatorSer1[T <: Data :Real:BinaryRepresentation, U <: Data](val 
 
   io.out.valid := ser.io.out.valid
   io.in.ready := demod.io.in.ready
-  
+
 }
 
 
@@ -1158,7 +1172,7 @@ class QPSKDemodulatorSer1[T <: Data :Real:BinaryRepresentation, U <: Data](val p
 
   io.out.valid := ser.io.out.valid
   io.in.ready := demod.io.in.ready
-  
+
 }
 
 
@@ -1208,7 +1222,7 @@ class QAM16DemodulatorSer1s[T <: Data :Real:BinaryRepresentation, U <: Data](val
 
   io.out.valid := ser.io.out.valid
   io.in.ready := demod.io.in.ready
-  
+
 }
 
 
@@ -1258,8 +1272,9 @@ class QPSKDemodulatorSer1s[T <: Data :Real:BinaryRepresentation, U <: Data](val 
 
   io.out.valid := ser.io.out.valid
   io.in.ready := demod.io.in.ready
-  
+
 }
+
 
 
 
@@ -1282,7 +1297,7 @@ class QPSKDemodulator1[T <: Data :Real:BinaryRepresentation, U <: Data](val para
  io.out.bits := deinterleaving.io.out.bits
  io.out.valid := deinterleaving.io.out.valid
  io.in.ready := demapping.io.in.ready
- 
+
 }
 
 class QAM16Demodulator1[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
@@ -1304,7 +1319,7 @@ class QAM16Demodulator1[T <: Data :Real:BinaryRepresentation, U <: Data](val par
  io.out.bits := deinterleaving.io.out.bits
  io.out.valid := deinterleaving.io.out.valid
  io.in.ready := demapping.io.in.ready
- 
+
 }
 
 
@@ -1327,7 +1342,7 @@ class QPSKDemodulator1s[T <: Data :Real:BinaryRepresentation, U <: Data](val par
  io.out.bits := deinterleaving.io.out.bits
  io.out.valid := deinterleaving.io.out.valid
  io.in.ready := demapping.io.in.ready
- 
+
 }
 
 class QAM16Demodulator1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params: DemodulationParams[T,U]) extends Module {
@@ -1349,8 +1364,9 @@ class QAM16Demodulator1s[T <: Data :Real:BinaryRepresentation, U <: Data](val pa
  io.out.bits := deinterleaving.io.out.bits
  io.out.valid := deinterleaving.io.out.valid
  io.in.ready := demapping.io.in.ready
- 
+
 }
+
 
 
 
@@ -1412,6 +1428,7 @@ class Serilizerm1qpsk[T <: Data, U <: Data](params: DemodulationParams[T,U]) ext
 
 }
 
+
 // serilizer modify packetstart/end
 class Serilizerm1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends Module {
     val io = IO(new Bundle {
@@ -1420,6 +1437,7 @@ class Serilizerm1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) ex
 
     //val in  = Flipped(Decoupled(Vec(params.Ncbps,Bool())))
     //val out = Decoupled(Vec(48,Bool()))
+
     //val cnt = Output(UInt(8.W))
     //val sat = Output(UInt(2.W))
   })
@@ -1434,6 +1452,7 @@ class Serilizerm1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) ex
   val sDone = 2.U(2.W)
   val state = RegInit(sInit)
   //io.out(0):= RegNext(io.in)
+
   val ser = Reg(Vec(48,Bool()))
  
    
@@ -1445,10 +1464,12 @@ class Serilizerm1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) ex
 	  pout := io.in.bits.bits
 	  	                      
 	 
+
   }
   when (state === sWork ) {
          val iterNext = iter + 1.U
          iter := iterNext
+
 	 for ( i <- 0 until 48 ) {
            ser(i) := pout( (48) * (4 - iter -1) + i )
          }	
@@ -1456,10 +1477,10 @@ class Serilizerm1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) ex
             state := sDone}
   }
   when (state === sDone && io.out.fire()) {
-          state := sInit	 
-	  
+          state := sInit
+
   }
-  io.in.ready := state === sInit 
+  io.in.ready := state === sInit
   io.out.valid :=  (state === sWork && iter >= 1.U) || state === sDone
   io.out.bits.pktStart := reg_pktstart
   io.out.bits.pktEnd := reg_pktend
@@ -1478,7 +1499,6 @@ class Serilizerms1qpsk[T <: Data, U <: Data](params: DemodulationParams[T,U]) ex
     //val out =  Decoupled(BitsBundle1b(params))
     val in  = Flipped(Decoupled(PacketBundle(96, params.protoIQ.cloneType)))
     val out = Decoupled(PacketBundle(48, params.protoIQ.cloneType))
-
     
     //val cnt = Output(UInt(8.W))
     //val sat = Output(UInt(2.W))
@@ -1494,32 +1514,36 @@ class Serilizerms1qpsk[T <: Data, U <: Data](params: DemodulationParams[T,U]) ex
   val sDone = 2.U(2.W)
   val state = RegInit(sInit)
   //io.out(0):= RegNext(io.in)
+
   val ser = Reg(Vec(48,params.protoIQ.cloneType))
- 
    
+
   when (state === sInit && io.in.fire()) {
           state := sWork
           iter := 0.U
 	  reg_pktstart := io.in.bits.pktStart
 	  reg_pktend := io.in.bits.pktEnd
+
 	  pout := io.in.bits.iq
-	  	                      
-	 
+	  	                     	 
+
   }
   when (state === sWork ) {
          val iterNext = iter + 1.U
          iter := iterNext
+
 	 for ( i <- 0 until 48 ) {
            ser(i) := pout( (48) * (2 - iter -1) + i )
          }	
          when (iterNext >= 2.U) {
+
             state := sDone}
   }
   when (state === sDone && io.out.fire()) {
-          state := sInit	 
-	  
+          state := sInit
+
   }
-  io.in.ready := state === sInit 
+  io.in.ready := state === sInit
   io.out.valid :=  (state === sWork && iter >= 1.U) || state === sDone
   io.out.bits.pktStart := reg_pktstart
   io.out.bits.pktEnd := reg_pktend
@@ -1537,7 +1561,7 @@ class Serilizerms1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) e
     val in  = Flipped(Decoupled(PacketBundle(192, params.protoIQ.cloneType)))
     val out = Decoupled(PacketBundle(48, params.protoIQ.cloneType))
 
-    
+
     //val cnt = Output(UInt(8.W))
     //val sat = Output(UInt(2.W))
   })
@@ -1555,29 +1579,32 @@ class Serilizerms1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) e
   val ser = Reg(Vec(48,params.protoIQ.cloneType))
  
    
+
   when (state === sInit && io.in.fire()) {
           state := sWork
           iter := 0.U
 	  reg_pktstart := io.in.bits.pktStart
 	  reg_pktend := io.in.bits.pktEnd
 	  pout := io.in.bits.iq
-	  	                      
-	 
+
+
   }
   when (state === sWork ) {
          val iterNext = iter + 1.U
          iter := iterNext
+
 	 for ( i <- 0 until 48 ) {
            ser(i) := pout( (48) * (4 - iter -1) + i )
          }	
          when (iterNext >= 4.U) {
+
             state := sDone}
   }
   when (state === sDone && io.out.fire()) {
-          state := sInit	 
-	  
+          state := sInit
+
   }
-  io.in.ready := state === sInit 
+  io.in.ready := state === sInit
   io.out.valid :=  (state === sWork && iter >= 1.U) || state === sDone
   io.out.bits.pktStart := reg_pktstart
   io.out.bits.pktEnd := reg_pktend
@@ -1592,7 +1619,7 @@ class Serilizerms1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) e
 //-- Interleaver modify(serial input)
 class Deserilizer[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends Module {
     val io = IO(new Bundle {
-    
+
     val in  = Flipped(Decoupled(Bool()))
     val out = Decoupled(Vec(48,Bool()))
     val cnt = Output(UInt(8.W))
@@ -1606,16 +1633,16 @@ class Deserilizer[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends
   val sWork = 1.U(2.W)
   val sDone = 2.U(2.W)
   val state = RegInit(sInit)
-  
- 
-   
+
+
+
   when (state === sInit && io.in.fire()) {
           state := sWork
           iter := 0.U
 	  pout(0) := io.in.bits
-	  
-                    
-	 
+
+
+
   }
   when (state === sWork && io.in.fire()) {
          val iterNext = iter + 1.U
@@ -1627,12 +1654,13 @@ class Deserilizer[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends
          }  
 	
          when (iterNext >= (48-1).U) {
+
             state := sDone
                       }
   }
   when (state === sDone && io.out.fire()) {
-          state := sInit	 
-	  
+          state := sInit
+
   }
 
   io.in.ready := state === sInit || state === sWork
@@ -1643,7 +1671,7 @@ class Deserilizer[T <: Data, U <: Data](params: DemodulationParams[T,U]) extends
   //val perm1 = Wire(Vec(params.Ncbps,Bool()))
   io.out.bits := pout
 
-   
+
 }
 
 
