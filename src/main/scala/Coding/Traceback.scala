@@ -44,7 +44,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   decodeWire.foreach(_ := 0.U(params.k.W))
 
-  val sIdle :: sWaitFirst :: sDecodeFirst :: sWaitRest :: sDecodeRest :: sDone :: Nil = Enum(6)
+  val sIdle :: sWaitFirst :: sDecodeFirst :: sWaitRest :: sDecodeRest :: Nil = Enum(5)
   val state      = RegInit(sIdle)
   val state_next = Wire(state.cloneType)
 
