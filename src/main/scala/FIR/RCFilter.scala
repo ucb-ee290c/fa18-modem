@@ -50,23 +50,46 @@ object RCFilterIO {
 }
 
 /**
+ * Tree-Reduce for better hardware instantiation
+ */
+object TreeReduce {
+  def apply[V](in: Seq[V], func: (V, V) => V): V = {
+    if (in.length == 1) {
+      return in(0)
+    }
+    if (in.length == 2) {
+      return func(in(0), in(1))
+    }
+    if (in.length % 2 == 0) {
+      val withIdxs = in.zipWithIndex
+      val evens = withIdxs.filter{case (_, idx) => idx % 2 == 0}.map(_._1)
+      val odds  = withIdxs.filter{case (_, idx) => idx % 2 != 0}.map(_._1)
+      val evenOddPairs: Seq[(V, V)] = evens zip odds
+      return TreeReduce(evenOddPairs.map(x => func(x._1, x._2)), func)
+    } else {
+      return TreeReduce(Seq(in(0), TreeReduce(in.drop(1), func)), func)
+    }
+  }
+}
+
+/**
  * Raised-cosine taps generator
  */
 object RCTaps {
-  def apply[T <: Data](params: RCFilterParams[T]): Seq(Double) = {
+  def apply[T <: Data](params: RCFilterParams[T]): Seq[Double] = {
     require(params.symbolSpan >= 1)
     require(params.sampsPerSymbol >= 1)
     require(params.alpha > 0.0)
     require(params.alpha <= 1.0)
     val ntaps = params.sampsPerSymbol * params.symbolSpan + 1
     val n = linspace(0, ntaps-1, ntaps)
-    println("n: $n")
+    println(s"n: $n")
     val taps = sinc(n / params.sampsPerSymbol) *
                cos(params.alpha * Constants.Pi * n / params.sampsPerSymbol) /
                (1 - pow(2 * params.alpha * n / params.sampsPerSymbol, 2))
-    println("taps: $taps")
+    println(s"taps: $taps")
     val normalized = taps / norm(taps)
-    println("normalized: $normalized")
+    println(s"normalized: $normalized")
     normalized
   }
 }
@@ -82,8 +105,43 @@ object RCTaps {
  */
 class RCFilter[T <: Data : Ring : ConvertableTo](val params: RCFilterParams[T]) extends Module {
   val io = IO(RCFilterIO(params))
-  val doubleTaps = RCTaps(params)
+  // Flush state variables
+  val sMain :: sFlush :: Nil = Enum(2)
+  val state = RegInit(sFlush)
+  val flushCount = Reg(UInt(32.W))
+  // Convert taps to fixedpoint
+  val doubleTaps = RCTaps(params).tail.reverse ++ RCTaps(params) // TODO: convert to single-sided implementation
+  println(s"double taps $doubleTaps")
   val taps = doubleTaps map {case x => ConvertableTo[T].fromDouble(x)}
-  val xn = Reg(Vec(taps.length, params.protoIQ))
-
+  println(s"taps symmetric $taps")
+  // Push incoming samples through buffer
+  val xn = Reg(Vec(2 * taps.length - 1, params.protoIQ), en=io.in.fire())
+  xn.foldLeft(io.in.bits.iq){
+    (prev, curr) => {
+      curr := prev
+    }
+  }
+  // Tree-reduce addition to reduce critical path
+  val outReal := TreeReduce(xn zip taps map {(x,y) => x.real * y}, (a,b) => a + b)
+  val outImag := TreeReduce(xn zip taps map {(x,y) => x.imag * y}, (a,b) => a + b)
+  // Extra state logic to handle packets
+  switch(state) {
+    is(sMain) {
+      flushCount := 0.U
+      state := Mux(io.in.fire() && io.in.pktEnd, sFlush, sMain)
+    }
+    is(sFlush) {
+      flushCount := flushCount + 1.U
+      val zero = Wire(params.protoIQ)
+      zero.real := Ring[T].zero
+      zero.imag := Ring[T].zero
+      xn(0) := zero
+      state := Mux(io.in.fire() && (flushCount >= taps.length - 1), sMain, sFlush)
+    }
+  }
+  // Decoupled logic
+  io.out.bits.iq.real := outReal
+  io.out.bits.iq.imag := outImag
+  io.out.valid := io.in.fire()
+  io.in.ready := (state == sMain) && io.out.ready
 }
