@@ -246,10 +246,11 @@ class RXThing[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentati
   * @tparam EI
   * @tparam B
   * @tparam T Type parameter for tx, i.e. FixedPoint or DspReal
+  * @tparam T Type parameter for tx, i.e. UInt
   */
-abstract class TXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentation]
+abstract class TXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentation, U<:Data]
 (
-  val txParams: TXParams[T]
+  val txParams: TXParams[T, U]
 )(implicit p: Parameters) extends DspBlock[D, W, EO, EI, B] {
   val streamNode = AXI4StreamIdentityNode()
   val mem = None
@@ -284,12 +285,13 @@ abstract class TXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentatio
   * @param ev$3
   * @param p
   * @tparam T Type parameter for tx data type
+  * @tparam U Type parameter for tx data type
   */
-class TLTXBlock[T<:Data:Real:BinaryRepresentation]
+class TLTXBlock[T<:Data:Real:BinaryRepresentation, U<:Data]
 (
-  txParams: TXParams[T]
+  txParams: TXParams[T ,U]
 )(implicit p: Parameters) extends
-  TXBlock[TLClientPortParameters, TLManagerPortParameters, TLEdgeOut, TLEdgeIn, TLBundle, T](txParams)
+  TXBlock[TLClientPortParameters, TLManagerPortParameters, TLEdgeOut, TLEdgeIn, TLBundle, T, U](txParams)
   with TLDspBlock
 
 /**
@@ -302,10 +304,11 @@ class TLTXBlock[T<:Data:Real:BinaryRepresentation]
   * @param ev$3
   * @param p
   * @tparam T Type parameter for tx, i.e. FixedPoint or DspReal
+  * @tparam U Type parameter for tx, i.e. UInt
   */
-class TXThing[T<:Data:Real:BinaryRepresentation]
+class TXThing[T<:Data:Real:BinaryRepresentation, U<:Data]
 (
-  val txParams: TXParams[T],
+  val txParams: TXParams[T, U],
   val depth: Int = 8,
 )(implicit p: Parameters) extends LazyModule {
   // instantiate lazy modules

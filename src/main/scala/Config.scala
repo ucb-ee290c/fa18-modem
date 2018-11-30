@@ -9,7 +9,7 @@ trait TXParams[T<:Data, U<:Data] {
     val iqBundleParams: IQBundleParams[T]
     val cyclicPrefixParams: CyclicPrefixParams[T]
     val ifftParams: FFTParams[T]
-    val firParams: ModFFTParams[T]
+    val firParams: RCFilterParams[T]
     val modulatorParams: ModParams[T]
     val encoderParams: CodingParams[U]
 }
@@ -26,7 +26,7 @@ object FinalTxParams {
             }
             val ifftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = nfft, binPoint = width - 3)
-            val firParams = FixedModFFTParams(
+            val modulatorParams = FixedModFFTParams(
                 dataWidth=width,
                 twiddleWidth=width,
                 numPoints=nfft,
@@ -34,7 +34,13 @@ object FinalTxParams {
                 Nbpsc=1,
                 binPoints=width-3
             )
-            val modulatorParams = firParams
+            val firParams = FixedRCFilterParams(
+                dataWidth = width,
+                binaryPoint = width-3,
+                alpha = 0.2,
+                sampsPerSymbol = 4,
+                symbolSpan = 2
+            )
             val encoderParams = FixedCoding()
         }
         txParams

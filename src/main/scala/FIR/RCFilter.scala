@@ -5,14 +5,14 @@
  *
  * Josh Sanz <jsanz@berkeley.edu>
  */
+package modem
 
 import chisel3._
+import chisel3.util._
 import chisel3.experimental.FixedPoint
 import chisel3.util.Decoupled
 import dsptools.numbers._
 
-import breeze.linalg._
-import breeze.numerics._
 
 /**
  * Raised-Cosine parameters
@@ -26,9 +26,9 @@ trait RCFilterParams[T<:Data] extends IQBundleParams[T] {
 case class FixedRCFilterParams(
   dataWidth: Int,
   binaryPoint: Int,
-  alpha: Double,
-  sampsPerSymbol: Int,
-  symbolSpan: Int
+  alpha: Double = 0.22,
+  sampsPerSymbol: Int = 4,
+  symbolSpan: Int = 3
 ) extends RCFilterParams[FixedPoint] {
   // IQ Data prototype
   val protoIQ = DspComplex(FixedPoint(dataWidth.W, binaryPoint.BP))
@@ -73,28 +73,6 @@ object TreeReduce {
 }
 
 /**
- * Raised-cosine taps generator
- */
-object RCTaps {
-  def apply[T <: Data](params: RCFilterParams[T]): Seq[Double] = {
-    require(params.symbolSpan >= 1)
-    require(params.sampsPerSymbol >= 1)
-    require(params.alpha > 0.0)
-    require(params.alpha <= 1.0)
-    val ntaps = params.sampsPerSymbol * params.symbolSpan + 1
-    val n = linspace(0, ntaps-1, ntaps)
-    println(s"n: $n")
-    val taps = sinc(n / params.sampsPerSymbol) *
-               cos(params.alpha * Constants.Pi * n / params.sampsPerSymbol) /
-               (1 - pow(2 * params.alpha * n / params.sampsPerSymbol, 2))
-    println(s"taps: $taps")
-    val normalized = taps / norm(taps)
-    println(s"normalized: $normalized")
-    normalized
-  }
-}
-
-/**
  * Raised-Cosine filter
  *
  * Input:
@@ -103,32 +81,38 @@ object RCTaps {
  * Output:
  *   IQBundle to be fed to the D2A converter
  */
-class RCFilter[T <: Data : Ring : ConvertableTo](val params: RCFilterParams[T]) extends Module {
+class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) extends Module {
   val io = IO(RCFilterIO(params))
   // Flush state variables
   val sMain :: sFlush :: Nil = Enum(2)
   val state = RegInit(sFlush)
   val flushCount = Reg(UInt(32.W))
+  val nTaps = params.sampsPerSymbol * params.symbolSpan + 1
   // Convert taps to fixedpoint
   val doubleTaps = RCTaps(params).tail.reverse ++ RCTaps(params) // TODO: convert to single-sided implementation
   println(s"double taps $doubleTaps")
-  val taps = doubleTaps map {case x => ConvertableTo[T].fromDouble(x)}
+  val taps: Seq[T] = doubleTaps map {case x => ConvertableTo[T].fromDouble(x)}
   println(s"taps symmetric $taps")
   // Push incoming samples through buffer
-  val xn = Reg(Vec(2 * taps.length - 1, params.protoIQ), en=io.in.fire())
-  xn.foldLeft(io.in.bits.iq){
-    (prev, curr) => {
-      curr := prev
+  val x0 = Wire(params.protoIQ)
+  val doShift = Wire(Bool())
+  val xn = Seq.fill(taps.length)(Reg(params.protoIQ))
+  xn.foldLeft(x0){case (prev, curr) => {
+    curr := Mux(doShift, prev, curr)
+    curr
     }
   }
   // Tree-reduce addition to reduce critical path
-  val outReal := TreeReduce(xn zip taps map {(x,y) => x.real * y}, (a,b) => a + b)
-  val outImag := TreeReduce(xn zip taps map {(x,y) => x.imag * y}, (a,b) => a + b)
+  val reals: Seq[T] = xn.map{case x => x.real}
+  val realProducts = reals.zip(taps).map{case (x:T,y:T) => x * y}
+  val imagProducts = xn zip taps map  {case (x, y) => x.imag * y}
+  val outReal = TreeReduce(realProducts, (a:T,b:T) => a+b)
+  val outImag = TreeReduce(imagProducts, (a:T,b:T) => a+b)
   // Extra state logic to handle packets
   switch(state) {
     is(sMain) {
       flushCount := 0.U
-      state := Mux(io.in.fire() && io.in.pktEnd, sFlush, sMain)
+      state := Mux(io.in.fire() && io.in.bits.pktEnd, sFlush, sMain)
     }
     is(sFlush) {
       flushCount := flushCount + 1.U
@@ -143,5 +127,5 @@ class RCFilter[T <: Data : Ring : ConvertableTo](val params: RCFilterParams[T]) 
   io.out.bits.iq.real := outReal
   io.out.bits.iq.imag := outImag
   io.out.valid := io.in.fire()
-  io.in.ready := (state == sMain) && io.out.ready
+  io.in.ready := (state === sMain) && io.out.ready
 }
