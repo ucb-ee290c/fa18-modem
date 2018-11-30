@@ -2,6 +2,9 @@ package modem
 
 import chisel3._
 
+// Written by Kunmo Kim : kunmok@berkeley.edu
+// Description: Trellis obj contains next-state table and output tables for all the possible data transitions
+// This object is used in brach-metric calculation
 class Trellis[T <: Data](params: CodingParams[T]){
   require(params.m > 1)
   require(params.k > 0)
@@ -27,7 +30,11 @@ class Trellis[T <: Data](params: CodingParams[T]){
         (1 until params.m).reverse.map(i => {shiftReg(i) = shiftReg(i-1) })  // start bit shifting
         shiftReg(0) = currentInputs
 
-        outbits(r) = (outbits(r) + (currentInputs * generatorArray(0))) % 2
+        if(params.softDecision == false){
+          outbits(r) = (outbits(r) + (currentInputs * generatorArray(0))) % 2
+        } else {
+          outbits(r) = ((outbits(r) + (currentInputs * generatorArray(0))) % 2) * 2 - 1
+        }
         output_table(currentStates)(currentInputs)(r) = outbits(r)
         nextstate_table(currentStates)(currentInputs)(r) = shiftReg(r)
       }

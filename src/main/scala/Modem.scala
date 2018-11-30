@@ -83,6 +83,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   // cfoPilot.io.in := fft.io.out
 
   // Demodulator
+  demod.io.mod_ctrl := 0.U
   demod.io.in <> eq.io.out
 
   // Decoder
