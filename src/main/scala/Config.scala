@@ -50,7 +50,7 @@ object FinalRxParams {
             val fftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = 2, binPoint = 3)
             val bitsBundleParams = BitsBundleParams(nBitPerSymbol, SInt(2.W))
-            val demodParams = HardDemodParams(width=nfft, datawidth=width, bitsWidth=nBitPerSymbol,
+            val demodParams = HardDemodParams(width=nfft, dataWidth=width, dataBinaryPoint=width - 3, bitsWidth=nBitPerSymbol,
                                               Nbpsc=1, Ncbps=nBitPerSymbol, hsmod=1)
             val viterbiParams = FixedCoding()
         }

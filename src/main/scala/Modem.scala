@@ -93,6 +93,10 @@ trait HasPeripheryModem extends BaseSubsystem {
   val rxChain = LazyModule(new RXThing(FinalRxParams(16, 64, 48)))
   // Instantiate tx chain
   val txChain = LazyModule(new TXThing(FinalTxParams(16, 64, 48)))
+  pbus.toVariableWidthSlave(Some("rxWrite")) { rxChain.writeQueue.mem.get }
+  pbus.toVariableWidthSlave(Some("rxRead")) { rxChain.readQueue.mem.get }
+  pbus.toVariableWidthSlave(Some("txWrite")) { txChain.writeQueue.mem.get }
+  pbus.toVariableWidthSlave(Some("txRead")) { txChain.readQueue.mem.get }
 }
 // trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
 //   val foo: Int
