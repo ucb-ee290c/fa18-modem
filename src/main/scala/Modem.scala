@@ -22,17 +22,22 @@ import freechips.rocketchip.subsystem.BaseSubsystem
 // //  pbus.toVarbleWidthSlave(Some("modemRead")) { modemChain.readQueue.mem.get }
 // }
 
-class TX[T<:Data:Real:BinaryRepresentation](val txParams: TXParams[T]) extends Module {
+class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U]) extends Module {
   val io = IO(new Bundle{
     val in = Decoupled(Vec(36, UInt(1.W)))
     val out = Flipped(Decoupled(IQBundle(txParams.iqBundleParams)))
   })
-  ???
-  // encoder
-  // modulator
-  // ifft
-  // cyclic prefix
-  // raised cosine fir
+  val encoder = Module( new Encoding(txParams.encoderParams) )
+  // val modulator = Module( new Modulator(txParams.modulatorParams))
+  val ifft = Module( new IFFT(txParams.ifftParams) )
+  val cyclicPrefix = Module( new CyclicPrefix(txParams.cyclicPrefixParams) )
+  val fir = Module( new FIR(txParams.firParams) )
+
+  encoder.io.in <> io.in
+  // modulator.io.in <> encoder.io.out
+  // ifft.io.in <> modulator.io.in
+  // cyclicPrefix.io.in <> ifft.io.out
+  // fir.io.in <> cyclicPrefix.io.out
 }
 
 class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real](

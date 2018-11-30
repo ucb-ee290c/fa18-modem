@@ -5,15 +5,37 @@ import chisel3.util._
 import chisel3.experimental.FixedPoint
 import dsptools.numbers._
 
-trait TXParams[T<:Data] {
+trait TXParams[T<:Data, U<:Data] {
     val iqBundleParams: IQBundleParams[T]
+    val cyclicPrefixParams: CyclicPrefixParams[T]
+    val ifftParams: FFTParams[T]
+    val firParams: ModFFTParams[T]
+    val modulatorParams: ModParams[T]
+    val encoderParams: CodingParams[U]
 }
 
 object FinalTxParams {
-    def apply(width: Int, nfft: Int, nBitPerSymbol: Int): TXParams[FixedPoint] = {
+    def apply(width: Int, nfft: Int, nBitPerSymbol: Int): TXParams[FixedPoint, UInt] = {
         val fixedIQ = DspComplex(FixedPoint(width.W, (width-3).BP))
-        val txParams = new TXParams[FixedPoint] {
+        val txParams = new TXParams[FixedPoint, UInt] {
             val iqBundleParams = IQBundleParams(fixedIQ)
+            val cyclicPrefixParams = new CyclicPrefixParams[FixedPoint] {
+                val protoIQ = fixedIQ
+                val prefixLength = nfft/4
+                val symbolLength = nfft
+            }
+            val ifftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
+                                           numPoints = nfft, binPoint = width - 3)
+            val firParams = FixedModFFTParams(
+                dataWidth=width,
+                twiddleWidth=width,
+                numPoints=nfft,
+                Ncbps=48,
+                Nbpsc=1,
+                binPoints=width-3
+            )
+            val modulatorParams = firParams
+            val encoderParams = FixedCoding()
         }
         txParams
     }
