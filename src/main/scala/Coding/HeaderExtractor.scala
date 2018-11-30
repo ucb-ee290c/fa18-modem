@@ -36,6 +36,12 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
     }
   }
 
+  // EDIT:
+  // val addrWire          = Wire(addrReg.cloneType)
+  val regA = Reg(Vec(N, UInt(m.W)))
+  val regB = Reg(Vec(N, UInt(m.W)))
+  val regAorB = RegInit(true.B)
+
   val branchMetricModule: BranchMetric[T] = Module(new BranchMetric[T](params))
   (0 until params.n).map(i => {branchMetricModule.io.in(i) := io.in(counter + i.U)})
 
@@ -86,6 +92,9 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
       counter := counter + params.n.U
     }.otherwise{
       SPcalcCompleted := true.B           // need to reset this later
+      regA.zipWithIndex.foreach {
+        case (elem, idx) => { elem := survivalPath.read(addrReg + idx.U) }
+      }
     }
     printf(p"counter = ${counter} ****** \n")
   }
@@ -102,23 +111,8 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   val outValid          = RegInit(false.B)
   val tbCounter         = RegInit(0.U(log2Ceil(H).W))
   val en_mem            = true.B
-  val addrWire          = Wire(UInt(5.W))
-  addrWire := addrReg + tmpSPReg
+  // addrWire := addrReg + tmpSPReg
   val outputMem = survivalPath.read(addrReg + tmpSPReg, en_mem)
-
-  printf(p"addrReg = ${addrReg} \n")
-  printf(p"tmpSPReg = ${tmpSPReg} \n")
-  //      printf(p"survival Path = ${survivalPath.read(addrReg + tmpSPReg, en_mem)} \n")
-  printf(p"survival Path = ${survivalPath.read(addrWire, en_mem)} \n")
-  printf(p"survival Path ***OUTMEM = ${outputMem} \n")
-  printf(p"survival Path ***HARD = ${survivalPath.read(17.U, en_mem)} \n")
-  for(i <- 0 until 17){
-    printf(p"addrWire = ${addrWire} \n")
-
-  }
-  printf(p"addrReg + tmpSPReg = ${addrReg + tmpSPReg}} \n")
-
-//  tmpSPReg                  := survivalPath.read(addrReg + tmpSPReg, en_mem)
 
   // start decoding !
   when(SPcalcCompleted === true.B) {
@@ -133,36 +127,50 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
       tmpPMMin(i)         := Mux(tmpPMMin(i - 1) < pmRegs(i + 1), tmpPMMin(i - 1), pmRegs(i + 1))
       tmpPMMinIndex(i)    := Mux(tmpPMMin(i - 1) < pmRegs(i + 1), tmpPMMinIndex(i - 1), (i + 1).U)
     }
-//    printf(p"tmpPMMinIndex = ${tmpPMMinIndex(N-2)} \n")
-//    printf(p"tmpPMMin = ${tmpPMMin(N-2)} \n")
-//    addrWire := addrReg + tmpSPReg
-    when(counter === (2*(H-1)).U){
+    when(counter === (params.n*(H-1)).U){
       printf("case 1 ************ \n")
-      printf(p"addrReg = ${addrReg} \n")
       decodeReg(counter/(params.n.U))  := tmpPMMinIndex(N-2) >> (m-1)     // grab the minimum PM
       tmpSPReg                  := tmpPMMinIndex(N-2)
-      printf(p"tmpPMMinIndex(N-2) = ${tmpPMMinIndex(N-2)}")
+      regB.zipWithIndex.foreach{
+        case (elem, idx) => {
+          elem := survivalPath.read(addrReg - N.U + idx.U)
+        }
+      }
     }.otherwise{
-//      printf("case 2 ************ \n")
-//      printf(p"addrReg = ${addrReg} \n")
-//      printf(p"tmpSPReg = ${tmpSPReg} \n")
-////      printf(p"survival Path = ${survivalPath.read(addrReg + tmpSPReg, en_mem)} \n")
-//      printf(p"survival Path = ${survivalPath.read(addrWire, en_mem)} \n")
-//      printf(p"survival Path ***ASDASDSA = ${survivalPath.read(20.U, en_mem)} \n")
-//      printf(p"addrReg + tmpSPReg = ${addrReg + tmpSPReg}} \n")
-      decodeReg(counter/(params.n.U))  := outputMem >> (m-1)
-      tmpSPReg                  := outputMem
+      // decodeReg(counter/(params.n.U))  := outputMem >> (m-1)
+      // tmpSPReg                  := outputMem
+      when (regAorB) {
+        decodeReg(counter/(params.n.U))  := regA(tmpSPReg) >> (m-1)
+        tmpSPReg                  := regA(tmpSPReg)
+      } .otherwise {
+        decodeReg(counter/(params.n.U))  := regB(tmpSPReg) >> (m-1)
+        tmpSPReg                  := regB(tmpSPReg)
+      }
+
+      when (addrReg >= (3 * N).U) {
+        when (regAorB) {
+          regA.zipWithIndex.foreach{
+            case (elem, idx) => {
+              elem := survivalPath.read(addrReg - N.U + idx.U)
+            }
+          }
+        } .otherwise {
+          regB.zipWithIndex.foreach{
+            case (elem, idx) => {
+              elem := survivalPath.read(addrReg - N.U + idx.U)
+            }
+          }
+        } 
+      }
+      regAorB := !regAorB
     }
 
-//    printf(p"survival path = ${survivalPath.read(addrReg + tmpSPReg)} \n")
-//    printf(p"decoded data = ${decodeReg(counter/2.U)} \n")
-    when(counter === (params.n*(H-1)).U){
-      counter := counter - params.n.U
-//      tbCounter := tbCounter - 1.U
-    }.elsewhen(counter > 0.U) {
+    // when(counter === (params.n*(H-1)).U){
+      // counter := counter - params.n.U
+    // }.elsewhen(counter > 0.U) {
+    when(counter > 0.U) {
       addrReg := addrReg - N.U
       counter := counter - params.n.U
-//      tbCounter := tbCounter - 1.U
     }.otherwise{
       addrReg := 0.U
       counter := 0.U
@@ -188,9 +196,9 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   (0 until 12).map(i  => { lengthInfoWire(i)         := 0.U  })
   io.headInfo.bits.dataLen    := lengthInfoWire.reduce(_ + _) << 3  // contains number of data "octets" in a packet
   io.headInfo.valid           := outValid
-//  for(i <- (0 until H).reverse){
-//    printf(p"decoded data = ${decodeReg(i)} \n")
-//  }
+ for(i <- (0 until H).reverse){
+   printf(p"decoded data = ${decodeReg(i)} \n")
+ }
 //  for(i <- (0 until N*H).reverse){
 //    printf(p"survival Path @ (addr = $i) = ${survivalPath.read(i.U)} \n")
 //  }
