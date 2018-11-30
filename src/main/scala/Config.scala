@@ -32,9 +32,9 @@ trait RXParams[T<:Data, U<:Data, V<:Data] {
 }
 
 object FinalRxParams {
-    def apply(width: Int, nfft: Int, nBitPerSymbol: Int): RXParams[FixedPoint, UInt, UInt] = {
+    def apply(width: Int, nfft: Int, nBitPerSymbol: Int): RXParams[FixedPoint, SInt, UInt] = {
         val fixedIQ = DspComplex(FixedPoint(width.W, (width-3).BP))
-        val rxParams = new RXParams[FixedPoint, UInt, UInt] {
+        val rxParams = new RXParams[FixedPoint, SInt, UInt] {
             val iqBundleParams = IQBundleParams(fixedIQ)
             val pktDetectParams = FixedPacketDetectParams(width)
             val cyclicPrefixParams = new CyclicPrefixParams[FixedPoint] {
@@ -49,7 +49,7 @@ object FinalRxParams {
                                            ltLength=160, preamble=true, stagesPerCycle=1)
             val fftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = 2, binPoint = 3)
-            val bitsBundleParams = BitsBundleParams(nBitPerSymbol, UInt(1.W))
+            val bitsBundleParams = BitsBundleParams(nBitPerSymbol, SInt(2.W))
             val demodParams = HardDemodParams(width=nfft, datawidth=width, bitsWidth=nBitPerSymbol,
                                               Nbpsc=1, Ncbps=nBitPerSymbol, hsmod=1)
             val viterbiParams = FixedCoding()

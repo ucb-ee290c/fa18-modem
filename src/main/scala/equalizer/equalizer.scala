@@ -6,23 +6,23 @@ import chisel3.util._
 import dsptools.numbers._
 
 
-trait EqualizerParams[T <: Data] {
-  val protoIQ: DspComplex[T]      // Prototype for the IQ data the qualizer will operate on
-  val mu: Double                  // Unused. In place for pilot-based equalization later.
-  val pilots: Seq[Int]            // Unused. List of subcarrier indices containing channel pilots.
+trait EqualizerParams[T <: Data] extends PacketBundleParams[T] {
+  //val mu: Double                  // Unused. In place for pilot-based equalization later.
+  //val pilots: Seq[Int]            // Unused. List of subcarrier indices containing channel pilots.
   val carrierMask: Seq[Boolean]   // Mask of subcarriers containing data or a pilot, which should be equalized.
   val nSubcarriers: Int           // Total number of subcarriers coming from the FFT.
 }
 
 case class FixedEqualizerParams(
-  width: Int,
-  mu: Double = 0.25,
-  pilots: Seq[Int] = Seq(5, 21, 43, 59),
+  width: Int = 16,
+  binaryPoint: Int = 13,
+  //mu: Double = 0.25,
+  //pilots: Seq[Int] = Seq(5, 21, 43, 59),
   // Default to non-fft-shifted output from fft block, 802.11a mask
   carrierMask: Seq[Boolean] = Seq.fill(1)(false) ++ Seq.fill(26)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(6)(false) ++ Seq.fill(27)(true),
   nSubcarriers: Int = 64
 ) extends EqualizerParams[FixedPoint] {
-  val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP)).cloneType
+  val protoIQ = DspComplex(FixedPoint(width.W, binaryPoint.BP)).cloneType
 }
 
 /**
@@ -102,12 +102,21 @@ class ChannelInverter[T <: Data : Real : BinaryRepresentation](params: Equalizer
 
   val phaseDelay = ShiftRegister(in=toPolar.io.out.bits.z, n=dividerDelay)
 
+  var nShift = 0.BP
+  params.protoIQ.real match {
+    case f: FixedPoint => nShift = f.binaryPoint
+    case t => ???
+  }
   divider.io.in.valid      := toPolar.io.out.valid
-  divider.io.in.bits.num   := Real[T].fromDouble(1.0).asUInt() << params.protoIQ.real.getWidth - 4 //TODO: make this not hardcoded
+  divider.io.in.bits.num   := Real[T].fromDouble(1.0).asUInt() << nShift.get - 1 //TODO: make this not hardcoded
   divider.io.in.bits.denom := toPolar.io.out.bits.x.asUInt()
 
   toCartesian.io.in.valid  := divider.io.out.valid
-  toCartesian.io.in.bits.x := divider.io.out.bits.asFixedPoint((params.protoIQ.real.getWidth - 3).BP) //TODO: make this not hardcoded
+  params.protoIQ.real match {
+    case f: FixedPoint => toCartesian.io.in.bits.x := divider.io.out.bits.asFixedPoint(f.binaryPoint)
+    case t => ???
+  }
+   //TODO: make this not hardcoded
   toCartesian.io.in.bits.y := Real[T].zero
   toCartesian.io.in.bits.z := -phaseDelay
   toCartesian.io.in.bits.vectoring := false.B

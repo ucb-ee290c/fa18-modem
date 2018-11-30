@@ -26,7 +26,13 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val fixedPktDetectParams = FixedPacketDetectParams(iqWidth = iqWidth)
 
-  val fixedEqualizerParams = FixedEqualizerParams(width = iqWidth)
+  val fixedCyclicPrefixParams = new CyclicPrefixParams[FixedPoint] {
+    val protoIQ = fixedIQParams.protoIQ
+    val prefixLength = numPoints / 4
+    val symbolLength = numPoints
+  }
+
+  val fixedEqualizerParams = FixedEqualizerParams(width = iqWidth, binaryPoint = binPoint)
 
   val fixedCFOParams = FixedCFOParams(iqWidth = iqWidth, stagesPerCycle = 5)
 
@@ -49,18 +55,22 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val hardViterbiParams = FixedCoding()
 
+  val rxParams = new RXParams[FixedPoint, SInt, UInt] {
+    val iqBundleParams = fixedIQParams
+    val pktDetectParams = fixedPktDetectParams
+    val cyclicPrefixParams = fixedCyclicPrefixParams
+    val equalizerParams = fixedEqualizerParams
+    val cfoParams = fixedCFOParams
+    val fftParams = fixedFFTParams
+    val bitsBundleParams = hardBitsBundleParams
+    val demodParams = hardDemodParams
+    val viterbiParams = hardViterbiParams
+  }
+
   it should "receive ofdm" in {
     //val trials = Seq(1)
     FixedRXTester(
-      fixedIQParams,
-      fixedPktDetectParams,
-      fixedEqualizerParams,
-      fixedCFOParams,
-      fixedCPParams,
-      fixedFFTParams,
-      hardBitsBundleParams,
-      hardDemodParams,
-      hardViterbiParams,
+      rxParams,
       trials) should be (true)
   }
 }
