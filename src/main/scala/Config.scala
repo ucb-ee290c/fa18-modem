@@ -10,7 +10,7 @@ trait TXParams[T<:Data] {
 }
 
 object FinalTxParams {
-    def apply(width: Int): TXParams[FixedPoint] = {
+    def apply(width: Int, nfft: Int, nBitPerSymbol: Int): TXParams[FixedPoint] = {
         val fixedIQ = DspComplex(FixedPoint(width.W, (width-3).BP))
         val txParams = new TXParams[FixedPoint] {
             val iqBundleParams = IQBundleParams(fixedIQ)
@@ -32,24 +32,26 @@ trait RXParams[T<:Data, U<:Data, V<:Data] {
 }
 
 object FinalRxParams {
-    def apply(width: Int): RXParams[FixedPoint, UInt, UInt] = {
+    def apply(width: Int, nfft: Int, nBitPerSymbol: Int): RXParams[FixedPoint, UInt, UInt] = {
         val fixedIQ = DspComplex(FixedPoint(width.W, (width-3).BP))
         val rxParams = new RXParams[FixedPoint, UInt, UInt] {
             val iqBundleParams = IQBundleParams(fixedIQ)
             val pktDetectParams = FixedPacketDetectParams(width)
             val cyclicPrefixParams = new CyclicPrefixParams[FixedPoint] {
                 val protoIQ = fixedIQ
-                val prefixLength = 16
-                val symbolLength = 64
+                val prefixLength = nfft/4
+                val symbolLength = nfft
             }
-            val equalizerParams = FixedEqualizerParams(width)
+            val equalizerParams = FixedEqualizerParams(width,
+                carrierMask=Seq.fill(1)(false) ++ Seq.fill(26)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(6)(false) ++ Seq.fill(27)(true),
+                nSubcarriers=nfft)
             val cfoParams = FixedCFOParams(width=1, iqWidth=width, stLength=160,
                                            ltLength=160, preamble=true, stagesPerCycle=1)
             val fftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = 2, binPoint = 3)
-            val bitsBundleParams = BitsBundleParams(48, UInt(1.W))
-            val demodParams = HardDemodParams(width=64, datawidth=width, bitsWidth=48,
-                                              Nbpsc=1, Ncbps=48, hsmod=1)
+            val bitsBundleParams = BitsBundleParams(nBitPerSymbol, UInt(1.W))
+            val demodParams = HardDemodParams(width=nfft, datawidth=width, bitsWidth=nBitPerSymbol,
+                                              Nbpsc=1, Ncbps=nBitPerSymbol, hsmod=1)
             val viterbiParams = FixedCoding()
         }
         rxParams
