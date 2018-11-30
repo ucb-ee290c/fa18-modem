@@ -41,7 +41,7 @@ case class FixedSerDesParams(
  */
 class DeserializerIO[T <: Data : Ring](params: SerDesParams[T]) extends Bundle {
   val in  = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(DeserialPacketBundle(params))
+  val out = Decoupled(PacketBundle(params.ratio, params.protoIQ))
 
   override def cloneType: this.type = DeserializerIO(params).asInstanceOf[this.type]
 }
@@ -108,7 +108,7 @@ class Deserializer[T <: Data : Real : BinaryRepresentation](val params: SerDesPa
  * Bundle type as IO for Serializer modules
  */
 class SerializerIO[T <: Data : Ring](params: SerDesParams[T]) extends Bundle {
-  val in  = Flipped(Decoupled(DeserialPacketBundle(params)))
+  val in  = Flipped(Decoupled(PacketBundle(params.ratio, params.protoIQ)))
   val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = SerializerIO(params).asInstanceOf[this.type]
