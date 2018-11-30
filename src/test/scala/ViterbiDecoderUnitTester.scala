@@ -2,7 +2,23 @@ package modem
 
 import dsptools.DspTester
 
-class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends DspTester(c) {
+import chisel3._
+class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends DspTester(c) with HasTesterUtil[ViterbiDecoder[T]] {
+  def check_expected_if_valid[U <: chisel3.Data](sig_vec: Vec[U], expected: Seq[Seq[Int]], idx: Int, valid: Bool): Int = {
+    if (peek(valid) && idx < expected.length) {
+      expect_seq(sig_vec, expected(idx).map(_.toDouble))
+      idx + 1
+    } else {
+      idx
+    }
+  }
+  val expected_out = Seq(
+    Seq(1, 0, 1, 1, 0),
+    Seq(0, 0, 0, 0, 0),
+    Seq(1, 0, 1, 1, 0)
+  )
+  var out_idx = 0
+
   poke(c.io.out.ready, 1)
   poke(c.io.in_soft.valid, 0)
   poke(c.io.in_soft.bits.pktStart, 0)
@@ -314,12 +330,7 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_sp(1), 3)
   expect(c.io.out_sp(2), 0)
   expect(c.io.out_sp(3), 2)
-  expect(c.io.out.valid, 0)
-  expect(c.io.out.bits(0), 1)
-  expect(c.io.out.bits(1), 0)
-  expect(c.io.out.bits(2), 1)
-  expect(c.io.out.bits(3), 1)
-  expect(c.io.out.bits(4), 0)
+  out_idx = check_expected_if_valid(c.io.out.bits, expected_out, out_idx, c.io.out.valid)
 
   step(1) // 18 & 19
   expect(c.io.out_pm(0), 2)
@@ -330,46 +341,13 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out_sp(1), 3)
   expect(c.io.out_sp(2), 0)
   expect(c.io.out_sp(3), 2)
-  expect(c.io.out.valid, 0)
 
-  step(1) // 20 & 21
-  expect(c.io.out.valid, 0)
-
-  step(1)
-  expect(c.io.out.valid, 1)
-  expect(c.io.out.bits(0), 1)
-  expect(c.io.out.bits(1), 0)
-  expect(c.io.out.bits(2), 1)
-  expect(c.io.out.bits(3), 1)
-  expect(c.io.out.bits(4), 0)
-
-  step(1)
-  expect(c.io.out.valid, 0)
-
-  step(1)
-  expect(c.io.out.valid, 0)
-
-  step(1)
-  expect(c.io.out.valid, 0)
-
-  step(1)
-  expect(c.io.out.valid, 0)
-
-  step(1)
-  expect(c.io.out.valid, 1)
-  expect(c.io.out.bits(0), 0)
-  expect(c.io.out.bits(1), 0)
-  expect(c.io.out.bits(2), 0)
-  expect(c.io.out.bits(3), 0)
-  expect(c.io.out.bits(4), 0)
-
-  step(5)
-  expect(c.io.out.valid, 1)
-  expect(c.io.out.bits(0), 1)
-  expect(c.io.out.bits(1), 0)
-  expect(c.io.out.bits(2), 1)
-  expect(c.io.out.bits(3), 1)
-  expect(c.io.out.bits(4), 0)
+  while (out_idx < expected_out.length) {
+    wait_for_assert(c.io.out.valid, 50)
+    expect_seq(c.io.out.bits, expected_out(out_idx).map(_.toDouble))
+    out_idx += 1
+    step(1)
+  }
 }
 
 object FixedViterbiDecoderTester {

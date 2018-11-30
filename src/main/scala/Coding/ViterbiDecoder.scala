@@ -74,6 +74,8 @@ class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
   tracebackModule.io.inPM         := pathMetricModule.io.outPM
   tracebackModule.io.inSP         := pathMetricModule.io.outSP
   tracebackModule.io.enable       := pathMetricModule.io.outEnable
+  tracebackModule.io.headInfo.bits := HeaderExtModule.io.headInfo.bits
+  tracebackModule.io.headInfo.valid := HeaderExtModule.io.headInfo.valid
   io.out                          <> tracebackModule.io.out
   io.out_en2  := pathMetricModule.io.outEnable
 }

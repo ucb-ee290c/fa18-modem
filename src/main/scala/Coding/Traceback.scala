@@ -18,6 +18,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
     val inSP    = Input(Vec(params.nStates, UInt(params.m.W))) // storing Survival Path
     val enable  = Input(Bool())
     val out     = Decoupled(Vec(params.D, UInt(params.k.W)))
+    val headInfo = Flipped(Valid(DecodeHeadBundle()))
 
   })
   val L   = params.L
@@ -26,108 +27,131 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   // Memory Configuration
   val outValid    = RegInit(false.B)
-  val addrSize    = params.nStates * (D+L)
-  val addrWidth   = log2Ceil(addrSize) + 2
-  val addrReg     = RegInit(0.U(addrWidth.W))
-  val mem         = SyncReadMem(addrSize * 2, UInt(m.W))
+  val addrSize    = (D + L) * 2
+  val addrWidth   = log2Ceil(addrSize) + 1
+  val wrAddrPrev     = RegInit(0.U(addrWidth.W))
+  val mem         = SyncReadMem(addrSize, Vec(params.nStates, UInt(m.W)))
 
   // declare variables for decoding process
-  val tmpPMMinReg       = RegInit(VecInit(Seq.fill(params.nStates - 1)(0.U(m.W))))
-  val tmpPMMinIndexReg  = RegInit(VecInit(Seq.fill(params.nStates - 1)(0.U(m.W))))
+  val tmpPMMinIndexReg  = RegInit(0.U(m.W))
   val tmpSPReg          = RegInit(VecInit(Seq.fill(params.nStates)(0.U(m.W))))
-  val trackValid        = RegInit(VecInit(Seq.fill(3)(0.U(1.W))))
-  val addrOffset        = RegInit(0.U(addrWidth.W))
-  val decodeStart       = RegInit(0.U(2.W))
+  val rdAddrOffset      = Reg(UInt(addrWidth.W))
   val counterD          = RegInit(0.U((log2Ceil(params.D)+1).W))      // counter for D
   val decodeWire        = Wire(Vec(D, UInt(params.k.W)))
-  val memReg            = RegInit(VecInit(Seq.fill(params.nStates * (D+L-1))(0.U(m.W))))
-  val cntLenReg         = RegInit(0.U(6.W))
-  val allDataRecvReg    = RegInit(0.U(1.W))
+  val allDataRecvReg    = RegInit(false.B)
+  val dataLen = RegEnable(io.headInfo.bits.dataLen, io.headInfo.valid)
+  val cntLenReg         = Reg(dataLen.cloneType) //RegInit(0.U(6.W))
 
   decodeWire.foreach(_ := 0.U(params.k.W))
+
+  val sIdle :: sWaitFirst :: sDecodeFirst :: sWaitRest :: sDecodeRest :: sDone :: Nil = Enum(6)
+  val state      = RegInit(sIdle)
+  val state_next = Wire(state.cloneType)
+
+  state_next := state
+  state := state_next
+
+  val wrAddr = Wire(wrAddrPrev.cloneType)
+  wrAddr := wrAddrPrev
+
+  when (io.enable) {
+    wrAddr := Mux(wrAddrPrev < (addrSize - 1).U, wrAddrPrev + 1.U, 0.U)
+  }
+
+  switch (state) {
+    is (sIdle) {
+      when (io.enable) {
+        state_next := sWaitFirst
+        wrAddr := 0.U
+      }
+    }
+    is (sWaitFirst) {
+      when (io.enable) {
+        when (wrAddr % (D + L).U === (D + L - 2).U) {
+          state_next := sDecodeFirst
+          rdAddrOffset := 0.U
+          cntLenReg := D.U
+        }
+      }
+    }
+    is (sDecodeFirst) {
+      when (io.enable) {
+        state_next := sWaitRest
+        counterD := 0.U
+      }
+    }
+    is (sWaitRest) {
+      when (io.enable) {
+        counterD := counterD + 1.U // counterD tracks number of received bits (count up to params.D)
+        when (counterD === (D - 2).U) {
+          state_next := sDecodeRest
+          rdAddrOffset := Mux(rdAddrOffset < (addrSize - D).U, rdAddrOffset + D.U, rdAddrOffset - (addrSize - D).U)
+          cntLenReg := cntLenReg + D.U
+        }
+      }
+    }
+    is (sDecodeRest) {
+      when (io.enable) {
+        counterD := 0.U
+        state_next := Mux(cntLenReg >= dataLen, sIdle, sWaitRest)
+      }
+    }
+  }
+
+  wrAddrPrev := wrAddr
+
   // setup registers for address
-  when(io.enable === true.B){
-    val addr              = Wire(UInt(addrWidth.W))
+  when (io.enable) {
     val tmpSP             = Wire(Vec(D+L, UInt(m.W)))
-    val memWire           = Wire(Vec(params.nStates * (D+L-1), UInt(m.W)))
-    val tmpPMMin          = Wire(Vec(params.nStates - 1, UInt(m.W)))
-    val tmpPMMinIndex     = Wire(Vec(params.nStates - 1, UInt(m.W)))
-    addr    := addrReg
+    val memWire           = Wire(Vec(D+L-1, Vec(params.nStates, UInt(m.W))))
 
-    when(addrReg < (addrSize * 2 - params.nStates).U ){
-      addrReg := addrReg + params.nStates.U
-    }.otherwise{
-      addrReg := 0.U
-    }
-    printf(p"addrReg = ${addrReg} ******* \n")
-    // TODO: currently using register file but later I will come back and try to use SyncReadMem instead
-    for (i <- 0 until params.nStates){
-      mem.write(addrReg + i.U, io.inSP(i))
+    printf(p"wrAddr = ${wrAddr} ******* \n")
+    printf(p"state = ${state} ******* \n")
+    mem.write(wrAddr, io.inSP)
+
+    when (state === sDecodeFirst || state === sDecodeRest) {
+      // find minimum in PM
+      val tmpPMMinIndex = io.inPM.zipWithIndex.map(elem => (elem._1, elem._2.U)).reduceLeft((x, y) => {
+        val comp = x._1 < y._1
+        (Mux(comp, x._1, y._1), Mux(comp, x._2, y._2))
+      })._2
+
+      // when the decoding just started, it starts decoding after it receives D+L bits
+      // decodes every D bits
+      tmpPMMinIndexReg := tmpPMMinIndex
+      tmpSPReg         := io.inSP
     }
 
-    // find minimum in PM
-    tmpPMMin(0)           := Mux(io.inPM(0) < io.inPM(1), io.inPM(0), io.inPM(1))
-    tmpPMMinIndex(0)      := Mux(io.inPM(0) < io.inPM(1), 0.U, 1.U)
-    for (i <- 1 until params.nStates - 1) {
-      tmpPMMin(i)         := Mux(tmpPMMin(i - 1) < io.inPM(i + 1), tmpPMMin(i - 1), io.inPM(i + 1))
-      tmpPMMinIndex(i)    := Mux(tmpPMMin(i - 1) < io.inPM(i + 1), tmpPMMinIndex(i - 1), (i + 1).U)
-    }
-    cntLenReg := cntLenReg + 1.U
-
-    // when the decoding just started, it starts decoding after it receives D+L bits
-    when((addrReg % (params.nStates * (D+L)).U === (params.nStates * (D+L-1)).U) && (decodeStart === 0.U)) {
-      tmpPMMinReg         := tmpPMMin
-      tmpPMMinIndexReg    := tmpPMMinIndex
-      tmpSPReg            := io.inSP
-      trackValid(0)       := 1.U                // trackValid is used to raise/lower io.out.valid signal
-      decodeStart         := 1.U                // decodeStart indicates whether this is the first time decoding
-      counterD            := 0.U                // counterD tracks number of received bits (count up to params.D)
-    }.elsewhen((counterD === (params.D-1).U) && (decodeStart === 1.U)){   // decodes every D bits
-      tmpPMMinReg         := tmpPMMin
-      tmpPMMinIndexReg    := tmpPMMinIndex
-      tmpSPReg            := io.inSP
-      trackValid(0)       := 1.U
-      counterD            := 0.U
-      addrOffset := addrOffset + (params.nStates * D).U
-    }.otherwise{
-      counterD := counterD + 1.U
-    }
-    when(trackValid(0) === 1.U){
-      (2 to 1 by -1).map(i => {trackValid(i) := trackValid(i-1)})
-    }
     // Start decoding
     /*  example: D = 5, D = traceback depth of Viterbi decoder
-        addrOffset + nState * (D + L - 1)  -> data have been received 'D' times
-        addrOffset + nState * (D + L)      -> 'D' data is stored in memory
-        addrOffset + nState * (D + L + 1)  -> 'mem.read' is called. Fetch the data from the memory.
-        addrOffset + nState * (D + L + 2)  -> data should be fetched on 'decodeReg'. raise 'valid'
-        addrOffset + nState * (D + L + 3)  -> fetch data from 'decodeReg' to 'io.out.bits'
+        rdAddrOffset + (D + L - 1)  -> data have been received 'D' times
+        rdAddrOffset + (D + L)      -> 'D' data is stored in memory
+        rdAddrOffset + (D + L + 1)  -> 'mem.read' is called. Fetch the data from the memory.
+        rdAddrOffset + (D + L + 2)  -> data should be fetched on 'decodeReg'. raise 'valid'
+        rdAddrOffset + (D + L + 3)  -> fetch data from 'decodeReg' to 'io.out.bits'
     */
-    tmpSP(D+L-1) := tmpSPReg(tmpPMMinIndexReg(params.nStates-2))    // grab the minimum PM
-    for (i <- 0 until (params.nStates * (D+L-1))){
-      when((addrOffset + i.U) <= ((addrSize*2) - 1).U ) {
-        memWire(i) := mem.read(addrOffset + i.U)
+    for (i <- 0 until D+L-1){
+      when ((rdAddrOffset + i.U) <= (addrSize - 1).U ) {
+        memWire(i) := mem.read(rdAddrOffset + i.U)
       }.otherwise {
-        memWire(i) := mem.read(addrOffset + i.U - (addrSize*2).U)
+        memWire(i) := mem.read(rdAddrOffset + i.U - addrSize.U)
       }
     }
+    tmpSP(D+L-1) := tmpSPReg(tmpPMMinIndexReg)    // grab the minimum PM
     for (i <- D+L-2 to 0 by -1) {
-      tmpSP(i) := memWire((params.nStates * i).U + tmpSP(i + 1))
-      if(i < D) {
-        decodeWire(i) := tmpSP(i+1) >> (m-1) // get MSB
+      tmpSP(i) := memWire(i)(tmpSP(i + 1))
+      if (i < D) {
+        decodeWire(i) := tmpSP(i+1)(m-1) // get MSB
       }
     }
 
-  //  when(addrReg === (params.nStates * (D+L+2)).U){
-    when(trackValid(2) === 1.U) {
-      outValid      := true.B
-      (0 to 2).map(i => {trackValid(i)  := 0.U})
-    }
-    when(io.out.fire()){
-      outValid      := false.B
+    when (io.out.fire()) {
+      outValid := false.B
+    } .otherwise {
+      outValid := state === sDecodeFirst || state === sDecodeRest
     }
   }
 
   io.out.valid    := outValid
-  io.out.bits     := decodeWire    // output is available 3 clk cycles after.
+  io.out.bits     := decodeWire    // output is available 1 clk cycle after.
 }
