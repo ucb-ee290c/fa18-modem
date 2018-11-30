@@ -13,6 +13,8 @@ case class CFOTestVectors() {
   val rawTFTV = stfTV ++ ltfTV
   val cleanTV = IEEE80211.addCFO(in = rawTFTV, cfo = 0.0, sampleRate = 20.0e6)
   val cfoTV = IEEE80211.addCFO(in = rawTFTV, cfo = 0.2, sampleRate = 20.0e6)
+  val cfoSTV = IEEE80211.addCFO(in = stfTV, cfo = 5000, sampleRate = 20.0e6)
+  val cfoLTV = IEEE80211.addCFO(in = stfTV, cfo = 100, sampleRate = 20.0e6)
 }
 
 //case class FixedDecimationParams(
@@ -34,13 +36,50 @@ class CFOEstimationSpec extends FlatSpec with Matchers {
 
   val fixedCFOParams = FixedCFOParams(iqWidth = 16)
 
-  it should "detect no offset" in {
-    val trials = Seq(IQ(vecs.cleanTV, None))
+  //it should "detect no offset" in {
+    //val trials = Seq(IQ(vecs.cleanTV, None))
+    //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+  //}
+
+  it should "detect offset of 0.2" in {
+    val trials = Seq(IQ(vecs.cfoTV, None))
     FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
   }
+}
 
+class COESpec extends FlatSpec with Matchers {
+  val vecs = CFOTestVectors()
+  behavior of "Coarse Estimation"
 
+  val fixedCFOParams = FixedCFOParams(iqWidth = 32)
 
+  //it should "detect no offset" in {
+    //val trials = Seq(IQ(vecs.cleanTV, None))
+    //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+  //}
+
+  it should "detect offset of 5kHz" in {
+    val trials = Seq(IQ(vecs.cfoSTV, None))
+    FixedCOETester(fixedCFOParams, trials) should be (true)
+  }
+}
+
+class FOESpec extends FlatSpec with Matchers {
+  val vecs = CFOTestVectors()
+  behavior of "Fine Estimation"
+
+  val fixedCFOParams = FixedCFOParams(iqWidth = 32)
+
+  //it should "detect no offset" in {
+    //val trials = Seq(IQ(vecs.cleanTV, None))
+    //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+  //}
+
+  it should "detect offset of 100Hz" in {
+    val trials = Seq(IQ(vecs.cfoLTV, None))
+    FixedFOETester(fixedCFOParams, trials) should be (true)
+  }
+}
 //  behavior of "RealPacketDetect"
 //
 //  val realNoCorrParams = new PacketDetectParams[DspReal] {
@@ -75,4 +114,4 @@ class CFOEstimationSpec extends FlatSpec with Matchers {
 //    RealPacketDetectTester(realCorrParams, trials) should be (true)
 //  }
 
-}
+
