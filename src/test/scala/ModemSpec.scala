@@ -13,8 +13,8 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val trials = Seq(DspComplex(1.U,0.U))
   // These are  bogus placeholder numbers
-  val iqWidth = 5
-  val binPoint = iqWidth - 3
+  val iqWidth = 16
+  val binPoint = 13
   val numPoints = 64
   val bitsWidth = 48
   val prfxLength = 16
