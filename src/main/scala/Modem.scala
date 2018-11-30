@@ -5,8 +5,8 @@ import chisel3._
 import chisel3.util._
 
 import dsptools.numbers._
-// import freechips.rocketchip.diplomacy.LazyModule
-// import freechips.rocketchip.subsystem.BaseSubsystem
+import freechips.rocketchip.diplomacy.LazyModule
+import freechips.rocketchip.subsystem.BaseSubsystem
 /**
   * Mixin for top-level rocket to add a modem
   *
@@ -19,40 +19,41 @@ import dsptools.numbers._
 // //  val equalizerChain = LazyModule(new EqualizerThing(FixedEqualizerParams(8, 10)))
 //   // connect memory interfaces to pbus
 // //  pbus.toVariableWidthSlave(Some("modemWrite")) { modemChain.writeQueue.mem.get }
-// //  pbus.toVariableWidthSlave(Some("modemRead")) { modemChain.readQueue.mem.get }
+// //  pbus.toVarbleWidthSlave(Some("modemRead")) { modemChain.readQueue.mem.get }
 // }
 
-class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Module {
-  val io = IO(???)
+class TX[T<:Data:Real:BinaryRepresentation](val txParams: TXParams[T]) extends Module {
+  val io = IO(new Bundle{
+    val in = Decoupled(Vec(36, UInt(1.W)))
+    val out = Flipped(Decoupled(IQBundle(txParams.iqBundleParams)))
+  })
+  ???
+  // encoder
+  // modulator
+  // ifft
+  // cyclic prefix
+  // raised cosine fir
 }
 
 class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real](
-  val iqBundleParams: IQBundleParams[T],
-  val pktDetectParams: PacketDetectParams[T],
-  val cyclicPrefixParams: CyclicPrefixParams[T],
-  val equalizerParams: EqualizerParams[T],
-  val cfoParams: CFOParams[T],
-  val fftParams: FFTParams[T],
-  val bitsBundleParams: BitsBundleParams[U],
-  val demodParams: DemodulationParams[T,U],
-  val viterbiParams: CodingParams[V],
+  rxParams: RXParams[T, U, V]
 ) extends Module {
   val io = IO(new Bundle{
-    val in = Flipped(Decoupled(IQBundle(iqBundleParams)))
+    val in = Flipped(Decoupled(IQBundle(rxParams.iqBundleParams)))
     //val out = Decoupled(BitsBundle(bitsBundleParams))
     val out = Decoupled(Vec(36, UInt(1.W)))
   })
 
-  val phaseRotator = Module( new PhaseRotator(cfoParams) )
-  val pktDetect = Module( new PacketDetect(pktDetectParams) )
-  val cfoEstimator = Module( new CFOCorrection(cfoParams) )
-  val vecToSerial = Module (new SingleVecToSerial(iqBundleParams) )
-  val cyclicPrefix = Module( new CyclicPrefix(cyclicPrefixParams) )
-  val fft = Module( new FFT(fftParams) )
-  val eq = Module( new Equalizer(equalizerParams) )
+  val phaseRotator = Module( new PhaseRotator(rxParams.cfoParams) )
+  val pktDetect = Module( new PacketDetect(rxParams.pktDetectParams) )
+  val cfoEstimator = Module( new CFOCorrection(rxParams.cfoParams) )
+  val vecToSerial = Module (new SingleVecToSerial(rxParams.iqBundleParams) )
+  val cyclicPrefix = Module( new CyclicPrefix(rxParams.cyclicPrefixParams) )
+  val fft = Module( new FFT(rxParams.fftParams) )
+  val eq = Module( new Equalizer(rxParams.equalizerParams) )
   // val cfoPilot = Module( new CFOPilot(cfoParams) )
-  val demod = Module( new Demodulator(demodParams) )
-  val decode = Module( new ViterbiDecoder(viterbiParams) )
+  val demod = Module( new Demodulator(rxParams.demodParams) )
+  val decode = Module( new ViterbiDecoder(rxParams.viterbiParams) )
 
   // Phase Rotation Block
   phaseRotator.io.inIQ <> io.in
@@ -69,7 +70,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   cyclicPrefix.io.add := false.B
 
   // FFT
-  vecToSerial.io.in <> cyclicPrefix.io.out 
+  vecToSerial.io.in <> cyclicPrefix.io.out
   fft.io.in <> vecToSerial.io.out
 
   // EQ
@@ -87,6 +88,16 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   io.out <> decode.io.out
 }
 
+trait HasPeripheryModem extends BaseSubsystem {
+  // Instantiate rx chain
+  val rxChain = LazyModule(new RXThing(FinalRxParams(16, 64, 48)))
+  // Instantiate tx chain
+  val txChain = LazyModule(new TXThing(FinalTxParams(16, 64, 48)))
+  pbus.toVariableWidthSlave(Some("rxWrite")) { rxChain.writeQueue.mem.get }
+  pbus.toVariableWidthSlave(Some("rxRead")) { rxChain.readQueue.mem.get }
+  pbus.toVariableWidthSlave(Some("txWrite")) { txChain.writeQueue.mem.get }
+  pbus.toVariableWidthSlave(Some("txRead")) { txChain.readQueue.mem.get }
+}
 // trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
 //   val foo: Int
 // }

@@ -20,3 +20,5 @@ install:
 
 script:
   - sbt $SBT_ARGS test
+  - cd verisim
+  - make
