@@ -32,21 +32,21 @@ class ScalaFirFilter(taps: Seq[Complex]) {
 
 // Fir
 
-class FIRIO[T <: Data : Ring](params: ModFFTParams[T]) extends Bundle {
+class FIRIO[T <: Data, U <: Data](params: ModFFTParams[T,U]) extends Bundle {
   val in = Flipped(Decoupled(SerialPacketBundle(params)))
   val out = Decoupled(SerialPacketBundle(params))
 
   override def cloneType: this.type = FIRIO(params).asInstanceOf[this.type]
 }
 object FIRIO {
-  def apply[T <: Data : Ring](params: ModFFTParams[T]): FIRIO[T] =
+  def apply[T <: Data, U <: Data](params: ModFFTParams[T,U]): FIRIO[T,U] =
     new FIRIO(params)
 }
 
 
 
 
-class MFir[T <: Data :Real:BinaryRepresentation](val params: ModFFTParams[T]) extends Module {
+class MFir[T <: Data :Real:BinaryRepresentation,U <:Data](val params: ModFFTParams[T,U]) extends Module {
   val io = IO(FIRIO(params))
   val taps = Seq(Complex(1,0),Complex(1,0),Complex(1,0),Complex(1,0))
   val taps1 = taps.map(x=> DspComplex(Real[T].fromDouble(x.real),Real[T].fromDouble(x.imag)))

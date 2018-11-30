@@ -851,7 +851,7 @@ object BitsBundle1b  {
     new BitsBundle1b(params)
 }
 
-class BitsBundle1bt[T<:Data](params: ModFFTParams[T] ) extends Bundle {
+class BitsBundle1bt[T<:Data, U<:Data](params: ModFFTParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
 
@@ -862,7 +862,7 @@ class BitsBundle1bt[T<:Data](params: ModFFTParams[T] ) extends Bundle {
 }
 
 object BitsBundle1bt  {
-  def apply[T <: Data](params: ModFFTParams[T]): BitsBundle1bt[T] =
+  def apply[T <: Data,U <: Data](params: ModFFTParams[T,U]): BitsBundle1bt[T,U] =
     new BitsBundle1bt(params)
 }
 
@@ -928,7 +928,7 @@ object BitsBundle2qam16  {
 
 
 
-class BitsBundle2t[T<:Data](params: ModFFTParams[T] ) extends Bundle {
+class BitsBundle2t[T<:Data,U<:Data](params: ModFFTParams[T,U] ) extends Bundle {
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
 
@@ -939,7 +939,7 @@ class BitsBundle2t[T<:Data](params: ModFFTParams[T] ) extends Bundle {
 }
 
 object BitsBundle2t  {
-  def apply[T <: Data](params: ModFFTParams[T]): BitsBundle2t[T] =
+  def apply[T <: Data,U <: Data](params: ModFFTParams[T,U]): BitsBundle2t[T,U] =
     new BitsBundle2t(params)
 }
 

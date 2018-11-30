@@ -10,7 +10,7 @@ import breeze.linalg.{DenseVector, randomDouble}
 
 
 
-class MFirTester[T <: chisel3.Data](c: MFir[T],tolLSBs: Int = 4) extends DspTester(c) {
+class MFirTester[T <: chisel3.Data, U <:chisel3.Data](c: MFir[T,U],tolLSBs: Int = 4) extends DspTester(c) {
     val goldenModel = new ScalaFirFilter(Seq(Complex(1,0),Complex(1,0),Complex(1,0),Complex(1,0)))
     //poke(c.io.consts(0), Complex(1,0))
     //poke(c.io.consts(1), Complex(1,0))
