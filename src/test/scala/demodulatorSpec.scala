@@ -15,10 +15,11 @@ import scala.collection.mutable.ListBuffer
 
 
 
-class demodulatorSpec extends FlatSpec with Matchers {
+class DemodulatorSpec extends FlatSpec with Matchers {
   behavior of "BPSKDemodulator"
   val paramsbpskdemodh = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
+     dataBinaryPoint = 13,
      width = 64,
      hsmod = 1,
      bitsWidth = 48,
@@ -26,7 +27,8 @@ class demodulatorSpec extends FlatSpec with Matchers {
      Nbpsc = 1
   )
   val paramsbpskdemods = SoftDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
+     dataBinaryPoint = 13,
      width = 64,
      hsmod = 0,
      bitsWidth = 48,
@@ -40,25 +42,25 @@ class demodulatorSpec extends FlatSpec with Matchers {
   val inpc = DenseVector.fill(5)(Complex(0.5, 0.5))
   val inpt1 = Seq.fill(18)(1)
   val inpt2 =  Seq.fill(12)(0)
-  
+
   val inp = DenseVector.vertcat(inp0,inpa,inp0,inpb,inp0,inpc,inp00,inpc,inp0,inpb,inp0,inpa)
   val inp1 = inpt1 ++inpt2++inpt1
   val inpe1 = new ListBuffer[Int]()//Seq[Int]()
   val inpe2 = Seq.fill(6)(1)++Seq.fill(4)(0)
   val s=1
   for (j <- 0 until 48) {
-      val iter = s*floor(j/s)+(j+floor(16* j/48)) %s 
+      val iter = s*floor(j/s)+(j+floor(16* j/48)) %s
       //print("iter=",iter)
-    
+
     }
    for (i <- 0 until 48) {
-    
+
       val iter1 =( 16*i -(48 -1)* floor(16* i/48) )
       inpe1 += iter1
-      
+
    }
     //print("inpe1=",inpe1)
-   
+
 
   //BPSKDemodTester(paramsbpskdemodh)
   //BPSKDemodTester1(paramsbpskdemodh)
@@ -67,7 +69,8 @@ class demodulatorSpec extends FlatSpec with Matchers {
 
   behavior of "Serilizer"
   val paramsser = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
+     dataBinaryPoint = 13,
      width = 64,
      hsmod =1,
      bitsWidth = 48,
@@ -77,7 +80,8 @@ class demodulatorSpec extends FlatSpec with Matchers {
   //SermTester(paramsser)
   behavior of "Serilizer1"
   val paramsser1 = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
+     dataBinaryPoint = 13,
      width = 64,
      hsmod = 1,
      bitsWidth = 48,
@@ -87,7 +91,8 @@ class demodulatorSpec extends FlatSpec with Matchers {
   //Serm1Tester(paramsser1)
   behavior of "Serilizerms1"
   val paramssers1 = SoftDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
+     dataBinaryPoint = 13,
      width = 64,
      hsmod =0,
      bitsWidth = 48,
@@ -98,7 +103,8 @@ class demodulatorSpec extends FlatSpec with Matchers {
 
    behavior of "QPSKDEMOD"
   val paramsqpskdemodh = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
+     dataBinaryPoint = 13,
      width = 64,
      hsmod = 1,
      bitsWidth = 48,
@@ -106,7 +112,8 @@ class demodulatorSpec extends FlatSpec with Matchers {
      Nbpsc = 2
   )
   val paramsqpskdemods = SoftDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
+     dataBinaryPoint = 13,
      width = 64,
      hsmod = 0,
      bitsWidth = 48,
@@ -118,7 +125,8 @@ class demodulatorSpec extends FlatSpec with Matchers {
   //QPSKDemodSer1sTester(paramsqpskdemods)
    behavior of "QAM16DEMOD"
   val paramsqam16demodh = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
+     dataBinaryPoint = 13,
      width = 64,
      hsmod = 1,
      bitsWidth = 48,
@@ -126,14 +134,15 @@ class demodulatorSpec extends FlatSpec with Matchers {
      Nbpsc = 4
   )
   val paramsqam16demods = SoftDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
+     dataBinaryPoint = 13,
      width = 64,
      hsmod = 0,
      bitsWidth = 48,
      Ncbps = 192,
      Nbpsc = 4
   )
-  
+
   //QAM16DemodSerTester(paramsqam16demodh)
   //QAM16DemodSer1Tester(paramsqam16demodh)
   //QAM16DemodSer1sTester(paramsqam16demods)

@@ -2,7 +2,7 @@ base_dir=$(abspath ..)
 sim_dir=$(abspath .)
 
 MODEL ?= TestHarness
-PROJECT ?= cordic
+PROJECT ?= modem
 CFG_PROJECT ?= freechips.rocketchip.system
 CONFIG ?= DefaultConfig
 
