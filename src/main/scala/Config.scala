@@ -42,13 +42,13 @@ object FinalRxParams {
                 val prefixLength = nfft/4
                 val symbolLength = nfft
             }
-            val equalizerParams = FixedEqualizerParams(width,
+            val equalizerParams = FixedEqualizerParams(width, binaryPoint=width-3,
                 carrierMask=Seq.fill(1)(false) ++ Seq.fill(26)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(6)(false) ++ Seq.fill(27)(true),
                 nSubcarriers=nfft)
             val cfoParams = FixedCFOParams(width=1, iqWidth=width, stLength=160,
                                            ltLength=160, preamble=true, stagesPerCycle=1)
             val fftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
-                                           numPoints = 2, binPoint = 3)
+                                           numPoints = nfft, binPoint = width - 3)
             val bitsBundleParams = BitsBundleParams(nBitPerSymbol, SInt(2.W))
             val demodParams = HardDemodParams(width=nfft, dataWidth=width, dataBinaryPoint=width - 3, bitsWidth=nBitPerSymbol,
                                               Nbpsc=1, Ncbps=nBitPerSymbol, hsmod=1)
