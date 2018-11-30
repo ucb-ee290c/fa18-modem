@@ -7,91 +7,179 @@ import dsptools.numbers._
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
-// TODO: zero-flush bufInterleaver when all the packets are properly received
-class DePuncturing[T <: Data](params: CodingParams[T]) extends Module {
-  val io = IO(new Bundle {
-    val in_hard   = Input(Vec(params.O, SInt(2.W)))
-//    val in_soft   = Input(Vec(params.O, DspComplex(FixedPoint(2.W, 30.BP))))
-    val out_hard  = Output(Vec(params.n, SInt(2.W)))
-//    val out_soft  = Output(Vec(params.n, DspComplex(FixedPoint(2.W, 30.BP))))
-    val inReady   = Input(UInt(1.W))
+// Written by Kunmo Kim : kunmok@berkeley.edu
+// Description: de-puncturing block for Viterbi decoder
+class DePuncturing[T <: Data: Real](params: CodingParams[T]) extends Module {
+//  require((params.n * params.H) <= params.n * params.H)
+  val io = IO(new Bundle{
 
-    val stateIn   = Input(UInt(2.W))
-    val stateOut  = Output(UInt(2.W))
+    val hdrPktLatch = Output(Bool())
+
+    val in          = Flipped(Decoupled(BitsBundle(params)))      // from Demod
+    val in_hard     = Input(Vec(params.n * params.H, SInt(2.W)))  // from Demod
+    val isHead      = Input(Bool())                               // from arbiter
+    val hdrEnd      = Input(Bool())                               // from arbiter
+    val headInfo    = Flipped(Decoupled(DecodeHeadBundle()))      // from Head Extractor
+
+    val outData     = Output(Vec(params.n, SInt(2.W)))            // to PathMetric
+    val outHead     = Output(Vec(params.n * params.H, SInt(2.W))) // to HeadExtractor
+    val lenCnt      = Output(Bool())                              // to arbiter
+    val outEnable   = Output(Bool())                              // to PathMetric
   })
+  val puncMatBitWidth     = RegInit(0.U(4.W))
+  val punctureVecReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U(1.W))))))  // support up to 7/8 coding rate
+  val puncIndicesReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U((log2Ceil(params.n * params.H)+1).W))))))
+  val puncListColSumReg   = RegInit(VecInit(Seq.fill(7)(0.U((log2Ceil(params.n+1)).W))))
+  val headInfoReady       = RegInit(true.B)
+  /*
+    R1-R4 | Rate (Mb/s) | Puncturing Matrix
+    1101  | 6           | 1/2
+    1111  | 9           | 3/4
+    0101  | 12          | 1/2
+    0111  | 18          | 3/4
+    1001  | 24          | 1/2
+    1011  | 36          | 3/4
+    0001  | 48          | 2/3
+    0011  | 54          | 3/4
 
-  val o_cnt             = RegInit(0.U(log2Ceil(params.O).W))              // counter for data vector tracker
-  val p_cnt             = RegInit(0.U(log2Ceil(params.O).W))              // counter for outReg tracker
-  val bufInterleaver    = RegInit(VecInit(Seq.fill(params.n)(0.S(2.W))))  // buffer for interleaver
-  val puncMatBitWidth   = CodingUtils.findMinBitWidth(params.punctureMatrix)
-
-  val punctureList      = CodingUtils.dec2bitarray(params.punctureMatrix, puncMatBitWidth)
-  val punctureVec       = Wire(Vec(params.n, Vec(puncMatBitWidth, UInt(1.W))))
-  (0 until params.n).map(i => {
-    (0 until puncMatBitWidth).map(j => {
-      punctureVec(i)(j) := (punctureList(i)(j)).U
-    })
-  })
-
-  // puncListColSum contains summation over rows
-  // ex) [1,1,0], [1,0,1] -> [2,1,1]
-  val puncListColSum      = punctureList.map(breeze.linalg.Vector(_)).reduce(_ + _)
-  val puncListColSumWire  = Wire(Vec(puncMatBitWidth, UInt((log2Ceil(params.n+1)).W)))
-  (0 until puncMatBitWidth).map(i => { puncListColSumWire(i) := puncListColSum(i).U })
-
-  // puncIndices contains buffer address offset
-  // ex) [1,1,0],[1,0,1] -> [1,1,0],[2,1,1] : accumulate over rows
-  val puncIndices       = punctureList.scanLeft(Array.fill(punctureList(0).length)(0)) ((x,y) =>
-    x.zip(y).map(e => e._1 + e._2)).drop(1)
-  // convert this to chisel-usable variable using vector of wires
-  val puncIndicesWire   = Wire(Vec(params.n, Vec(puncMatBitWidth, UInt((log2Ceil(params.O)+1).W))))
-  (0 until params.n).map(i => {
-    (0 until puncMatBitWidth).map(j => {
-      puncIndicesWire(i)(j) := puncIndices(i)(j).U
-    })
-  })
-
-  // Make states for state machine
-  val sStartRecv  = 0.U(2.W)        // start taking input bits
-  val sEOS        = 1.U(2.W)
-  val sDone       = 2.U(2.W)
-  val stateWire   = Wire(UInt(2.W))
-  stateWire := io.stateIn
-
-  // puncturing Matrix: [1,1,0],[1,0,1]
-  // Input Matrix: [A0,A1,A2], [B0, B1, B2] -> Output Matrix: [A0, B0, A1, B2]
-  when(io.stateIn =/= sDone && io.inReady === 1.U){
-    when(params.punctureEnable.B === true.B) {    // if puncturing is enabled,
-      for (i <- 0 until params.n) {
-        when(punctureVec((o_cnt+i.U) % params.n.U)((o_cnt / params.n.U) % puncMatBitWidth.U) === 1.U) {
-          bufInterleaver(i.U) := io.in_hard(p_cnt - 1.U + puncIndicesWire((o_cnt+i.U) % params.n.U)(((o_cnt+i.U) / params.n.U) % puncMatBitWidth.U))
-          // o_cnt + i.U / params.n.U % puncMatBitWidth.U must reach to puncMatBitWidth.U-1
-        }.otherwise{
-          bufInterleaver(i.U) := 0.S
-        }
-      }
-      p_cnt := p_cnt + puncListColSumWire((o_cnt/params.n.U) % puncMatBitWidth.U)
-      o_cnt := o_cnt + params.n.U
-      when(p_cnt >= (params.O.U - puncListColSumWire((o_cnt/params.n.U) % puncMatBitWidth.U))) {
-        stateWire := sDone
-        p_cnt := 0.U
-      }
-      when((o_cnt >= (params.O - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth.U) === (puncMatBitWidth.U -1.U))) {
-        o_cnt := 0.U
-      }
-    }.otherwise{                                  // no puncturing
-      (0 until params.n).map(i => { bufInterleaver(i.U) := io.in_hard(o_cnt + i.U) })
-      o_cnt := o_cnt + params.n.U
-      when(o_cnt === (params.O - params.n).U) {
-        stateWire := sDone
-      }
-      when(o_cnt >= (params.O - params.n).U){
-        o_cnt := 0.U
-      }
+    1/2 -> 0.U  ->  nand(R1,R2) && !R3 && R4
+    2/3 -> 1.U  ->  !R1 && !R2 && !R3 && R4
+    3/4 -> 2.U  ->  R3 && R4
+   */
+  // re-configure registers for puncturing
+  when(io.headInfo.fire() === true.B){
+    when( ((io.headInfo.bits.rate(0).toBool() || io.headInfo.bits.rate(1).toBool()) && !io.headInfo.bits.rate(2).toBool() && io.headInfo.bits.rate(3).toBool()) === true.B)
+    { // rate = 1/2
+      puncMatBitWidth := 1.U
+      (0 until params.n).map(i => {
+        (0 until 2).map(j => {
+          punctureVecReg(i)(j) := (CodingVariables.punctureList1(i)(j)).U
+          puncIndicesReg(i)(j) := CodingVariables.puncIndices1(i)(j).U
+        })
+      })
+      (0 until 2).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum1(i).U })
+    }.elsewhen( (!io.headInfo.bits.rate(0).toBool() && !io.headInfo.bits.rate(1).toBool() && !io.headInfo.bits.rate(2).toBool() && io.headInfo.bits.rate(3).toBool()) === true.B)
+    { // rate = 2/3
+      puncMatBitWidth := 2.U
+      (0 until params.n).map(i => {
+        (0 until 2).map(j => {
+          punctureVecReg(i)(j) := (CodingVariables.punctureList2(i)(j)).U
+          puncIndicesReg(i)(j) := CodingVariables.puncIndices2(i)(j).U
+        })
+      })
+      (0 until 2).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum2(i).U })
+    }.elsewhen( (io.headInfo.bits.rate(2).toBool() && io.headInfo.bits.rate(3).toBool()) === true.B)
+    { // rate = 3/4
+      puncMatBitWidth := 3.U
+      (0 until params.n).map(i => {
+        (0 until 3).map(j => {
+          punctureVecReg(i)(j) := (CodingVariables.punctureList3(i)(j)).U
+          puncIndicesReg(i)(j) := CodingVariables.puncIndices3(i)(j).U
+        })
+      })
+      (0 until 3).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum3(i).U })
+    }.otherwise
+    { // rate = 1/2
+      puncMatBitWidth := 1.U
+      (0 until params.n).map(i => {
+        (0 until 2).map(j => {
+          punctureVecReg(i)(j) := (CodingVariables.punctureList1(i)(j)).U
+          puncIndicesReg(i)(j) := CodingVariables.puncIndices1(i)(j).U
+        })
+      })
+      (0 until 2).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum1(i).U })
     }
+    headInfoReady := false.B
   }
 
+  val o_cnt         = RegInit(0.U(log2Ceil(params.n * params.H).W))              // counter for data vector tracker
+  val p_cnt         = RegInit(0.U(log2Ceil(params.n * params.H).W))              // counter for outReg tracker
+  val h_cnt         = RegInit(0.U(6.W))
+  val bufData       = RegInit(VecInit(Seq.fill(params.n)(0.S(2.W))))  // buffer for Data
+  val pktLatch      = RegInit(false.B)
+  val pktCntReg     = RegInit(0.U(15.W))
+  val lenCntReg     = RegInit(true.B)
+  val bitCntReg     = RegInit((params.n * params.H).U(log2Ceil(params.n * params.H).W))
+  val enReg         = RegInit(false.B)
+  val inReg         = Reg(Vec(params.n * params.H, SInt(2.W)))
+
+  when(io.in.fire()){
+    inReg := io.in_hard
+    when((io.in.bits.pktStart === true.B) && (pktLatch === false.B)){
+      pktLatch := true.B
+    }
+    bitCntReg   := 0.U
+  }
+  when( (io.in.bits.pktEnd === true.B) && (pktLatch === true.B)){             // lower pktLatch
+    pktLatch := false.B
+  }
+  when(io.isHead === true.B){
+    pktCntReg := 0.U
+  }
+  when(io.isHead === true.B || pktCntReg >= io.headInfo.bits.dataLen || bitCntReg >= (params.n * params.H).U) {
+    enReg := false.B
+  }
+
+  when(pktLatch === true.B && bitCntReg < (params.n * params.H).U) {
+    // hdrEnd triggers one cycle before the end of header block
+    // -> needs to reset o_cnt and p_cnt registers.
+    // -> below may not be necessary if params.n * params.H is set to 96 or higher.
+    // -> but I don't see any reason not to have params.n * params.H fixed at 48 bits.
+    when(io.hdrEnd === true.B) {
+      o_cnt     := 0.U
+      p_cnt     := 0.U
+      enReg     := false.B
+      lenCntReg := false.B
+      bitCntReg := (params.n * params.H).U
+      printf("io.hdrEnd === true \n")
+      // when it starts receiving payload
+    // need to count number of bits it has received.
+    // Once all the data has been received, raise 'lenCntReg' and 'headInfoReady' registers
+    }
+    when(io.isHead === false.B && lenCntReg === false.B){
+      // puncturing Matrix: [1,1,0],[1,0,1]
+      // Input Matrix: [A0,A1,A2], [B0, B1, B2] -> Output Matrix: [A0, B0, A1, B2]
+      for (i <- 0 until params.n) {
+        when(punctureVecReg((o_cnt+i.U) % params.n.U)((o_cnt / params.n.U) % puncMatBitWidth) === 1.U) {
+          bufData(i.U) := inReg(p_cnt - 1.U + puncIndicesReg((o_cnt+i.U) % params.n.U)(((o_cnt+i.U) / params.n.U) % puncMatBitWidth))
+          // o_cnt + i.U / params.n.U % puncMatBitWidth.U must reach to puncMatBitWidth.U-1
+        }.otherwise{          // add dummy bits
+          bufData(i.U) := 0.S
+        }
+      }
+      enReg := true.B
+      p_cnt := p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)
+      o_cnt := o_cnt + params.n.U
+      when(p_cnt >= (params.n * params.H.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
+        p_cnt := 0.U
+      }
+      when((o_cnt >= (params.n * params.H - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
+        o_cnt := 0.U
+      }
+
+      when(pktCntReg < io.headInfo.bits.dataLen){
+        pktCntReg := pktCntReg + 1.U
+      }
+      bitCntReg := bitCntReg + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)    // count # of processed bits
+    }
+  }
+  when(pktCntReg >= io.headInfo.bits.dataLen){                // length counter.
+    lenCntReg := true.B
+    headInfoReady := true.B
+  }
+  printf(p"pktCntReg = ${pktCntReg} \n")
+  printf(p"pktLatch = ${pktLatch} \n")
+  printf(p"bitCntReg = ${bitCntReg} \n")
+  printf(p"lenCntReg = ${lenCntReg} \n")
+  printf(p"enReg = ${enReg} \n")
+  printf(p"io.head = ${io.isHead}\n")
+
   // connect registers to output
-  io.out_hard := bufInterleaver
-  io.stateOut := stateWire
+  io.in.ready       := bitCntReg >= (params.n * params.H).U
+  io.outData        := bufData
+  io.lenCnt         := lenCntReg
+  io.headInfo.ready := headInfoReady
+  io.outHead        := inReg
+  io.hdrPktLatch    := pktLatch
+  io.outEnable      := enReg
 }
