@@ -114,8 +114,8 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   printf(p"survival Path ***HARD = ${survivalPath.read(17.U, en_mem)} \n")
   for(i <- 0 until 17){
     printf(p"addrWire = ${addrWire} \n")
-
   }
+
   printf(p"addrReg + tmpSPReg = ${addrReg + tmpSPReg}} \n")
 
 //  tmpSPReg                  := survivalPath.read(addrReg + tmpSPReg, en_mem)
