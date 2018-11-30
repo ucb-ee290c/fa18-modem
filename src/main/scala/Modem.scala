@@ -90,7 +90,9 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
 
 trait HasPeripheryModem extends BaseSubsystem {
   // Instantiate rx chain
-  val rxChain = LazyModule(new RXThing(finalRxParams(16)))
+  val rxChain = LazyModule(new RXThing(FinalRxParams(16)))
+  // Instantiate tx chain
+  val txChain = LazyModule(new TXThing(FinalTxParams(16)))
 }
 // trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
 //   val foo: Int

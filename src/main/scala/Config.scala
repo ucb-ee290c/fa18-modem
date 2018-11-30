@@ -1,9 +1,22 @@
 package modem
 
 import chisel3._
+import chisel3.util._
+import chisel3.experimental.FixedPoint
+import dsptools.numbers._
 
 trait TXParams[T<:Data] {
-    val width: Int
+    val iqBundleParams: IQBundleParams[T]
+}
+
+object FinalTxParams {
+    def apply(width: Int): TXParams[FixedPoint] = {
+        val fixedIQ = DspComplex(FixedPoint(width.W, (width-3).BP))
+        val txParams = new TXParams[FixedPoint] {
+            val iqBundleParams = IQBundleParams(fixedIQ)
+        }
+        txParams
+    }
 }
 
 trait RXParams[T<:Data, U<:Data, V<:Data] {
@@ -18,14 +31,14 @@ trait RXParams[T<:Data, U<:Data, V<:Data] {
   val viterbiParams: CodingParams[V]
 }
 
-case class FinalRxParams {
+object FinalRxParams {
     def apply(width: Int): RXParams[FixedPoint, UInt, UInt] = {
-        val protoIQ = DspComplex(FixedPoint(width.W, (width-3).BP))
+        val fixedIQ = DspComplex(FixedPoint(width.W, (width-3).BP))
         val rxParams = new RXParams[FixedPoint, UInt, UInt] {
-            val iqBundleParams = IQBundleParams(protoIQ)
+            val iqBundleParams = IQBundleParams(fixedIQ)
             val pktDetectParams = FixedPacketDetectParams(width)
             val cyclicPrefixParams = new CyclicPrefixParams[FixedPoint] {
-                val protoIQ = protoIQ
+                val protoIQ = fixedIQ
                 val prefixLength = 16
                 val symbolLength = 64
             }

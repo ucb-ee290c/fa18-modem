@@ -153,7 +153,9 @@ class TLReadQueue
   * @tparam EO
   * @tparam EI
   * @tparam B
-  * @tparam T Type parameter for cordic, i.e. FixedPoint or DspReal
+  * @tparam T Type parameter for rx data type
+  * @tparam U Type parameter for rx data type
+  * @tparam V Type parameter for rx data type
   */
 abstract class RXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real]
 (
@@ -186,12 +188,14 @@ abstract class RXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentatio
 
 /**
   * TLDspBlock specialization of CordicBlock
-  * @param rxParams parameters for cordic
+  * @param rxParams parameters for rx
   * @param ev$1
   * @param ev$2
   * @param ev$3
   * @param p
-  * @tparam T Type parameter for cordic data type
+  * @tparam T Type parameter for rx data type
+  * @tparam U Type parameter for rx data type
+  * @tparam V Type parameter for rx data type
   */
 class TLRXBlock[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real]
 (
@@ -203,13 +207,15 @@ class TLRXBlock[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresenta
 /**
   * TLChain is the "right way" to do this, but the dspblocks library seems to be broken.
   * In the interim, this should work.
-  * @param cordicParams parameters for cordic
+  * @param rxParams parameters for rx
   * @param depth depth of queues
   * @param ev$1
   * @param ev$2
   * @param ev$3
   * @param p
-  * @tparam T Type parameter for cordic, i.e. FixedPoint or DspReal
+  * @tparam T Type parameter for rx data type
+  * @tparam U Type parameter for rx data type
+  * @tparam V Type parameter for rx data type
   */
 class RXThing[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real]
 (
@@ -223,6 +229,92 @@ class RXThing[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentati
 
   // connect streamNodes of queues and cordic
   readQueue.streamNode := rx.streamNode := writeQueue.streamNode
+
+  lazy val module = new LazyModuleImp(this)
+}
+
+/**
+  * Make DspBlock wrapper for TX
+  * @param txParams parameters for tx
+  * @param ev$1
+  * @param ev$2
+  * @param ev$3
+  * @param p
+  * @tparam D
+  * @tparam W
+  * @tparam EO
+  * @tparam EI
+  * @tparam B
+  * @tparam T Type parameter for tx, i.e. FixedPoint or DspReal
+  */
+abstract class TXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentation]
+(
+  val txParams: TXParams[T]
+)(implicit p: Parameters) extends DspBlock[D, W, EO, EI, B] {
+  val streamNode = AXI4StreamIdentityNode()
+  val mem = None
+
+  lazy val module = new LazyModuleImp(this) {
+    require(streamNode.in.length == 1)
+    require(streamNode.out.length == 1)
+
+    val in = streamNode.in.head._1
+    val out = streamNode.out.head._1
+
+    val descriptorWidth: Int = IQBundle(txParams.iqBundleParams).getWidth
+    require(descriptorWidth <= in.params.n * 8, "Streaming interface too small")
+
+    val tx = Module (new TX(txParams))
+    // Connect input queue
+    tx.io.in.bits := in.bits.data.asTypeOf(Vec(36, UInt(1.W)))
+    tx.io.in.valid := in.valid
+    in.ready := tx.io.in.ready
+    // Connect output queue
+    out.bits.data := tx.io.out.bits.asUInt()
+    out.valid := tx.io.out.valid
+    tx.io.out.ready := out.ready
+  }
+}
+
+/**
+  * TLDspBlock specialization of TXBlock
+  * @param txParams parameters for tx
+  * @param ev$1
+  * @param ev$2
+  * @param ev$3
+  * @param p
+  * @tparam T Type parameter for tx data type
+  */
+class TLTXBlock[T<:Data:Real:BinaryRepresentation]
+(
+  txParams: TXParams[T]
+)(implicit p: Parameters) extends
+  TXBlock[TLClientPortParameters, TLManagerPortParameters, TLEdgeOut, TLEdgeIn, TLBundle, T](txParams)
+  with TLDspBlock
+
+/**
+  * TLChain is the "right way" to do this, but the dspblocks library seems to be broken.
+  * In the interim, this should work.
+  * @param txParams parameters for tx
+  * @param depth depth of queues
+  * @param ev$1
+  * @param ev$2
+  * @param ev$3
+  * @param p
+  * @tparam T Type parameter for tx, i.e. FixedPoint or DspReal
+  */
+class TXThing[T<:Data:Real:BinaryRepresentation]
+(
+  val txParams: TXParams[T],
+  val depth: Int = 8,
+)(implicit p: Parameters) extends LazyModule {
+  // instantiate lazy modules
+  val writeQueue = LazyModule(new TLWriteQueue(depth))
+  val tx = LazyModule(new TLTXBlock(txParams))
+  val readQueue = LazyModule(new TLReadQueue(depth))
+
+  // connect streamNodes of queues and cordic
+  readQueue.streamNode := tx.streamNode := writeQueue.streamNode
 
   lazy val module = new LazyModuleImp(this)
 }
