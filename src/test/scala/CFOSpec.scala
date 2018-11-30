@@ -9,10 +9,12 @@ import org.scalatest.{FlatSpec, Matchers}
 case class CFOTestVectors() {
   val stfTV = IEEE80211.stf
   val ltfTV = IEEE80211.ltf
+  val r = new scala.util.Random
+  val randData = Seq.fill(20){Complex(2*(r.nextFloat)-1, 2*(r.nextFloat)-1)}
 
-  val rawTFTV = stfTV ++ ltfTV
+  val rawTFTV = stfTV ++ ltfTV ++ randData
   val cleanTV = IEEE80211.addCFO(in = rawTFTV, cfo = 0.0, sampleRate = 20.0e6)
-  val cfoTV = IEEE80211.addCFO(in = rawTFTV, cfo = 0.2, sampleRate = 20.0e6)
+  val cfoTV = IEEE80211.addCFO(in = rawTFTV, cfo = 6666, sampleRate = 20.0e6)
   val cfoSTV = IEEE80211.addCFO(in = stfTV, cfo = 5000, sampleRate = 20.0e6)
   val cfoLTV = IEEE80211.addCFO(in = stfTV, cfo = 100, sampleRate = 20.0e6)
 }
@@ -34,84 +36,54 @@ class CFOEstimationSpec extends FlatSpec with Matchers {
   val vecs = CFOTestVectors()
   behavior of "Estimate CFO"
 
-  val fixedCFOParams = FixedCFOParams(iqWidth = 16)
+  val fixedCFOParams = FixedCFOParams(iqWidth = 32)
 
   //it should "detect no offset" in {
     //val trials = Seq(IQ(vecs.cleanTV, None))
+    //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+  //}
+
+  //it should "detect offset of 0.2" in {
+    //val trials = Seq(IQ(vecs.cfoTV, None))
     //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
   //}
 
   it should "detect offset of 0.2" in {
     val trials = Seq(IQ(vecs.cfoTV, None))
-    FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+    FixedCFOCorrectionTester(fixedCFOParams, trials) should be (true)
   }
 }
 
-class COESpec extends FlatSpec with Matchers {
-  val vecs = CFOTestVectors()
-  behavior of "Coarse Estimation"
+//class COESpec extends FlatSpec with Matchers {
+  //val vecs = CFOTestVectors()
+  //behavior of "Coarse Estimation"
 
-  val fixedCFOParams = FixedCFOParams(iqWidth = 32)
+  //val fixedCFOParams = FixedCFOParams(iqWidth = 32)
 
-  //it should "detect no offset" in {
-    //val trials = Seq(IQ(vecs.cleanTV, None))
-    //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+  ////it should "detect no offset" in {
+    ////val trials = Seq(IQ(vecs.cleanTV, None))
+    ////FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+  ////}
+
+  //it should "detect offset of 5kHz" in {
+    //val trials = Seq(IQ(vecs.cfoSTV, None))
+    //FixedCOETester(fixedCFOParams, trials, 5000) should be (true)
   //}
+//}
 
-  it should "detect offset of 5kHz" in {
-    val trials = Seq(IQ(vecs.cfoSTV, None))
-    FixedCOETester(fixedCFOParams, trials) should be (true)
-  }
-}
+//class FOESpec extends FlatSpec with Matchers {
+  //val vecs = CFOTestVectors()
+  //behavior of "Fine Estimation"
 
-class FOESpec extends FlatSpec with Matchers {
-  val vecs = CFOTestVectors()
-  behavior of "Fine Estimation"
+  //val fixedCFOParams = FixedCFOParams(iqWidth = 32)
 
-  val fixedCFOParams = FixedCFOParams(iqWidth = 32)
+  ////it should "detect no offset" in {
+    ////val trials = Seq(IQ(vecs.cleanTV, None))
+    ////FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+  ////}
 
-  //it should "detect no offset" in {
-    //val trials = Seq(IQ(vecs.cleanTV, None))
-    //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
+  //it should "detect offset of 100Hz" in {
+    //val trials = Seq(IQ(vecs.cfoLTV, None))
+    //FixedFOETester(fixedCFOParams, trials, 100) should be (true)
   //}
-
-  it should "detect offset of 100Hz" in {
-    val trials = Seq(IQ(vecs.cfoLTV, None))
-    FixedFOETester(fixedCFOParams, trials) should be (true)
-  }
-}
-//  behavior of "RealPacketDetect"
-//
-//  val realNoCorrParams = new PacketDetectParams[DspReal] {
-//    val protoIQ = DspComplex(DspReal())
-//    val powerThreshVal: Double = 0.75 // Power threshold
-//    val powerThreshWindow: Int = 4 // Number of samples greater than power in a row before triggering
-//    val correlationThresh: Boolean = false
-//    val correlationThreshVal: Double = 0.75
-//    val correlationWindow: Int = 4 // Number of strided correlations to sum
-//    val correlationStride: Int = 16 // Stride between correlated samples
-//  }
-//  it should "detect power for reals" in {
-//    val trials = Seq(IQ(vecs.tvNoPkt, None),
-//      IQ(vecs.tvPwrOnly, Option(vecs.tvPwrOnlyOut)),
-//      IQ(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
-//    RealPacketDetectTester(realNoCorrParams, trials) should be (true)
-//  }
-//
-//  val realCorrParams = new PacketDetectParams[DspReal] {
-//    val protoIQ = DspComplex(DspReal())
-//    val powerThreshVal: Double = 0.75 // Power threshold
-//    val powerThreshWindow: Int = 4 // Number of samples greater than power in a row before triggering
-//    val correlationThresh: Boolean = true
-//    val correlationThreshVal: Double = 0.75
-//    val correlationWindow: Int = 4 // Number of strided correlations to sum
-//    val correlationStride: Int = 16 // Stride between correlated samples
-//  }
-//  it should "detect power and correlation for reals" in {
-//    val trials = Seq(IQ(vecs.tvNoPkt, None),
-//                    IQ(vecs.tvPwrOnly, None),
-//                    IQ(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
-//    RealPacketDetectTester(realCorrParams, trials) should be (true)
-//  }
-
-
+//}
