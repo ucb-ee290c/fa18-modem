@@ -809,44 +809,45 @@ object DemodulationParams {
 
 case class HardDemodParams(
   // width of Input and Output
-  datawidth: Int,
+  dataWidth: Int,
+  dataBinaryPoint: Int,
   width: Int,
   bitsWidth: Int,
   hsmod: Int,
   Ncbps: Int,
   Nbpsc: Int
  ) extends DemodulationParams[FixedPoint, SInt] {
-  val protoIQ = DspComplex(FixedPoint(datawidth.W, (datawidth-2).BP))
+  val protoIQ = DspComplex(FixedPoint(dataWidth.W, dataBinaryPoint.BP))
   val protoBits = SInt(2.W)
-
 }
 
 case class SoftDemodParams(
   // width of Input and Output
-  datawidth: Int,
+  dataWidth: Int,
+  dataBinaryPoint: Int,
   width: Int,
   bitsWidth: Int,
   hsmod: Int,
   Ncbps: Int,
   Nbpsc: Int
  ) extends DemodulationParams[FixedPoint,FixedPoint] {
-  val protoIQ = DspComplex(FixedPoint(datawidth.W, (datawidth-2).BP))
-  val protoBits = FixedPoint(datawidth.W, (datawidth-2).BP)
+  val protoIQ = DspComplex(FixedPoint(dataWidth.W, dataBinaryPoint.BP))
+  val protoBits = FixedPoint(dataWidth.W, dataBinaryPoint.BP)
 }
 
 
 
 case class FixedDemodParams(
   // width of Input and Output
-  datawidth: Int,
+  dataWidth: Int,
+  dataBinaryPoint: Int,
   width: Int,
   bitsWidth: Int,
   Ncbps: Int,
   Nbpsc: Int
  ) extends DemodParams[FixedPoint] {
-  val protoIQ = DspComplex(FixedPoint(datawidth.W, (datawidth-2).BP))
+  val protoIQ = DspComplex(FixedPoint(dataWidth.W, dataBinaryPoint.BP))
   //val protoBits = SInt(2.W)
-
 }
 
 class Demodulator[T <: Data:Real:BinaryRepresentation,U <: Data:Real:BinaryRepresentation](val params: DemodulationParams[T,U]) extends Module {
