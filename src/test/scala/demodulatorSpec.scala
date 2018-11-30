@@ -18,15 +18,16 @@ import scala.collection.mutable.ListBuffer
 class demodulatorSpec extends FlatSpec with Matchers {
   behavior of "BPSKDemodulator"
   val paramsbpskdemodh = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
      width = 64,
      hsmod = 1,
      dataBinaryPoint = 14,
      bitsWidth = 48
      )
   val paramsbpskdemods = SoftDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
      width = 64,
+     dataBinaryPoint = 14,
      hsmod = 0,
      bitsWidth = 48
        )
@@ -66,7 +67,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
 
   behavior of "Serilizer"
   val paramsser = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
      width = 64,
      hsmod =1,
      dataBinaryPoint = 14,
@@ -77,7 +78,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
   //SermTester(paramsser)
   behavior of "Serilizer1"
   val paramsser1 = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
      width = 64,
      dataBinaryPoint = 14,
      hsmod = 1,
@@ -88,7 +89,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
   //Serm1Tester(paramsser1)
   behavior of "Serilizerms1"
   val paramssers1 = SoftDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
      width = 64,
      hsmod =0,
      dataBinaryPoint = 14,
@@ -100,7 +101,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
 
    behavior of "QPSKDEMOD"
   val paramsqpskdemodh = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
      width = 64,
      hsmod = 1,
      dataBinaryPoint = 14,
@@ -109,7 +110,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
      //Nbpsc = 2
   )
   val paramsqpskdemods = SoftDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
      width = 64,
      hsmod = 0,
      dataBinaryPoint = 14,
@@ -130,7 +131,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
    
    behavior of "QAM16DEMOD"
   val paramsqam16demodh = HardDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
      width = 64,
      hsmod = 1,
      dataBinaryPoint = 14,
@@ -139,7 +140,7 @@ class demodulatorSpec extends FlatSpec with Matchers {
      //Nbpsc = 4
   )
   val paramsqam16demods = SoftDemodParams(
-     datawidth = 16,
+     dataWidth = 16,
      width = 64,
      hsmod = 0,
      dataBinaryPoint = 14,
