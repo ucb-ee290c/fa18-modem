@@ -5,8 +5,8 @@ import chisel3._
 import chisel3.util._
 
 import dsptools.numbers._
-// import freechips.rocketchip.diplomacy.LazyModule
-// import freechips.rocketchip.subsystem.BaseSubsystem
+import freechips.rocketchip.diplomacy.LazyModule
+import freechips.rocketchip.subsystem.BaseSubsystem
 /**
   * Mixin for top-level rocket to add a modem
   *
@@ -22,29 +22,38 @@ import dsptools.numbers._
 // //  pbus.toVarbleWidthSlave(Some("modemRead")) { modemChain.readQueue.mem.get }
 // }
 
-class TX[T<:Data:Real:BinaryRepresentation](val params: TXParams[T]) extends Module {
-  val io = IO(???)
+class TX[T<:Data:Real:BinaryRepresentation](val txParams: TXParams[T]) extends Module {
+  val io = IO(new Bundle{
+    val in = Decoupled(Vec(36, UInt(1.W)))
+    val out = Flipped(Decoupled(IQBundle(txParams.iqBundleParams)))
+  })
+  ???
+  // encoder
+  // modulator
+  // ifft
+  // cyclic prefix
+  // raised cosine fir
 }
 
-class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real](
-  RXParams[T, U, V]
+class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real](
+  rxParams: RXParams[T, U, V]
 ) extends Module {
   val io = IO(new Bundle{
-    val in = Flipped(Decoupled(IQBundle(iqBundleParams)))
+    val in = Flipped(Decoupled(IQBundle(rxParams.iqBundleParams)))
     //val out = Decoupled(BitsBundle(bitsBundleParams))
     val out = Decoupled(Vec(36, UInt(1.W)))
   })
 
-  val phaseRotator = Module( new PhaseRotator(cfoParams) )
-  val pktDetect = Module( new PacketDetect(pktDetectParams) )
-  val cfoEstimator = Module( new CFOCorrection(cfoParams) )
-  val vecToSerial = Module (new SingleVecToSerial(iqBundleParams) )
-  val cyclicPrefix = Module( new CyclicPrefix(cyclicPrefixParams) )
-  val fft = Module( new FFT(fftParams) )
-  val eq = Module( new Equalizer(equalizerParams) )
+  val phaseRotator = Module( new PhaseRotator(rxParams.cfoParams) )
+  val pktDetect = Module( new PacketDetect(rxParams.pktDetectParams) )
+  val cfoEstimator = Module( new CFOCorrection(rxParams.cfoParams) )
+  val vecToSerial = Module (new SingleVecToSerial(rxParams.iqBundleParams) )
+  val cyclicPrefix = Module( new CyclicPrefix(rxParams.cyclicPrefixParams) )
+  val fft = Module( new FFT(rxParams.fftParams) )
+  val eq = Module( new Equalizer(rxParams.equalizerParams) )
   // val cfoPilot = Module( new CFOPilot(cfoParams) )
-  val demod = Module( new Demodulator(demodParams) )
-  val decode = Module( new ViterbiDecoder(viterbiParams) )
+  val demod = Module( new Demodulator(rxParams.demodParams) )
+  val decode = Module( new ViterbiDecoder(rxParams.viterbiParams) )
 
   // Phase Rotation Block
   phaseRotator.io.inIQ <> io.in
@@ -81,7 +90,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real](
 
 trait HasPeripheryModem extends BaseSubsystem {
   // Instantiate rx chain
-  val rxChain = LazyModule(new RXThing())
+  val rxChain = LazyModule(new RXThing(finalRxParams(16)))
 }
 // trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
 //   val foo: Int

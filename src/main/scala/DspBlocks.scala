@@ -155,7 +155,7 @@ class TLReadQueue
   * @tparam B
   * @tparam T Type parameter for cordic, i.e. FixedPoint or DspReal
   */
-abstract class RXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real]
+abstract class RXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real]
 (
   val rxParams: RXParams[T, U, V]
 )(implicit p: Parameters) extends DspBlock[D, W, EO, EI, B] {
@@ -174,7 +174,7 @@ abstract class RXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentatio
 
     val rx = Module (new RX(rxParams))
     // Connect input queue
-    rx.io.in.bits := in.bits.data.asTypeOf(IQBundle(iqBundleParams))
+    rx.io.in.bits := in.bits.data.asTypeOf(IQBundle(rxParams.iqBundleParams))
     rx.io.in.valid := in.valid
     in.ready := rx.io.in.ready
     // Connect output queue
@@ -193,7 +193,7 @@ abstract class RXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentatio
   * @param p
   * @tparam T Type parameter for cordic data type
   */
-class TLRXBlock[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real]
+class TLRXBlock[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real]
 (
   rxParams: RXParams[T,U,V]
 )(implicit p: Parameters) extends
@@ -211,7 +211,7 @@ class TLRXBlock[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real]
   * @param p
   * @tparam T Type parameter for cordic, i.e. FixedPoint or DspReal
   */
-class RXThing[T<:Data:Real:BinaryRepresentation, U<:Data:Real, V<:Data:Real]
+class RXThing[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real]
 (
   val rxParams: RXParams[T, U, V],
   val depth: Int = 8,
