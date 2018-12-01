@@ -90,9 +90,7 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
   val nTaps = params.sampsPerSymbol * params.symbolSpan + 1
   // Convert taps to fixedpoint
   val doubleTaps = RCTaps(params).tail.reverse ++ RCTaps(params) // TODO: convert to single-sided implementation
-  println(s"double taps $doubleTaps")
   val taps: Seq[T] = doubleTaps map {case x => ConvertableTo[T].fromDouble(x)}
-  println(s"taps symmetric $taps")
   // Push incoming samples through buffer
   val x0 = Wire(params.protoIQ)
   val doShift = Wire(Bool())
