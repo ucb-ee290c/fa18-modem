@@ -32,6 +32,7 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
     val puncMatrix  = Input(Vec(4, UInt(1.W)))
     val out = Decoupled(IQBundle(txParams.iqBundleParams))
   })
+  val serilizer = Module( new BitsSerializer(txParams.serParams) )
   val encoder = Module( new Encoding(txParams.encoderParams) )
   val modulator = Module( new Modulator(txParams.modulatorParams))
   val ifft = Module( new IFFT(txParams.ifftParams) )
