@@ -24,19 +24,26 @@ import freechips.rocketchip.subsystem.BaseSubsystem
 
 class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U]) extends Module {
   val io = IO(new Bundle{
-    val in = Decoupled(Vec(36, UInt(1.W)))
-    val out = Flipped(Decoupled(IQBundle(txParams.iqBundleParams)))
+    val in = Flipped(Decoupled(Vec(48, UInt(1.W))))
+    val pktStart = Input(Bool())
+    val pktEnd = Input(Bool())
+    val mod_ctrl = Input(UInt(2.W))
+    val isHead = Input(Bool())
+    val puncMatrix  = Input(Vec(4, UInt(1.W)))
+    val out = Decoupled(IQBundle(txParams.iqBundleParams))
   })
   val encoder = Module( new Encoding(txParams.encoderParams) )
-   val modulator = Module( new Modulator(txParams.modulatorParams))
+  val modulator = Module( new Modulator(txParams.modulatorParams))
   val ifft = Module( new IFFT(txParams.ifftParams) )
   val cyclicPrefix = Module( new CyclicPrefix(txParams.cyclicPrefixParams) )
   val fir = Module( new RCFilter(txParams.firParams) )
 
   encoder.io.in <> io.in
+  encoder.io.mac.isHead := io.isHead
+  encoder.io.mac.puncMatrix := io.puncMatrix
   //modulator.io.in <> encoder.io.out
   
-  modulator.io.mod_ctrl := 0.U
+  modulator.io.mod_ctrl := io.mod_ctrl
   ifft.io.in <> modulator.io.in
   cyclicPrefix.io.in <> ifft.io.out
   fir.io.in <> cyclicPrefix.io.out
