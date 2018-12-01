@@ -104,20 +104,14 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   // start decoding !
   when(SPcalcCompleted === true.B) {
-    val tmpPMMin          = Wire(Vec(N - 1, UInt(pmBits.W)))
-    val tmpPMMinIndex     = Wire(Vec(N - 1, UInt(m.W)))
-
-    // find minimum in PM
-    tmpPMMin(0)           := Mux(pmRegs(0) < pmRegs(1), pmRegs(0), pmRegs(1))
-    tmpPMMinIndex(0)      := Mux(pmRegs(0) < pmRegs(1), 0.U, 1.U)
-    for (i <- 1 until N - 1) {
-      tmpPMMin(i)         := Mux(tmpPMMin(i - 1) < pmRegs(i + 1), tmpPMMin(i - 1), pmRegs(i + 1))
-      tmpPMMinIndex(i)    := Mux(tmpPMMin(i - 1) < pmRegs(i + 1), tmpPMMinIndex(i - 1), (i + 1).U)
-    }
+    val tmpPMMinIndex = pmRegs.zipWithIndex.map(elem => (elem._1, elem._2.U)).reduceLeft((x, y) => {
+      val comp = x._1 < y._1
+      (Mux(comp, x._1, y._1), Mux(comp, x._2, y._2))
+    })._2
 
     when(counter === (params.n*(H-1)).U){
-      decodeReg(counter/(params.n.U)) := tmpPMMinIndex(N-2) >> (m-1)     // grab the minimum PM
-      tmpSPReg                        := tmpPMMinIndex(N-2)
+      decodeReg(counter/(params.n.U)) := tmpPMMinIndex >> (m-1)     // grab the minimum PM
+      tmpSPReg                        := tmpPMMinIndex
     }.otherwise{
       decodeReg(counter/(params.n.U)) := readMemWire(tmpSPReg) >> (m-1)
       tmpSPReg                        := readMemWire(tmpSPReg)
