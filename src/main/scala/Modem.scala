@@ -28,16 +28,18 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
     val out = Flipped(Decoupled(IQBundle(txParams.iqBundleParams)))
   })
   val encoder = Module( new Encoding(txParams.encoderParams) )
-  // val modulator = Module( new Modulator(txParams.modulatorParams))
+   val modulator = Module( new Modulator(txParams.modulatorParams))
   val ifft = Module( new IFFT(txParams.ifftParams) )
   val cyclicPrefix = Module( new CyclicPrefix(txParams.cyclicPrefixParams) )
   val fir = Module( new RCFilter(txParams.firParams) )
 
   encoder.io.in <> io.in
-  // modulator.io.in <> encoder.io.out
-  // ifft.io.in <> modulator.io.in
-  // cyclicPrefix.io.in <> ifft.io.out
-  // fir.io.in <> cyclicPrefix.io.out
+  //modulator.io.in <> encoder.io.out
+  
+  modulator.io.mod_ctrl := 0.U
+  ifft.io.in <> modulator.io.in
+  cyclicPrefix.io.in <> ifft.io.out
+  fir.io.in <> cyclicPrefix.io.out
 }
 
 class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real](
