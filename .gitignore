@@ -14,3 +14,4 @@ simulator-*
 .vscode/
 *.DS_Store
 *.swp
+*.vim

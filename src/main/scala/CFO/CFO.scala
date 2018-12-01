@@ -38,7 +38,7 @@ class CFOEIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   //val stCounter = Output(UInt(10.W))
   //val giCounter = Output(UInt(10.W))
   //val ltCounter = Output(UInt(10.W))
-  //val curState = Output(UInt(3.W))
+  val curState = Output(UInt(3.W))
 
   override def cloneType: this.type = CFOEIO(params).asInstanceOf[this.type]
 }
@@ -54,7 +54,7 @@ case class FixedCFOParams(
   ltLength: Int = 160,
   giLength: Int = 32,
   preamble: Boolean = true,
-  stagesPerCycle: Int = 8
+  stagesPerCycle: Int = 32
 ) extends CFOParams[FixedPoint] {
   val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP)).cloneType
   val protoXY = FixedPoint(iqWidth.W, (iqWidth-3).BP).cloneType
@@ -80,9 +80,9 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
 
   cordic.io.in.bits.x := io.in.bits.iq.real
   cordic.io.in.bits.y := io.in.bits.iq.imag
-  cordic.io.in.bits.z := -io.phiCorrect
+  cordic.io.in.bits.z := io.phiCorrect
   cordic.io.in.bits.vectoring := false.B
-  cordic.io.in.valid := true.B
+  cordic.io.in.valid := io.in.valid
   io.in.ready := cordic.io.in.ready
   io.out.bits.iq.real := cordic.io.out.bits.x
   io.out.bits.iq.imag := cordic.io.out.bits.y
@@ -270,8 +270,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 
     val curState = RegInit(UInt(3.W), idle)
     val nxtState = Wire(UInt(3.W))
-    val coarseOffset = RegEnable(next=coe.io.out.bits, init=ConvertableTo[T].fromDouble(0), enable=coe.io.out.valid)
-    val fineOffset = RegEnable(next=foe.io.out.bits, init=ConvertableTo[T].fromDouble(0), enable=foe.io.out.valid)
+    val coarseOffset = RegEnable(next=coe.io.out.bits, init=ConvertableTo[T].fromDouble(0.0), enable=coe.io.out.valid)
+    val fineOffset = RegEnable(next=foe.io.out.bits, init=ConvertableTo[T].fromDouble(0.0), enable=foe.io.out.valid)
 
     //val stMul = Wire(params.protoIQ)
     //val stAcc = Reg(params.protoIQ)
@@ -313,6 +313,7 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     //   true
     // }
 
+    //fineOffset := ConvertableTo[T].fromDouble(0.0)
     io.in.ready := estimatorReady
     io.out.valid := cordic.io.out.valid
     io.out.bits.pktStart := nxtState === lt && RegNext(!(nxtState === lt))
@@ -370,7 +371,7 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
      foe.io.in.valid := false.B
 
      nxtState := idle
-     //io.curState := curState
+     io.curState := curState
 
     //stMul := (delayIQByST.conj() * io.in.bits.iq(0))
     //ltMul := (delayIQByLT.conj() * io.in.bits.iq(0))
@@ -503,6 +504,7 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     val pErr = Output(params.protoZ)
     val cErr = Output(params.protoZ)
     val fErr = Output(params.protoZ)
+    val curState = Output(UInt(3.W))
   })
 
   val phaseRotator = Module( new PhaseRotator(params) )
@@ -514,53 +516,54 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
   phaseRotator.io.phiCorrect := cfoEstimator.io.pErr
   cfoEstimator.io.in.valid := phaseRotator.io.out.valid
   phaseRotator.io.out.ready := cfoEstimator.io.in.ready
-  cfoEstimator.io.in.bits.pktStart := io.in.bits.pktStart
-  cfoEstimator.io.in.bits.pktEnd := io.in.bits.pktEnd
+  cfoEstimator.io.in.bits.pktStart := ShiftRegister(io.in.bits.pktStart, params.nStages)
+  cfoEstimator.io.in.bits.pktEnd := ShiftRegister(io.in.bits.pktEnd, params.nStages)
   cfoEstimator.io.in.bits.iq(0) := phaseRotator.io.out.bits.iq
   io.out <> cfoEstimator.io.out
   io.pErr := cfoEstimator.io.pErr
   io.cErr := cfoEstimator.io.cErr
   io.fErr := cfoEstimator.io.fErr
   io.prOut := phaseRotator.io.out.bits.iq
+  io.curState := cfoEstimator.io.curState
 
  }
-//class COEWrapper[T<:chisel3.Data:Real:ConvertableTo:BinaryRepresentation](val params: CFOParams[T], stLength: Int) extends Module {
-  //val io = IO(new Bundle{
-    //val in = Flipped(Decoupled(params.protoIQ))
+class COEWrapper[T<:chisel3.Data:Real:ConvertableTo:BinaryRepresentation](val params: CFOParams[T], stLength: Int) extends Module {
+  val io = IO(new Bundle{
+    val in = Flipped(Decoupled(params.protoIQ))
     //val stMul = Output(params.protoIQ)
     //val stAcc = Output(params.protoIQ)
     //val delayIQ = Output(params.protoIQ)
     //val delayValid = Output(Bool())
-    //val cordicIn = Output(CordicBundle(params))
-    //val cordicInVal = Output(Bool())
-    //val cordicOut = Output(CordicBundle(params))
-    //val cordicOutVal = Output(Bool())
-    //val out = Decoupled(params.protoZ)
-    //})
+    val cordicIn = Output(CordicBundle(params))
+    val cordicInVal = Output(Bool())
+    val cordicOut = Output(CordicBundle(params))
+    val cordicOutVal = Output(Bool())
+    val out = Decoupled(params.protoZ)
+    })
 
-  //val cordic = Module (new IterativeCordic[T](params))
-  //val coe = Module (new CoarseOffsetEstimator[T](params, stLength))
+  val cordic = Module (new IterativeCordic[T](params))
+  val coe = Module (new CoarseOffsetEstimator[T](params, stLength))
 
   
-  //cordic.io.in.bits := coe.io.cordicIn.bits
-  //cordic.io.out.ready := coe.io.cordicOut.ready
-  //cordic.io.in.valid := coe.io.cordicIn.valid
-  //coe.io.cordicOut.bits := cordic.io.out.bits
-  //coe.io.out.ready := io.out.ready
-  //coe.io.cordicIn.ready := cordic.io.in.ready
-  //coe.io.cordicOut.valid := cordic.io.out.valid
+  cordic.io.in.bits := coe.io.cordicIn.bits
+  cordic.io.out.ready := coe.io.cordicOut.ready
+  cordic.io.in.valid := coe.io.cordicIn.valid
+  coe.io.cordicOut.bits := cordic.io.out.bits
+  coe.io.out.ready := io.out.ready
+  coe.io.cordicIn.ready := cordic.io.in.ready
+  coe.io.cordicOut.valid := cordic.io.out.valid
 
-  //coe.io.in <> io.in
+  coe.io.in <> io.in
   //io.stMul := coe.io.stMul
   //io.stAcc := coe.io.stAcc
   //io.delayIQ := coe.io.delayIQ
   //io.delayValid := coe.io.delayValid
-  //io.cordicIn := coe.io.cordicIn.bits
-  //io.cordicInVal := coe.io.cordicIn.valid
-  //io.cordicOut := cordic.io.out.bits
-  //io.cordicOutVal := cordic.io.out.valid
-  //io.out <> coe.io.out
-//}
+  io.cordicIn := coe.io.cordicIn.bits
+  io.cordicInVal := coe.io.cordicIn.valid
+  io.cordicOut := cordic.io.out.bits
+  io.cordicOutVal := cordic.io.out.valid
+  io.out <> coe.io.out
+}
 
 //class FOEWrapper[T<:chisel3.Data:Real:ConvertableTo:BinaryRepresentation](val params: CFOParams[T], ltLength: Int) extends Module {
   //val io = IO(new Bundle{
