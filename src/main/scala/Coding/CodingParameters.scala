@@ -74,6 +74,31 @@ case class HardCoding(
   val numInputs   = math.pow(2.0, k.asInstanceOf[Double]).asInstanceOf[Int]
   val pmBits = 5
 }
+
+case class HardEncoding(
+  k: Int = 1,
+  n: Int = 2,
+  K: Int = 3,
+  L: Int = 40,
+  O: Int = 48,
+  D: Int = 36,                            // D needs to be larger than 4 in current architecture
+  H: Int = 24,                            // Header length after encoding
+  genPolynomial: List[Int] = List(7, 5),  // generator polynomial
+  //  CodingScheme: Int = 0,
+  //  fbPolynomial: List[Int] = List(0),
+  tailBitingEn: Boolean = false,
+  tailBitingScheme: Int = 0,
+  protoBitsWidth: Int = 16,
+  bitsWidth: Int = 48,
+  softDecision: Boolean = false,
+) extends CodingParams[UInt] {
+  val protoBits = UInt(1.W)
+  val m = K - 1
+  val nStates = math.pow(2.0, m.asInstanceOf[Double]).asInstanceOf[Int]
+  val numInputs   = math.pow(2.0, k.asInstanceOf[Double]).asInstanceOf[Int]
+  val pmBits = 5
+}
+
 class MACctrl[T <: Data](params: CodingParams[T]) extends Bundle {
   val isHead      = Input(Bool())                   // indicate whether the current block is header
   val puncMatrix  = Input(Vec(4, UInt(1.W)))        // from MAC layer
