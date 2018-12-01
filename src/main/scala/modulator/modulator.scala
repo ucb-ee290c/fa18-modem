@@ -3,17 +3,13 @@ package modem
 
 import chisel3._
 import chisel3.experimental.FixedPoint
-import chisel3.experimental.withClock
 import chisel3.util.Decoupled
 import chisel3.util._
 //import chisel3.core.data
 import dsptools.numbers._
-import breeze.numerics.{atan, pow, sqrt, abs,floor}
-import breeze.numerics.constants.{Pi}
+import breeze.numerics.floor
 
 import dsptools.numbers._
-import freechips.rocketchip.diplomacy.LazyModule
-import freechips.rocketchip.subsystem.BaseSubsystem
 
 
 
@@ -362,8 +358,6 @@ object BitsBundle2tqam  {
   def apply[T <: Data, U <: Data](params: ModFFTParams[T,U]): BitsBundle2tqam[T,U] =
     new BitsBundle2tqam(params)
 }
-
-
 
 
 //-- Interleaver modify2(48bits input: Nbpsc = 1)

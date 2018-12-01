@@ -6,8 +6,6 @@ import chisel3.util._
 
 import dsptools.numbers._
 
-import scala.math._
-
 /**
  * Base class for Serializer/Deserializer parameters
  *
