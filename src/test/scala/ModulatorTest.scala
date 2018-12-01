@@ -77,7 +77,7 @@ object InterleavTester {
 
 // modulator + FFT tester
 
-class QPSKModFFTTester[T <: chisel3.Data](c: QPSKModFFT[T],inp: Seq[Complex], out: Seq[Complex],pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 5) extends DspTester(c) with HasTesterUtil[QPSKModFFT[T]] {
+class QPSKModFFTTester[T <: chisel3.Data,U <: chisel3.Data](c: QPSKModFFT[T,U],inp: Seq[Complex], out: Seq[Complex],pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 5) extends DspTester(c) with HasTesterUtil[QPSKModFFT[T,U]] {
   poke(c.io.out.ready, 1)
   poke(c.io.in.valid, 1)
 
@@ -129,7 +129,7 @@ object FixedQPSKModFFTTester {
   }
 }
 
-class InterleaverTester[T <: chisel3.Data](c: Interleaver[T]) extends DspTester(c) {
+class InterleaverTester[T <: chisel3.Data,U <: chisel3.Data](c: Interleaver[T,U]) extends DspTester(c) {
     
     poke(c.io.out.ready, 1)
     poke(c.io.in.valid, 1)
@@ -200,7 +200,7 @@ object InterleaverTester {
 }
 
 
-class Interleaverds2Tester[T <: chisel3.Data](c: Interleaverds2[T]) extends DspTester(c) {
+class Interleaverds2Tester[T <: chisel3.Data,U <: chisel3.Data](c: Interleaverds2[T,U]) extends DspTester(c) {
     
     poke(c.io.out.ready, 1)
     poke(c.io.in.valid, 1)
@@ -283,7 +283,7 @@ object Interleaverds2Tester {
     }
   }
 }
-class Interleaverds2bTester[T <: chisel3.Data](c: Interleaverds2b[T]) extends DspTester(c) {
+class Interleaverds2bTester[T <: chisel3.Data,U <: chisel3.Data](c: Interleaverds2b[T,U]) extends DspTester(c) {
     
     poke(c.io.out.ready, 1)
     poke(c.io.in.valid, 1)
@@ -378,7 +378,7 @@ object Interleaverds2bTester {
     }
   }
 }
-class Interleaverds1Tester[T <: chisel3.Data](c: Interleaverds1[T]) extends DspTester(c) {
+class Interleaverds1Tester[T <: chisel3.Data,U <: chisel3.Data](c: Interleaverds1[T,U]) extends DspTester(c) {
     
     poke(c.io.out.ready, 1)
     poke(c.io.in.valid, 1)
@@ -440,7 +440,7 @@ object Interleaverds1Tester {
   }
 }
 
-class Interleaverds1bTester[T <: chisel3.Data](c: Interleaverds1b[T]) extends DspTester(c) {
+class Interleaverds1bTester[T <: chisel3.Data,U <: chisel3.Data](c: Interleaverds1b[T,U]) extends DspTester(c) {
     
     poke(c.io.out.ready, 1)
     poke(c.io.in.valid, 1)
@@ -507,7 +507,7 @@ object Interleaverds1bTester {
 
 
 
-class QPSKCPModTester[T <: chisel3.Data](c: QPSKCPModulator[T],tolLSBs: Int = 2) extends DspTester(c) {
+class QPSKCPModTester[T <: chisel3.Data,U <: chisel3.Data](c: QPSKCPModulator[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -569,7 +569,7 @@ object QPSKCPModTester {
   }
 }
 
-class QPSKCPMod1Tester[T <: chisel3.Data](c: QPSKCPModulator1[T],tolLSBs: Int = 2) extends DspTester(c) {
+class QPSKCPMod1Tester[T <: chisel3.Data,U <: chisel3.Data](c: QPSKCPModulator1[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
@@ -629,11 +629,77 @@ object QPSKCPMod1Tester {
     }
   }
 }
-class QAM16CPMod1Tester[T <: chisel3.Data](c: QAM16CPModulator1[T],tolLSBs: Int = 2) extends DspTester(c) {
+
+class QPSKCPModulatorTester[T <: chisel3.Data,U <: chisel3.Data](c: Modulator[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
     poke(c.io.in.valid, 1)
+    poke(c.io.mod_ctrl,1)
+    
+      // wait until input is accepted
+   for (i <- 0 until 2) {
+      
+    
+    while (!peek(c.io.in.ready)) {
+      
+       step(1)
+      
+      }
+            
+       for (i <- 0 until 48){
+         poke(c.io.in.bits.bits(i), 0)
+       }
+       
+
+       peek(c.io.in.ready)
+       peek(c.io.out.valid)
+       step(1)
+       for (i <- 0 until 48){
+         poke(c.io.in.bits.bits(i), 0)
+       }
+
+       
+
+       peek(c.io.in.ready)
+       peek(c.io.out.valid)
+               
+    
+    while (!peek(c.io.out.valid) ) {
+     
+
+      peek(c.io.in.ready)
+      peek(c.io.out.valid)
+            
+      step(1)
+    }
+      fixTolLSBs.withValue(tolLSBs) {
+      // check every output where we have an expected value
+       for (i <- 0 until 48){
+       //expect(c.io.out.bits.iq(3), Complex(-0.707,0.707)) 
+       //expect(c.io.out.bits.iq(2), Complex(-0.707,0.707)) 
+       //expect(c.io.out.bits.iq(1), Complex(-0.707,0.707))
+       //expect(c.io.out.bits.iq(0), Complex(0.707,0.707))
+
+       expect(c.io.out.bits.iq(i), Complex(-0.707,-0.707)) }
+       
+    }
+   }      
+}
+object QPSKCPModulatorTester {
+  def apply(params: FixedModFFTParams): Boolean = {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Modulator(params)) {
+      c => new QPSKCPModulatorTester(c)
+    }
+  }
+}
+
+class QAM16ModulatorTester[T <: chisel3.Data,U <: chisel3.Data](c: Modulator[T,U],tolLSBs: Int = 2) extends DspTester(c) {
+    
+
+    poke(c.io.out.ready, 1)
+    poke(c.io.in.valid, 1)
+    poke(c.io.mod_ctrl,2)
     
       // wait until input is accepted
    for (i <- 0 until 2) {
@@ -646,18 +712,11 @@ class QAM16CPMod1Tester[T <: chisel3.Data](c: QAM16CPModulator1[T],tolLSBs: Int 
       }
             
      
-    for (i <- 0 until 2) {
-       poke(c.io.in.bits.bits(0), 0)
-       poke(c.io.in.bits.bits(1), 1)
-       peek(c.io.in.ready)
-       peek(c.io.out.valid)
-       step(1)
-      
-    }
-
-    for (i <- 2 until 4) {
-       poke(c.io.in.bits.bits(0), 1)
-       poke(c.io.in.bits.bits(1), 1)
+    
+    for (i <- 0 until 4) {
+       for (i <- 0 until 48){
+           poke(c.io.in.bits.bits(i), 1)}
+       
        peek(c.io.in.ready)
        peek(c.io.out.valid)
        
@@ -680,21 +739,22 @@ class QAM16CPMod1Tester[T <: chisel3.Data](c: QAM16CPModulator1[T],tolLSBs: Int 
     }
       fixTolLSBs.withValue(tolLSBs) {
       // check every output where we have an expected value
-       //for (i <- 0 until 48){
+       for (i <- 0 until 48){
        //expect(c.io.out.bits.iq(3), Complex(-0.707,0.707)) 
        //expect(c.io.out.bits.iq(2), Complex(-0.707,0.707)) 
-       expect(c.io.out.bits.iq(1), Complex(-0.316,-0.316))
-       expect(c.io.out.bits.iq(0), Complex(0.316,0.316))
+       //expect(c.io.out.bits.iq(1), Complex(-0.316,-0.316))
+       expect(c.io.out.bits.iq(i), Complex(0.316,0.316))
 
-       //expect(c.io.out.bits(i), Complex(-0.707,-0.707)) }
+       //expect(c.io.out.bits(i), Complex(0.707,0.707)) 
+       }
        
     }
    }      
 }
-object QAM16CPMod1Tester {
+object QAM16ModulatorTester {
   def apply(params: FixedModFFTParams): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new QAM16CPModulator1(params)) {
-      c => new QAM16CPMod1Tester(c)
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Modulator(params)) {
+      c => new QAM16ModulatorTester(c)
     }
   }
 }
@@ -755,24 +815,25 @@ object SerTester {
   }
 }
 
-class BPSKCPMod1Tester[T <: chisel3.Data](c: BPSKCPModulator1[T],tolLSBs: Int = 2) extends DspTester(c) {
+class BPSKCPModulatorTester[T <: chisel3.Data,U <: chisel3.Data](c: Modulator[T,U],tolLSBs: Int = 2) extends DspTester(c) {
     
 
     poke(c.io.out.ready, 1)
     poke(c.io.in.valid, 1)
+    poke(c.io.mod_ctrl,0)
     
       // wait until input is accepted
    for (i <- 0 until 2) {
-     //for (i <- 0 until 48) {
-        poke(c.io.in.bits.bits(3), 0)
-        poke(c.io.in.bits.bits(2), 1)
-        poke(c.io.in.bits.bits(1), 1)
-        poke(c.io.in.bits.bits(0), 0)
-       //poke(c.io.in.bits.bits(i), 0)
-       peek(c.io.in.ready)
-       peek(c.io.out.valid) 
+     for (i <- 0 until 48) {
+        //poke(c.io.in.bits.bits(3), 0)
+        //poke(c.io.in.bits.bits(2), 1)
+        //poke(c.io.in.bits.bits(1), 1)
+        //poke(c.io.in.bits.bits(0), 0)
+       poke(c.io.in.bits.bits(i), 0) 
       
-    //}  
+    }  
+    peek(c.io.in.ready)
+     peek(c.io.out.valid)
     
     while (!peek(c.io.in.ready)) {
       
@@ -794,21 +855,21 @@ class BPSKCPMod1Tester[T <: chisel3.Data](c: BPSKCPModulator1[T],tolLSBs: Int = 
     }
       fixTolLSBs.withValue(tolLSBs) {
       // check every output where we have an expected value
-       //for (i <- 0 until 48){
-       expect(c.io.out.bits.iq(3), Complex(-1,0)) 
-       expect(c.io.out.bits.iq(2), Complex(1,0)) 
-       expect(c.io.out.bits.iq(1), Complex(1,0))
-       expect(c.io.out.bits.iq(0), Complex(-1,0))
+       for (i <- 0 until 48){
+       //expect(c.io.out.bits.iq(3), Complex(-1,0)) 
+       //expect(c.io.out.bits.iq(2), Complex(1,0)) 
+       //expect(c.io.out.bits.iq(1), Complex(1,0))
+       //expect(c.io.out.bits.iq(0), Complex(-1,0))
 
-      // expect(c.io.out.bits.iq(i), Complex(-1,0)) }
+        expect(c.io.out.bits.iq(i), Complex(-1,0)) }
        
     }
    }      
 }
-object BPSKCPMod1Tester {
+object BPSKCPModulatorTester {
   def apply(params: FixedModFFTParams): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new BPSKCPModulator1(params)) {
-      c => new BPSKCPMod1Tester(c)
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Modulator(params)) {
+      c => new BPSKCPModulatorTester(c)
     }
   }
 }

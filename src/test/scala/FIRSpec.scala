@@ -18,6 +18,7 @@ class FIRSpec extends FlatSpec with Matchers {
  behavior of "Fir"
   val paramsfir =   FixedModFFTParams(
     dataWidth = 20,
+    bitsWidth = 48,
     Ncbps = 8,
     Nbpsc = 4,
     twiddleWidth = 10,
