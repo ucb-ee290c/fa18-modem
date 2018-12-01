@@ -93,7 +93,9 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
   val taps: Seq[T] = doubleTaps map {case x => ConvertableTo[T].fromDouble(x)}
   // Push incoming samples through buffer
   val x0 = Wire(params.protoIQ)
+  x0 := io.in.bits.iq(0)
   val doShift = Wire(Bool())
+  doShift := false.B
   val xn = Seq.fill(taps.length)(Reg(params.protoIQ))
   xn.foldLeft(x0){case (prev, curr) => {
     curr := Mux(doShift, prev, curr)
@@ -108,21 +110,25 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
   // Extra state logic to handle packets
   switch(state) {
     is(sMain) {
+      printf("MAIN\n")
       flushCount := 0.U
+      doShift := io.in.fire()
       state := Mux(io.in.fire() && io.in.bits.pktEnd, sFlush, sMain)
     }
     is(sFlush) {
-      flushCount := flushCount + 1.U
+      printf("FLUSH\n")
+      flushCount := flushCount + io.out.ready
       val zero = Wire(params.protoIQ)
       zero.real := Ring[T].zero
       zero.imag := Ring[T].zero
-      xn(0) := zero
-      state := Mux(io.in.fire() && (flushCount >= taps.length - 1), sMain, sFlush)
+      x0 := zero
+      doShift := io.out.ready
+      state := Mux(io.out.ready && (flushCount >= taps.length - 2), sMain, sFlush)
     }
   }
   // Decoupled logic
   io.out.bits.iq.real := outReal
   io.out.bits.iq.imag := outImag
-  io.out.valid := io.in.fire()
+  io.out.valid := io.in.fire() || (state === sFlush)
   io.in.ready := (state === sMain) && io.out.ready
 }
