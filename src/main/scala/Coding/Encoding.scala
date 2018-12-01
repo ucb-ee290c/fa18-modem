@@ -9,9 +9,10 @@ import chisel3.util._
 // Description: Convolutional encoder + puncturing block
 class EncodingIO[T <: Data](params: CodingParams[T]) extends Bundle {
   val in          = Flipped(Decoupled(UInt(1.W)))
-  val out         = Decoupled(Vec(params.O, UInt(1.W)))
+  val out         = Decoupled(BitsBundle(params))
   val mac         = MACctrl(params)
-
+  val pktStartIn  = Input(Bool())       //TODO: I need to come up with smarter way to process pktStart and pktEnd
+  val pktEndIn    = Input(Bool())
   override def cloneType: this.type = EncodingIO(params).asInstanceOf[this.type]
 }
 object EncodingIO {
@@ -46,7 +47,11 @@ class Encoding[T <: Data](params: CodingParams[T]) extends Module {
   }
 
   // connect registers to output
-  io.out        <> puncturingModule.io.out
+  io.out.bits.pktStart          := true.B
+  io.out.bits.pktEnd            := false.B
+  io.out.bits.bits              := puncturingModule.io.out.bits
+  puncturingModule.io.out.ready := io.out.ready
+  io.out.valid                  := puncturingModule.io.out.valid
   io.in.ready   := state === sStartRecv   // io.out.ready is fired from FIFO sitting b/w interleaver and
 
 }

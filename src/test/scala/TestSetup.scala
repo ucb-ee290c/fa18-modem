@@ -12,6 +12,7 @@ object TestSetup {
   val testerOptionsVerilog = TesterOptions(
     isVerbose = false,
     displayBase = 16,
+    isGenVerilog = true,
     backendName = "verilator"
   )
   val dspTesterOptionsVerilog = new DspTesterOptionsManager {
@@ -24,7 +25,7 @@ object TestSetup {
     dspTesterOptions = dspTesterOptions.copy(
       isVerbose = false
     )
-    testerOptions = testerOptionsFirrtl
-    //testerOptions = testerOptionsVerilog
+    //testerOptions = testerOptionsFirrtl
+    testerOptions = testerOptionsVerilog
   }
 }
