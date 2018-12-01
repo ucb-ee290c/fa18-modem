@@ -13,12 +13,12 @@ class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
     val inReady     = Input(UInt(1.W))
     val isHead      = Input(Bool())                               // from MAC layer
     val puncMatrix  = Input(Vec(4, UInt(1.W)))                    // from MAC layer
-    val out         = Decoupled(Vec(params.O, UInt(1.W)))
+    val out         = Decoupled(Vec(params.bitsWidth, UInt(1.W)))
   })
 
   val puncMatBitWidth     = RegInit(0.U(4.W))
   val punctureVecReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U(1.W))))))  // support up to 7/8 coding rate
-  val puncIndicesReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U((log2Ceil(params.O)+1).W))))))
+  val puncIndicesReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U((log2Ceil(params.bitsWidth)+1).W))))))
   val puncListColSumReg   = RegInit(VecInit(Seq.fill(7)(0.U((log2Ceil(params.n+1)).W))))
 
   /*
@@ -80,9 +80,9 @@ class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
     }
   }
 
-  val o_cnt             = RegInit(0.U(log2Ceil(params.O).W))              // counter for data vector tracker
-  val p_cnt             = RegInit(0.U(log2Ceil(params.O).W))              // counter for outReg tracker
-  val bufInterleaver    = RegInit(VecInit(Seq.fill(params.O)(0.U(1.W))))  // buffer for interleaver
+  val o_cnt             = RegInit(0.U(log2Ceil(params.bitsWidth).W))              // counter for data vector tracker
+  val p_cnt             = RegInit(0.U(log2Ceil(params.bitsWidth).W))              // counter for outReg tracker
+  val bufInterleaver    = RegInit(VecInit(Seq.fill(params.bitsWidth)(0.U(1.W))))  // buffer for interleaver
 
   // Make states for state machine
   val sStartRecv  = 0.U(2.W)        // start taking input bits
@@ -101,17 +101,17 @@ class Puncturing[T <: Data](params: CodingParams[T]) extends Module {
     }
     p_cnt := p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)
     o_cnt := o_cnt + params.n.U
-    when(p_cnt >= (params.O.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
+    when(p_cnt >= (params.bitsWidth.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
       outValid  := true.B
       p_cnt := 0.U
     }
-    when((o_cnt >= (params.O - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
+    when((o_cnt >= (params.bitsWidth - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
       o_cnt := 0.U
     }
   }.elsewhen( io.inReady === 1.U && io.isHead === true.B){    // no puncturing
     (0 until params.n).map(i => { bufInterleaver(o_cnt + i.U) := io.in(i.U) })
     o_cnt := o_cnt + params.n.U
-    when(o_cnt === (params.O - params.n).U) {
+    when(o_cnt === (params.bitsWidth - params.n).U) {
       outValid  := true.B
       o_cnt := 0.U
     }
