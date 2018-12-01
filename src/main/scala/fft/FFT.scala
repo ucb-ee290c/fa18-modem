@@ -82,8 +82,8 @@ case class FixedFFTParams(
  */
 // serial input, serial output
 class SISOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
+  val out = Decoupled(PacketBundle(1, params.protoIQ))
 
   override def cloneType: this.type = SISOIO(params).asInstanceOf[this.type]
 }
@@ -93,8 +93,8 @@ object SISOIO {
 
 // serial input, deserial output
 class SIDOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(DeserialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
+  val out = Decoupled(PacketBundle(params))
 
   override def cloneType: this.type = SIDOIO(params).asInstanceOf[this.type]
 }
@@ -104,8 +104,8 @@ object SIDOIO {
 
 // deserial input, serial output
 class DISOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(DeserialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(params)))
+  val out = Decoupled(PacketBundle(1, params.protoIQ))
 
   override def cloneType: this.type = DISOIO(params).asInstanceOf[this.type]
 }
@@ -115,8 +115,8 @@ object DISOIO {
 
 // deserial input, deserial output
 class DIDOIO[T <: Data : Ring](params: PacketBundleParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(DeserialPacketBundle(params)))
-  val out = Decoupled(DeserialPacketBundle(params))
+  val in = Flipped(Decoupled(PacketBundle(params)))
+  val out = Decoupled(PacketBundle(params))
 
   override def cloneType: this.type = DIDOIO(params).asInstanceOf[this.type]
 }
@@ -179,8 +179,8 @@ class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) ex
 
   val scalar = ConvertableTo[T].fromDouble(1.0 / params.numPoints.toDouble) // normalization factor
   // Swap real and imaginary components and normalize
-  io.out.bits.iq.real := fft_out.bits.iq.imag * scalar
-  io.out.bits.iq.imag := fft_out.bits.iq.real * scalar
+  io.out.bits.iq(0).real := fft_out.bits.iq(0).imag * scalar
+  io.out.bits.iq(0).imag := fft_out.bits.iq(0).real * scalar
 
   params.fftType match {
     case "direct" => {
@@ -225,8 +225,8 @@ class DirectFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T
  * Bundle type as IO for direct FFT stage
  */
 class DirectStageIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Valid(DeserialPacketBundle(params)))
-  val out = Valid(DeserialPacketBundle(params))
+  val in = Flipped(Valid(PacketBundle(params)))
+  val out = Valid(PacketBundle(params))
 
   override def cloneType: this.type = DirectStageIO(params).asInstanceOf[this.type]
 }
@@ -505,8 +505,8 @@ class SDFChain[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
  */
 class SDFStageIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
   // datapath
-  val in  = Input(SerialPacketBundle(params))
-  val out = Output(SerialPacketBundle(params))
+  val in  = Input(PacketBundle(1, params.protoIQ))
+  val out = Output(PacketBundle(1, params.protoIQ))
   // control
   val twiddles_rom = Input(Vec(params.numPoints / 2, params.protoTwiddle.cloneType))
   val cntr         = Input(UInt(log2Up(params.numPoints).W))
@@ -535,20 +535,20 @@ class SDFStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]
 
   // Apply twiddle factor at the input or output, depending on whether it's DIT or DIF
   if (params.decimType == "dit") {
-    // Issue: using `inp := Mux(use_twiddle, io.in.iq * twiddle, io.in.iq` causes the following error:
+    // Issue: using `inp := Mux(use_twiddle, io.in.iq(0) * twiddle, io.in.iq(0)` causes the following error:
     // can't create Mux with non-equivalent types dsptools.numbers.DspComplex@________ and dsptools.numbers.DspComplex@________
     when (io.cntr > delay.U) {
-      inp := io.in.iq * io.twiddles_rom((io.cntr - delay.U) << rom_shift.U)
+      inp := io.in.iq(0) * io.twiddles_rom((io.cntr - delay.U) << rom_shift.U)
     } .otherwise {
-      inp := io.in.iq
+      inp := io.in.iq(0)
     }
-    io.out.iq := out
+    io.out.iq(0) := out
   } else {
-    inp := io.in.iq
+    inp := io.in.iq(0)
     when (io.cntr < delay.U && io.cntr =/= 0.U) {
-      io.out.iq := out * io.twiddles_rom(io.cntr << rom_shift.U)
+      io.out.iq(0) := out * io.twiddles_rom(io.cntr << rom_shift.U)
     } .otherwise {
-      io.out.iq := out
+      io.out.iq(0) := out
     }
   }
 

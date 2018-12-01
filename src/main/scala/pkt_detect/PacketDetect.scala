@@ -189,7 +189,7 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   }
 
   // Power Threshold
-  val powerMeter = PowerMeter(Vec(dataVec.drop(dataVec.length - params.powerThreshWindow)), params)
+  val powerMeter = PowerMeter(VecInit(dataVec.drop(dataVec.length - params.powerThreshWindow)), params)
   val powerHigh = powerMeter.io.powerHigh
   val powerLow = powerMeter.io.powerLow
 
@@ -203,7 +203,7 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   if (params.correlationThresh) {
     // Reverse dataVec to have denominator based on earlier-in-time data
 //    corrComp := Correlator(Vec(dataVec.reverse), params)
-    val (cmp, num, denom) = Correlator(Vec(dataVec.reverse), params)
+    val (cmp, num, denom) = Correlator(VecInit(dataVec.reverse), params)
     corrComp := cmp
     corrNum := num
     corrDenom := denom

@@ -14,25 +14,17 @@ class RXTester[T <: Data, U <: Data, V<: Data](c: RX[T,U,V], trials: Seq[DspComp
   poke(c.io.out.ready, 1)
   print("Placeholder")
   for(trial <- trials) {
-
+    step(1)
   }
   //expect(false, "Placeholder")
 }
 
 object FixedRXTester {
   def apply(
-    iqParams: IQBundleParams[FixedPoint],
-    pktDetectParams: FixedPacketDetectParams,
-    eqParams: FixedEqualizerParams,
-    cfoParams: FixedCFOParams,
-    cpParams: CyclicPrefixParams[FixedPoint],
-    fftParams: FixedFFTParams,
-    bitsBundleParams: BitsBundleParams[SInt],
-    demodParams: HardDemodParams,
-    viterbiParams: FixedCoding,
+    rxParams: RXParams[FixedPoint, SInt, UInt],
     trials: Seq[DspComplex[UInt]]): Boolean = {
     // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RX(iqBundleParams = iqParams, pktDetectParams = pktDetectParams, equalizerParams = eqParams, cfoParams = cfoParams, cyclicPrefixParams = cpParams, fftParams = fftParams, bitsBundleParams = bitsBundleParams, demodParams = demodParams, viterbiParams = viterbiParams)) {
-    dsptools.Driver.execute(() => new RX(iqBundleParams = iqParams, pktDetectParams = pktDetectParams, equalizerParams = eqParams, cfoParams = cfoParams, cyclicPrefixParams = cpParams, fftParams = fftParams, bitsBundleParams = bitsBundleParams, demodParams = demodParams, viterbiParams = viterbiParams), TestSetup.dspTesterOptions) {
+    dsptools.Driver.execute(() => new RX(rxParams), TestSetup.dspTesterOptions) {
       c => new RXTester(c, trials)
     }
   }

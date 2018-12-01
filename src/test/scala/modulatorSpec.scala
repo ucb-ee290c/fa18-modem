@@ -16,19 +16,11 @@ class modulatorSpec extends FlatSpec with Matchers {
   behavior of "ShiftRegister"
    
 
-  
-  
-  behavior of "Interleaver"
-  val paramsinter = UintInterleavParams(
-     mwidth = 8,
-     Ncbps = 48,
-     Nbpsc = 4
-  )
-  //InterleavTester(paramsinter)
 
   behavior of "Interleaver_modify"
   val paramsinterleaver = FixedBPSKModParams(
      dataWidth = 12,
+     dataBinaryPoint = 10,
      Ncbps = 48,
      Nbpsc = 1
   )
@@ -36,6 +28,7 @@ class modulatorSpec extends FlatSpec with Matchers {
    behavior of "Interleaverds1_modify"
   val paramsinterleaverds1 =  FixedModFFTParams(
     dataWidth = 16,
+    bitsWidth = 48,
     Ncbps = 4,
     Nbpsc = 1,
     twiddleWidth = 10,
@@ -48,6 +41,7 @@ class modulatorSpec extends FlatSpec with Matchers {
   behavior of "Interleaverds1_modify"
   val paramsinterleaverds2 =  FixedModFFTParams(
     dataWidth = 16,
+    bitsWidth = 48,
     Ncbps = 8,
     Nbpsc = 4,
     twiddleWidth = 10,
@@ -62,6 +56,7 @@ class modulatorSpec extends FlatSpec with Matchers {
  behavior of "Deinterleaver_modify"
   val paramsdeinterleaver = FixedBPSKModParams(
      dataWidth = 12,
+     dataBinaryPoint = 10,
      Ncbps = 48,
      Nbpsc = 1
   )
@@ -71,6 +66,7 @@ class modulatorSpec extends FlatSpec with Matchers {
   val paramsbpskmod =  FixedModFFTParams(
     dataWidth = 16,
     Ncbps = 4,
+    bitsWidth = 48,
     Nbpsc = 1,
     twiddleWidth = 10,
     numPoints = 2,
@@ -83,19 +79,22 @@ class modulatorSpec extends FlatSpec with Matchers {
   behavior of "qam16Modulator"
   val paramsqammod1 =  FixedModFFTParams(
     dataWidth = 16,
+    bitsWidth = 48,
     Ncbps = 8,
     Nbpsc = 4,
     twiddleWidth = 10,
     numPoints = 2,
-    binPoints = 10,
+    binPoints = 14,
     fftType = "direct"
   )
   //QAM16CPMod1Tester(paramsqammod1)
+  QAM16ModulatorTester(paramsqammod1)
   
 
  behavior of "Serilizer"
   val paramser = FixedBPSKModParams(
      dataWidth = 12,
+     dataBinaryPoint = 10,
      Ncbps = 4,
      Nbpsc = 1
   )
@@ -103,6 +102,7 @@ class modulatorSpec extends FlatSpec with Matchers {
  behavior of "QAM16Demodulator"
   val paramsqam16demod = FixedBPSKModParams(
      dataWidth = 12,
+     dataBinaryPoint = 10,
      Ncbps = 192,
      Nbpsc = 4
   )
@@ -110,6 +110,7 @@ class modulatorSpec extends FlatSpec with Matchers {
   behavior of "BPSKDemodulator"
   val paramsbpskdemod = FixedBPSKModParams(
      dataWidth = 12,
+     dataBinaryPoint = 10,
      Ncbps = 48,
      Nbpsc = 1
   )
@@ -117,6 +118,7 @@ class modulatorSpec extends FlatSpec with Matchers {
  behavior of "BPSKSerDemodulator"
   val paramserbpskdemod = FixedBPSKModParams(
      dataWidth = 12,
+     dataBinaryPoint = 10,
      Ncbps = 48,
      Nbpsc = 1
   )
@@ -124,47 +126,48 @@ class modulatorSpec extends FlatSpec with Matchers {
  behavior of "QPSKmodulatorm"
   val paramsqpskmod1 =   FixedModFFTParams(
     dataWidth = 16,
+    bitsWidth = 48,
     Ncbps = 4,
     Nbpsc = 2,
     twiddleWidth = 10,
     numPoints = 2,
-    binPoints = 2,
+    binPoints = 14,
     fftType = "direct"
   )
+  QPSKCPModulatorTester(paramsqpskmod1)
+  BPSKCPModulatorTester(paramsqpskmod1)
+
   //QPSKCPMod1Tester(paramsqpskmod1)
  behavior of "QPSKModulator"
   val paramsqpskmod = FixedBPSKModParams(
-     dataWidth = 12,
+     dataWidth = 16,
+     dataBinaryPoint = 14,
      Ncbps = 96,
      Nbpsc = 2
   )
-  //QPSKCPModTester(paramsqpskmod)
+  //QPSKCPModulatorTester(paramsqpskmod)
 
-  behavior of "Deinterleaver"
-  val paramsdeinter = UintInterleavParams(
-     mwidth = 8,
-     Ncbps = 96,
-     Nbpsc = 2
-  )
-  //DeinterleavTester(paramsdeinter)
 
+  
   behavior of "Demapper"
   val paramsdemap = FixedDemapParams(
       iqwidth = 12,
+      dataBinaryPoint = 10,
       n = 4
   )
 
-  val baseTrial = IQ(in=1.0, qn=1.0,out=5.0)
-  val anglesi = Seq(0.5, 1)
-  val anglesq = Seq(0.25, -1)
-  val trial1 = anglesi.map { in1 => baseTrial.copy(in = in1)}
-  val trials = List(IQ(1.0, 0.25, 13.0), IQ(1.0, -1.0, 1.0))
+  //val baseTrial = IQ(in=1.0, qn=1.0,out=5.0)
+  //val anglesi = Seq(0.5, 1)
+  //val anglesq = Seq(0.25, -1)
+  //val trial1 = anglesi.map { in1 => baseTrial.copy(in = in1)}
+  //val trials = List(IQ(1.0, 0.25, 13.0), IQ(1.0, -1.0, 1.0))
   //= anglesq.map {qn1 => baseTrial.copy(qn = qn1)}
   //DemapperTester(paramsdemap,trials)
 
  behavior of "Mapper"
   val paramsmap = FixedMapParams(
       iqwidth = 12,
+      dataBinaryPoint = 10,
       n = 4
   )
   
@@ -174,6 +177,7 @@ class modulatorSpec extends FlatSpec with Matchers {
  behavior of " QPSK modulator + FFT"
  val base_qmparams = FixedModFFTParams(
     dataWidth = 16,
+    bitsWidth = 48,
     Ncbps = 96,
     Nbpsc = 2,
     twiddleWidth = 10,
@@ -201,10 +205,12 @@ class modulatorSpec extends FlatSpec with Matchers {
  behavior of "Modulatorm"
   val paramsmodm = FixedMapParams(
       iqwidth = 12,
+      dataBinaryPoint = 10,
       n = 2
   )
   val base_params = FixedModParams(
     dataWidth = 12,
+    dataBinaryPoint = 10,
     n = 2
 )
   val trialmodm = List(IQGM(0 ,0, -0.707, -0.707),IQGM(0 ,1, 0.707, -0.707))
@@ -216,6 +222,7 @@ class modulatorSpec extends FlatSpec with Matchers {
  //behavior of "Modulator"
   val paramsmod = FixedMapParams(
       iqwidth = 12,
+      dataBinaryPoint = 10,
       n = 1
   )
   

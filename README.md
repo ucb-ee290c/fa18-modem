@@ -5,6 +5,14 @@
 ## Implemented in Chisel and supporting 802.11 and LTE radios
 ## Authors: Sean Huang, Kunmo Kim, Paul Kwon, Josh Sanz, Meng Wei
 
+### C TX Vector
+- [47:0] Encoder In Bits
+- [48] pktStart
+- [49] pktEnd
+- [50] isHead
+- [54:51] puncMatrix
+- [56:55] modCtrl
+
 ## Dependencies
 - scala 2.12
 - rocket-dsptools
