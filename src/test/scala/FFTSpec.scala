@@ -8,43 +8,44 @@ import breeze.linalg.{DenseVector, randomDouble}
 import chisel3.util.log2Ceil
 
 class FFTSpec extends FlatSpec with Matchers {
+
+  def test_setup(base_params: FixedFFTParams, numPoints: Int, fftType: String): (FixedFFTParams, Vector[Complex], Vector[Complex], Vector[Complex]) = {
+    val inp      = DenseVector.fill(numPoints) { Complex(randomDouble() * 2 - 1, randomDouble() * 2 - 1) }
+    val out_fft  = fourierTr(inp).toScalaVector
+    val out_ifft = iFourierTr(inp).toScalaVector
+    val binPoint = base_params.dataWidth-2-log2Ceil(numPoints)
+    val new_params = base_params.copy(numPoints=numPoints, binPoint=binPoint, fftType=fftType)
+    (new_params, inp.toScalaVector, out_fft, out_ifft)
+  }
+
   behavior of "FixedFFT"
 
   val base_params = FixedFFTParams(
     dataWidth = 10,
     twiddleWidth = 10,
     numPoints = 2,
-    binPoint = 2,
-    fftType = "direct"
+    binPoint = 2
   )
 
-  for (i <- Seq(2, 4, 8, 16)) {
-    it should f"compute $i-point FFT/IFFT" in {
-      val inp = DenseVector.fill(i) { Complex(randomDouble() * 2 - 1, randomDouble() * 2 - 1) }
-      val out_fft = fourierTr(inp)
-      val out_ifft = iFourierTr(inp)
-      val binPoint = base_params.dataWidth-2-log2Ceil(i)
-      val direct_params = base_params.copy(numPoints = i, binPoint = binPoint, pipeline = true)
-      val sdf_params = direct_params.copy(fftType = "sdf")
-      FixedFFTTester(direct_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      // FixedFFTTester(sdf_params   , inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      // FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      FixedIFFTTester(direct_params, inp.toScalaVector, out_ifft.toScalaVector) should be (true)
-      // FixedIFFTTester(sdf_params   , inp.toScalaVector, out_ifft.toScalaVector) should be (true)
-      FixedSDFFFTTester(sdf_params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
+  for (i <- Seq(2, 16, 64)) {
+    it should f"compute $i-point Direct FFT/IFFT" in {
+      val (params, inp, out_fft, out_ifft) = test_setup(base_params, i, "direct")
+      FixedFFTTester(params,  inp, out_fft ) should be (true)
+      FixedIFFTTester(params, inp, out_ifft) should be (true)
+    }
+    it should f"compute $i-point SDF FFT/IFFT" in {
+      val (params, inp, out_fft, out_ifft) = test_setup(base_params, i, "sdf")
+      FixedFFTTester(params,  inp, out_fft ) should be (true)
+      FixedIFFTTester(params, inp, out_ifft) should be (true)
     }
   }
 
-  for (i <- Seq(5, 7)) {
-    it should f"compute $i-point FFT" in {
-      val inp = DenseVector.fill(i) { Complex(randomDouble() * 2 - 1, randomDouble() * 2 - 1) }
-      val out_fft = fourierTr(inp)
-      val binPoint = base_params.dataWidth-2-log2Ceil(i)
-      val params = base_params.copy(numPoints = i, binPoint = binPoint, pipeline = false)
-      FixedFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-      FixedDirectFFTTester(params, inp.toScalaVector, out_fft.toScalaVector) should be (true)
-    }
-  }
+  // for (i <- Seq(5, 7)) {
+  //   it should f"compute $i-point FFT" in {
+  //     val (params, inp, out_fft, _) = test_setup(base_params, i, "direct")
+  //     FixedFFTTester(params, inp, out_fft) should be (true)
+  //   }
+  // }
 
   behavior of "FFTUtil"
   it should "check factorize" in {
