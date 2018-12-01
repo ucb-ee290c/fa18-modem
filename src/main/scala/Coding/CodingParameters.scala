@@ -75,22 +75,22 @@ case class HardCoding(
   val pmBits = 5
 }
 
-case class HardEncoding(
-  k: Int = 1,
-  n: Int = 2,
-  K: Int = 3,
-  L: Int = 40,
-  O: Int = 48,
-  D: Int = 36,                            // D needs to be larger than 4 in current architecture
-  H: Int = 24,                            // Header length after encoding
-  genPolynomial: List[Int] = List(7, 5),  // generator polynomial
-  //  CodingScheme: Int = 0,
-  //  fbPolynomial: List[Int] = List(0),
-  tailBitingEn: Boolean = false,
-  tailBitingScheme: Int = 0,
-  protoBitsWidth: Int = 16,
-  bitsWidth: Int = 48,
-  softDecision: Boolean = false,
+case class TxCoding(
+   k: Int = 1,
+   n: Int = 2,
+   K: Int = 3,
+   L: Int = 40,
+   O: Int = 48,
+   D: Int = 36,                            // D needs to be larger than 4 in current architecture
+   H: Int = 24,                            // Header length after encoding
+   genPolynomial: List[Int] = List(7, 5),  // generator polynomial
+   //  CodingScheme: Int = 0,
+   //  fbPolynomial: List[Int] = List(0),
+   tailBitingEn: Boolean = false,
+   tailBitingScheme: Int = 0,
+   protoBitsWidth: Int = 16,
+   bitsWidth: Int = 48,
+   softDecision: Boolean = false,
 ) extends CodingParams[UInt] {
   val protoBits = UInt(1.W)
   val m = K - 1
