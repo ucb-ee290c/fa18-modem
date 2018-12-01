@@ -795,8 +795,9 @@ class Modulator[T <: Data:Real:BinaryRepresentation,U <: Data](val params: ModFF
          //val out = Decoupled(BitsBundle(params))
 	 val out = Decoupled(PacketBundle(48, params.protoIQ.cloneType))
         })
-
+    
     val bpskmod = Module( new BPSKCPModulator1(params) )
+    //for (k <- 0 until 48){
     bpskmod.io.in.bits := io.in.bits
     bpskmod.io.in.valid := io.in.valid
     bpskmod.io.out.ready := io.out.ready
@@ -874,10 +875,11 @@ case class FixedModFFTParams(
   decimType: String = "opt",
   fftType: String = "direct",
   pipeline: Boolean = false
-) extends ModFFTParams[FixedPoint, Bool] {
+) extends ModFFTParams[FixedPoint, UInt] {
   val protoIQ = DspComplex(FixedPoint(dataWidth.W, (binPoints).BP))
   val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP))
-  val protoBits = Bool()
+  val protoBits = UInt(1.W)
+  //Bool()
 }
 
 

@@ -59,6 +59,8 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   val demod = Module( new Demodulator(rxParams.demodParams) )
   val decode = Module( new ViterbiDecoder(rxParams.viterbiParams) )
 
+  val dummyReg = Reg(Vec(Seq.fill(48){SInt(2.W)}))
+
   // Phase Rotation Block
   phaseRotator.io.inIQ <> io.in
   phaseRotator.io.phiCorrect := ConvertableTo[T].fromDouble(0) //cfoEstimator.phiCorrect
@@ -87,7 +89,8 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   demod.io.in <> eq.io.out
 
   // Decoder
-  decode.io.in <> demod.io.out
+  decode.io.in_soft <> demod.io.out
+  decode.io.in_hard := dummyReg
 
   io.out <> decode.io.out
 }
