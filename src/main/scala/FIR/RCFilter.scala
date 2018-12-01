@@ -103,8 +103,7 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
     }
   }
   // Tree-reduce addition to reduce critical path
-  val reals: Seq[T] = xn.map{case x => x.real}
-  val realProducts = reals.zip(taps).map{case (x:T,y:T) => x * y}
+  val realProducts = xn zip taps map  {case (x, y) => x.real * y}
   val imagProducts = xn zip taps map  {case (x, y) => x.imag * y}
   val outReal = TreeReduce(realProducts, (a:T,b:T) => a+b)
   val outImag = TreeReduce(imagProducts, (a:T,b:T) => a+b)

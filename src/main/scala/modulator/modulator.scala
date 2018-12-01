@@ -3,17 +3,13 @@ package modem
 
 import chisel3._
 import chisel3.experimental.FixedPoint
-import chisel3.experimental.withClock
 import chisel3.util.Decoupled
 import chisel3.util._
 //import chisel3.core.data
 import dsptools.numbers._
-import breeze.numerics.{atan, pow, sqrt, abs,floor}
-import breeze.numerics.constants.{Pi}
+import breeze.numerics.floor
 
 import dsptools.numbers._
-import freechips.rocketchip.diplomacy.LazyModule
-import freechips.rocketchip.subsystem.BaseSubsystem
 
 
 
@@ -320,7 +316,7 @@ class BitsBundle2tbpsk[T<:Data,U<:Data](params: ModFFTParams[T,U] ) extends Bund
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
 
- 
+
   val bits = Vec(48, Bool() )
   override def cloneType: this.type = BitsBundle2tbpsk(params).asInstanceOf[this.type]
 
@@ -337,7 +333,7 @@ class BitsBundle2tqpsk[T<:Data,U<:Data](params: ModFFTParams[T,U] ) extends Bund
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
 
- 
+
   val bits = Vec(96, Bool() )
   override def cloneType: this.type = BitsBundle2tqpsk(params).asInstanceOf[this.type]
 
@@ -352,7 +348,7 @@ class BitsBundle2tqam[T<:Data, U<:Data](params: ModFFTParams[T,U] ) extends Bund
   val pktStart: Bool = Bool()
   val pktEnd: Bool = Bool()
 
- 
+
   val bits = Vec(192, Bool() )
   override def cloneType: this.type = BitsBundle2tqam(params).asInstanceOf[this.type]
 
@@ -795,7 +791,7 @@ class Modulator[T <: Data:Real:BinaryRepresentation,U <: Data](val params: ModFF
          //val out = Decoupled(BitsBundle(params))
 	 val out = Decoupled(PacketBundle(48, params.protoIQ.cloneType))
         })
-    
+
     val bpskmod = Module( new BPSKCPModulator1(params) )
     //for (k <- 0 until 48){
     bpskmod.io.in.bits := io.in.bits
@@ -805,7 +801,7 @@ class Modulator[T <: Data:Real:BinaryRepresentation,U <: Data](val params: ModFF
     qpskmod.io.in.bits := io.in.bits
     qpskmod.io.in.valid := io.in.valid
     qpskmod.io.out.ready := io.out.ready
-    val qam16mod = Module( new QAM16CPModulator1(params) )        
+    val qam16mod = Module( new QAM16CPModulator1(params) )
     qam16mod.io.in.bits := io.in.bits
     qam16mod.io.in.valid := io.in.valid
     qam16mod.io.out.ready := io.out.ready

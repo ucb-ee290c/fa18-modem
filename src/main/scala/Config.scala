@@ -1,7 +1,6 @@
 package modem
 
 import chisel3._
-import chisel3.util._
 import chisel3.experimental.FixedPoint
 import dsptools.numbers._
 
@@ -28,6 +27,7 @@ object FinalTxParams {
                                            numPoints = nfft, binPoint = width - 3)
             val modulatorParams = FixedModFFTParams(
                 dataWidth=width,
+                bitsWidth=2,
                 twiddleWidth=width,
                 numPoints=nfft,
                 Ncbps=48,

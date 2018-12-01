@@ -1,21 +1,12 @@
 package modem
 
 import chisel3._
-import chisel3.experimental.FixedPoint
-import chisel3.experimental.withClock
 import chisel3.util.Decoupled
-import chisel3.util._
-import breeze.linalg.{DenseVector, randomDouble}
 //import chisel3.core.data
 import dsptools.numbers._
-import breeze.numerics.{atan, pow, sqrt, abs,floor}
-import breeze.numerics.constants.{Pi}
-import scala.math._
 import breeze.math.Complex
 
 import dsptools.numbers._
-import freechips.rocketchip.diplomacy.LazyModule
-import freechips.rocketchip.subsystem.BaseSubsystem
 
 class ScalaFirFilter(taps: Seq[Complex]) {
   var pseudoRegisters = List.fill(taps.length)(Complex(0,0))
@@ -67,7 +58,7 @@ class MFir[T <: Data :Real:BinaryRepresentation,U <:Data](val params: ModFFTPara
   io.out.bits.iq.imag := prods.head.imag + regs.head.imag
 
   io.out.valid := io.in.valid
- 
+
   //val taps = Seq(io.in.bits.iq) ++ Seq.fill(consts.length - 1)(RegInit(Ring[T].zero))
   //taps.zip(taps.tail).foreach { case (a, b) => when (io.in.valid()) { b := a } }
 
