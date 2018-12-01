@@ -699,6 +699,7 @@ class QAM16ModulatorTester[T <: chisel3.Data,U <: chisel3.Data](c: Modulator[T,U
 
     poke(c.io.out.ready, 1)
     poke(c.io.in.valid, 1)
+    poke(c.io.mod_ctrl,2)
     
       // wait until input is accepted
    for (i <- 0 until 2) {

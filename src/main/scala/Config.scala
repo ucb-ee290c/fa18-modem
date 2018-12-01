@@ -28,7 +28,7 @@ trait RXParams[T<:Data, U<:Data, V<:Data] {
   val fftParams: FFTParams[T]
   val bitsBundleParams: BitsBundleParams[U]
   val demodParams: DemodulationParams[T,U]
-  val viterbiParams: CodingParams[V]
+  val viterbiParams: CodingParams[T]
 }
 
 object FinalRxParams {
