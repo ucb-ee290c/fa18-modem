@@ -41,7 +41,7 @@ object FinalTxParams {
                 sampsPerSymbol = 4,
                 symbolSpan = 2
             )
-            val encoderParams = HardEncoding()
+            val encoderParams = TxCoding()
         }
         txParams
     }

@@ -64,11 +64,11 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   val dummyReg = Reg(Vec(48, SInt(2.W)))
 
   // Phase Rotation Block
-  phaseRotator.io.inIQ <> io.in
+  phaseRotator.io.in <> io.in
   phaseRotator.io.phiCorrect := ConvertableTo[T].fromDouble(0) //cfoEstimator.phiCorrect
 
   // Packet Detector Block
-  pktDetect.io.in <> phaseRotator.io.outIQ
+  pktDetect.io.in <> phaseRotator.io.out
 
   // CFO Estimation
   cfoEstimator.io.in <> pktDetect.io.out

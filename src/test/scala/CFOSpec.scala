@@ -57,11 +57,11 @@ class CFOCorrectionSpec extends FlatSpec with Matchers {
 
   val fixedCFOParams = FixedCFOParams(iqWidth = 16)
 
-  it should "detect no offset" in {
-    val trials = Seq(IQ(vecs.cleanTV, None))
-    val reals = Seq(IQ(vecs.cleanTV, None))
-    FixedCFOCorrectionTester(fixedCFOParams, trials, reals, 0, 2) should be (true)
-  }
+  //it should "detect no offset" in {
+    //val trials = Seq(IQ(vecs.cleanTV, None))
+    //val reals = Seq(IQ(vecs.cleanTV, None))
+    //FixedCFOCorrectionTester(fixedCFOParams, trials, reals, 0, 2) should be (true)
+  //}
 
   it should "detect offset of 0.2" in {
     val trials = Seq(IQ(vecs.cfoTV, None))

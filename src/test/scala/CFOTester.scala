@@ -136,13 +136,12 @@ class CFOCorrectionTester[T <: chisel3.Data](c: CFOCorrection[T], trials: Seq[IQ
   poke(c.io.out.ready, 1)
 
   for(trial<- trials){
-    val testinst = trial.iqin zip real.iqin
       poke(c.io.in.bits.pktStart,0)
       poke(c.io.in.bits.pktEnd, 1)
       step(2)
       poke(c.io.in.bits.pktStart, 1)
       poke(c.io.in.bits.pktEnd, 0)
-    for((trialiq, realiq) <- testinst){
+    for(trialiq <- trial.iqin){
       poke(c.io.in.bits.iq(0), trialiq)
       poke(c.io.in.valid, 1)
       peek(c.io.pErr)
