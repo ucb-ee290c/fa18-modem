@@ -33,6 +33,7 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
   val cyclicPrefix = Module( new CyclicPrefix(txParams.cyclicPrefixParams) )
   val fir = Module( new RCFilter(txParams.firParams) )
 
+
   encoder.io.in <> io.in
   // modulator.io.in <> encoder.io.out
   // ifft.io.in <> modulator.io.in

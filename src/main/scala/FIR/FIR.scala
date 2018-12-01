@@ -34,7 +34,8 @@ class ScalaFirFilter(taps: Seq[Complex]) {
 
 class FIRIO[T <: Data, U <: Data](params: ModFFTParams[T,U]) extends Bundle {
   val in = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  //val out = Decoupled(SerialPacketBundle(params))
+  val out = Decoupled(IQBundle(params))
 
   override def cloneType: this.type = FIRIO(params).asInstanceOf[this.type]
 }
@@ -74,8 +75,8 @@ class MFir[T <: Data :Real:BinaryRepresentation,U <:Data](val params: ModFFTPara
   //io.out.bits.iq := taps.zip(consts).map { case (a, b) => a * b }.reduce(_ + _)
   io.out.valid := io.in.valid
   io.in.ready := true.B
-  io.out.bits.pktStart := io.in.bits.pktStart
-  io.out.bits.pktEnd := io.in.bits.pktEnd
+  //io.out.bits.pktStart := io.in.bits.pktStart
+  //io.out.bits.pktEnd := io.in.bits.pktEnd
 
 
 }
