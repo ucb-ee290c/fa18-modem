@@ -104,11 +104,8 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
     }
   }
   // Tree-reduce addition to reduce critical path
-  xn foreach {c => printf("Xn %d %d \n", c.real.asUInt, c.imag.asUInt)}
   val realProducts = xn zip taps map  {case (x, y) => x.real * y}
-  // realProducts foreach {r => printf("REAL %d\n", r.asUInt)}
   val imagProducts = xn zip taps map  {case (x, y) => x.imag * y}
-  // imagProducts foreach {i => printf("IMAG %d\n", i.asUInt)}
   val outReal = TreeReduce(realProducts, (a:T,b:T) => a+b)
   val outImag = TreeReduce(imagProducts, (a:T,b:T) => a+b)
   // Extra state logic to handle packets
@@ -117,7 +114,6 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
   zero.imag := Ring[T].zero
   switch(state) {
     is(sIdle) {
-      printf("IDLE\n")
       flushCount := 0.U
       doShift := true.B
       x0 := Mux(io.in.fire(), io.in.bits.iq(0), zero)
@@ -126,14 +122,12 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
                    sIdle)
     }
     is(sMain) {
-      printf("MAIN\n")
       flushCount := 0.U
       doShift := io.in.fire()
       x0 := io.in.bits.iq(0)
       state := Mux(io.in.fire() && io.in.bits.pktEnd, sFlush, sMain)
     }
     is(sFlush) {
-      printf("FLUSH\n")
       flushCount := flushCount + io.out.ready
       x0 := zero
       doShift := io.out.ready
