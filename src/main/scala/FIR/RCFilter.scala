@@ -76,7 +76,8 @@ object TreeReduce {
  * Raised-Cosine filter
  *
  * Input:
- *   PacketBundle of width 1 to ensure each packet is flushed properly
+ *   PacketBundle of width 1
+ *    -> pktEnd field is used to ensure each packet is flushed properly
  *
  * Output:
  *   IQBundle to be fed to the D2A converter
@@ -84,18 +85,18 @@ object TreeReduce {
 class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) extends Module {
   val io = IO(RCFilterIO(params))
   // Flush state variables
-  val sMain :: sFlush :: Nil = Enum(2)
+  val sIdle :: sMain :: sFlush :: Nil = Enum(3)
   val state = RegInit(sFlush)
-  val flushCount = Reg(UInt(32.W))
+  val flushCount = RegInit(0.U(32.W))
   val nTaps = params.sampsPerSymbol * params.symbolSpan + 1
   // Convert taps to fixedpoint
   val doubleTaps = RCTaps(params).tail.reverse ++ RCTaps(params) // TODO: convert to single-sided implementation
-  println(s"double taps $doubleTaps")
   val taps: Seq[T] = doubleTaps map {case x => ConvertableTo[T].fromDouble(x)}
-  println(s"taps symmetric $taps")
   // Push incoming samples through buffer
   val x0 = Wire(params.protoIQ)
+  x0 := io.in.bits.iq(0)
   val doShift = Wire(Bool())
+  doShift := false.B
   val xn = Seq.fill(taps.length)(Reg(params.protoIQ))
   xn.foldLeft(x0){case (prev, curr) => {
     curr := Mux(doShift, prev, curr)
@@ -103,28 +104,45 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
     }
   }
   // Tree-reduce addition to reduce critical path
+  xn foreach {c => printf("Xn %d %d \n", c.real.asUInt, c.imag.asUInt)}
   val realProducts = xn zip taps map  {case (x, y) => x.real * y}
+  // realProducts foreach {r => printf("REAL %d\n", r.asUInt)}
   val imagProducts = xn zip taps map  {case (x, y) => x.imag * y}
+  // imagProducts foreach {i => printf("IMAG %d\n", i.asUInt)}
   val outReal = TreeReduce(realProducts, (a:T,b:T) => a+b)
   val outImag = TreeReduce(imagProducts, (a:T,b:T) => a+b)
   // Extra state logic to handle packets
+  val zero = Wire(params.protoIQ)
+  zero.real := Ring[T].zero
+  zero.imag := Ring[T].zero
   switch(state) {
-    is(sMain) {
+    is(sIdle) {
+      printf("IDLE\n")
       flushCount := 0.U
+      doShift := true.B
+      x0 := Mux(io.in.fire(), io.in.bits.iq(0), zero)
+      state := Mux(io.in.fire(),
+                   Mux(io.in.bits.pktEnd, sFlush, sMain),
+                   sIdle)
+    }
+    is(sMain) {
+      printf("MAIN\n")
+      flushCount := 0.U
+      doShift := io.in.fire()
+      x0 := io.in.bits.iq(0)
       state := Mux(io.in.fire() && io.in.bits.pktEnd, sFlush, sMain)
     }
     is(sFlush) {
-      flushCount := flushCount + 1.U
-      val zero = Wire(params.protoIQ)
-      zero.real := Ring[T].zero
-      zero.imag := Ring[T].zero
-      xn(0) := zero
-      state := Mux(io.in.fire() && (flushCount >= taps.length - 1), sMain, sFlush)
+      printf("FLUSH\n")
+      flushCount := flushCount + io.out.ready
+      x0 := zero
+      doShift := io.out.ready
+      state := Mux(io.out.ready && (flushCount >= taps.length - 1), sIdle, sFlush)
     }
   }
   // Decoupled logic
   io.out.bits.iq.real := outReal
   io.out.bits.iq.imag := outImag
-  io.out.valid := io.in.fire()
-  io.in.ready := (state === sMain) && io.out.ready
+  io.out.valid := ((state === sMain) && io.in.fire()) || (state === sFlush)
+  io.in.ready := ((state === sMain) && io.out.ready) || (state === sIdle)
 }

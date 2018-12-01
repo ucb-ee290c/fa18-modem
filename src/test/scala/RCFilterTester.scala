@@ -1,6 +1,7 @@
 package modem
 
 import breeze.math.Complex
+import breeze.numerics.abs
 import dsptools.DspTester
 
 /**
@@ -17,7 +18,7 @@ case class RCIQ(
   *
   * Run each trial in @trials
   */
-class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLSBs: Int = 2) extends DspTester(c) {
+class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLSBs: Int = 2, tol: Double = 1e-3) extends DspTester(c) {
   def getIQOut(c: RCFilter[T], v: Vector[Complex]): Vector[Complex] = {
     var vout = v
     if (peek(c.io.out.valid)) {
@@ -26,15 +27,21 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
     vout
   }
 
-  val maxCyclesWait = 32
+  val maxCyclesWait = 64
 
   poke(c.io.out.ready, 1)
-  poke(c.io.in.valid, 1)
+  poke(c.io.in.valid, 0)
+  step(32)
 
   for (trial <- trials) {
+    println("Trial begins...")
+    poke(c.io.in.valid, 1)
     var iqOut = Vector[Complex]()
-    for (iq <- trial.iqin) {
-      poke(c.io.in.bits.iq(0), iq)
+    for (i <- trial.iqin.indices) {
+      println(s"Poking #$i")
+      poke(c.io.in.bits.iq(0), trial.iqin(i))
+      poke(c.io.in.bits.pktStart, i==0)
+      poke(c.io.in.bits.pktEnd, i==trial.iqin.length-1)
       // wait until input is accepted
       var cyclesWaiting = 0
       while (!peek(c.io.in.ready) && cyclesWaiting < maxCyclesWait) {
@@ -49,7 +56,7 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
       step(1)
     }
     // wait for remaining output after pushing in IQ data
-    poke(c.io.in.valid, 1)
+    poke(c.io.in.valid, 0)
     poke(c.io.in.bits.iq(0), Complex(0, 0))
     var cyclesWaiting = 0
     while (cyclesWaiting < maxCyclesWait) {
@@ -69,8 +76,9 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
         val iqRef = trial.iqout
         assert(iqOut.length == iqRef.length,
                s"The packet length was ${iqOut.length} but should have been ${iqRef.length}")
+        println(s"iqOut: $iqOut")
         iqOut.indices.foreach {
-         i => assert(iqOut(i) == iqRef(i), s"iq mismatch: ref ${iqRef(i)} != ${iqOut(i)} @$i")}
+          i => assert(abs(iqOut(i) - iqRef(i)) < tol, s"iq mismatch: ref ${iqRef(i)} != ${iqOut(i)} @$i")}
       }
     }
   }
