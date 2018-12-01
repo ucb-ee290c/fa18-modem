@@ -21,10 +21,12 @@ class RCFilterSpec extends FlatSpec with Matchers {
     sampsPerSymbol = 4,
     symbolSpan = 2
   )
-  val taps = RCTaps(params).toScalaVector
+  val taps = RCTaps(params)
   val impResponse = (taps.tail.reverse ++ taps).map{x => Complex(x, 0)}
   val jImpResponse = (taps.tail.reverse ++ taps).map{x => Complex(0, x)}
-  val doubleImpResponse = impResponse(0) ++ (impResponse.tail + impResponse.take(impResponse.length - 1)) ++ impResponse(impResponse.length - 1)
+  val doubleImpResponse = Vector(impResponse(0)) ++
+      (impResponse.tail zip impResponse.take(impResponse.length - 1) map {case (x,y) => x + y}) ++
+      Vector(impResponse(impResponse.length - 1))
   it should "have an impulse response" in {
     val trials = Seq(RCIQ(vecs.impulse, impResponse),
                      RCIQ(vecs.jImpulse, jImpResponse),

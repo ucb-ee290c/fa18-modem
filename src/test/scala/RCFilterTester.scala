@@ -21,7 +21,7 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
   def getIQOut(c: RCFilter[T], v: Vector[Complex]): Vector[Complex] = {
     var vout = v
     if (peek(c.io.out.valid)) {
-      vout = vout :+ peek(c.io.out.bits.iq(0))
+      vout = vout :+ peek(c.io.out.bits.iq)
     }
     vout
   }
@@ -34,7 +34,7 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
   for (trial <- trials) {
     var iqOut = Vector[Complex]()
     for (iq <- trial.iqin) {
-      poke(c.io.in.bits.iq, iq)
+      poke(c.io.in.bits.iq(0), iq)
       // wait until input is accepted
       var cyclesWaiting = 0
       while (!peek(c.io.in.ready) && cyclesWaiting < maxCyclesWait) {
@@ -46,35 +46,17 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
         step(1)
       }
       iqOut = getIQOut(c, iqOut)
-      peek(c.io.debug.powerHigh)
-      peek(c.io.debug.powerLow)
-      peek(c.io.debug.corrComp)
-      peek(c.io.debug.corrNum)
-      peek(c.io.debug.corrDenom)
-//      peek(c.io.debug.iq)
       step(1)
     }
     // wait for remaining output after pushing in IQ data
     poke(c.io.in.valid, 1)
-    poke(c.io.in.bits.iq, Complex(0, 0))
+    poke(c.io.in.bits.iq(0), Complex(0, 0))
     var cyclesWaiting = 0
     while (cyclesWaiting < maxCyclesWait) {
       cyclesWaiting += 1
-      peek(c.io.debug.powerHigh)
-      peek(c.io.debug.powerLow)
-      peek(c.io.debug.corrComp)
-      peek(c.io.debug.corrNum)
-      peek(c.io.debug.corrDenom)
-      //      peek(c.io.debug.iq)
       iqOut = getIQOut(c, iqOut)
       step(1)
     }
-    peek(c.io.debug.powerHigh)
-    peek(c.io.debug.powerLow)
-    peek(c.io.debug.corrComp)
-    peek(c.io.debug.corrNum)
-    peek(c.io.debug.corrDenom)
-    //    peek(c.io.debug.iq)
     iqOut = getIQOut(c, iqOut)
     // set desired tolerance
     // in this case, it's pretty loose (2 bits)
@@ -84,7 +66,7 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
       if (trial.iqout.isEmpty) {
         assert(iqOut.isEmpty, "No IQ should have been passed through")
       } else {
-        val iqRef = trial.iqout.get
+        val iqRef = trial.iqout
         assert(iqOut.length == iqRef.length,
                s"The packet length was ${iqOut.length} but should have been ${iqRef.length}")
         iqOut.indices.foreach {
