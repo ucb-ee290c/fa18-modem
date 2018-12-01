@@ -6,7 +6,7 @@ import chisel3._
 import chisel3.experimental.FixedPoint
 import org.scalatest.{FlatSpec, Matchers}
 
-case class CFOTestVectors() {
+case class CFOTestVectors(randcfo: Int = 50000) {
   val stfTV = IEEE80211.stf
   val ltfTV = IEEE80211.ltf
   val r = new scala.util.Random
@@ -15,8 +15,8 @@ case class CFOTestVectors() {
 
   val rawTFTV = stfTV ++ ltfTV ++ randData
   val cleanTV = IEEE80211.addCFO(in = rawTFTV, cfo = 0.0, sampleRate = 20.0e6)
-  val cfoTV = IEEE80211.addCFO(in = rawTFTV, cfo = 100010, sampleRate = 20.0e6)
-  val cfoSTV = IEEE80211.addCFO(in = stfTV, cfo = 5000, sampleRate = 20.0e6)
+  val cfoTV = IEEE80211.addCFO(in = rawTFTV, cfo = randcfo, sampleRate = 20.0e6)
+  val cfoSTV = IEEE80211.addCFO(in = stfTV, cfo = 100010, sampleRate = 20.0e6)
   val cfoLTV = IEEE80211.addCFO(in = stfTV, cfo = 100, sampleRate = 20.0e6)
 }
 
@@ -44,7 +44,7 @@ class CFOEstimationSpec extends FlatSpec with Matchers {
     //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
   //}
 
-  it should "detect offset of 0.2" in {
+  it should "detect offset" in {
     val trials = Seq(IQ(vecs.cfoTV, None))
     val reals = Seq(IQ(vecs.cleanTV, None))
     FixedCFOEstimationTester(fixedCFOParams, trials, reals, 3) should be (true)
@@ -55,22 +55,18 @@ class CFOCorrectionSpec extends FlatSpec with Matchers {
   val vecs = CFOTestVectors()
   behavior of "Estimate CFO"
 
-  val fixedCFOParams = FixedCFOParams(iqWidth = 32)
+  val fixedCFOParams = FixedCFOParams(iqWidth = 16)
 
-  //it should "detect no offset" in {
-    //val trials = Seq(IQ(vecs.cleanTV, None))
-    //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
-  //}
-
-  //it should "detect offset of 0.2" in {
-    //val trials = Seq(IQ(vecs.cfoTV, None))
-    //FixedCFOEstimationTester(fixedCFOParams, trials) should be (true)
-  //}
+  it should "detect no offset" in {
+    val trials = Seq(IQ(vecs.cleanTV, None))
+    val reals = Seq(IQ(vecs.cleanTV, None))
+    FixedCFOCorrectionTester(fixedCFOParams, trials, reals, 0, 2) should be (true)
+  }
 
   it should "detect offset of 0.2" in {
     val trials = Seq(IQ(vecs.cfoTV, None))
     val reals = Seq(IQ(vecs.cleanTV, None))
-    FixedCFOCorrectionTester(fixedCFOParams, trials, reals, 6666, 3) should be (true)
+    FixedCFOCorrectionTester(fixedCFOParams, trials, reals, 50000, 2) should be (true)
   }
 }
 class COESpec extends FlatSpec with Matchers {
@@ -86,7 +82,7 @@ class COESpec extends FlatSpec with Matchers {
 
   it should "detect offset of 5kHz" in {
     val trials = Seq(IQ(vecs.cfoSTV, None))
-    FixedCOETester(fixedCFOParams, trials, 6666) should be (true)
+    FixedCOETester(fixedCFOParams, trials, 100010) should be (true)
   }
 }
 

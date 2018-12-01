@@ -77,12 +77,24 @@ class PhaseRotator[T<:Data:Real:BinaryRepresentation](val params: CFOParams[T]) 
   })
 
   val cordic = Module( new IterativeCordic(params))
+  val phiNext = Wire(params.protoZ)
+  val phi = RegNext(next = phiNext, init = ConvertableTo[T].fromDouble(0.0))
+  val pi = ConvertableTo[T].fromDouble(math.Pi)
+
+  when((phi + io.phiCorrect) > pi){
+    phiNext := phi - 2 * pi + io.phiCorrect
+  }.elsewhen((phi + io.phiCorrect) < -pi){
+    phiNext := phi + 2 * pi + io.phiCorrect
+  }.otherwise{
+    phiNext := phi + io.phiCorrect
+  }
 
   cordic.io.in.bits.x := io.in.bits.iq.real
   cordic.io.in.bits.y := io.in.bits.iq.imag
-  cordic.io.in.bits.z := io.phiCorrect
+  cordic.io.in.bits.z := phi
   cordic.io.in.bits.vectoring := false.B
   cordic.io.in.valid := io.in.valid
+
   io.in.ready := cordic.io.in.ready
   io.out.bits.iq.real := cordic.io.out.bits.x
   io.out.bits.iq.imag := cordic.io.out.bits.y
