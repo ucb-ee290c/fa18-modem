@@ -18,7 +18,7 @@ case class RCIQ(
   *
   * Run each trial in @trials
   */
-class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLSBs: Int = 2, tol: Double = 1e-6) extends DspTester(c) {
+class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLSBs: Int = 2, tol: Double = 1e-3) extends DspTester(c) {
   def getIQOut(c: RCFilter[T], v: Vector[Complex]): Vector[Complex] = {
     var vout = v
     if (peek(c.io.out.valid)) {
@@ -32,12 +32,13 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
   poke(c.io.out.ready, 1)
   poke(c.io.in.valid, 0)
   step(32)
-  poke(c.io.in.valid, 1)
 
   for (trial <- trials) {
     println("Trial begins...")
+    poke(c.io.in.valid, 1)
     var iqOut = Vector[Complex]()
     for (i <- trial.iqin.indices) {
+      println(s"Poking #$i")
       poke(c.io.in.bits.iq(0), trial.iqin(i))
       poke(c.io.in.bits.pktStart, i==0)
       poke(c.io.in.bits.pktEnd, i==trial.iqin.length-1)
@@ -75,6 +76,7 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
         val iqRef = trial.iqout
         assert(iqOut.length == iqRef.length,
                s"The packet length was ${iqOut.length} but should have been ${iqRef.length}")
+        println(s"iqOut: $iqOut")
         iqOut.indices.foreach {
           i => assert(abs(iqOut(i) - iqRef(i)) < tol, s"iq mismatch: ref ${iqRef(i)} != ${iqOut(i)} @$i")}
       }

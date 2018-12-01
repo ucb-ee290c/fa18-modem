@@ -7,6 +7,7 @@ import breeze.numerics.constants.Pi
 
 /**
  * Raised-cosine taps generator
+ * Returns a single side of the full filter, since it is real and symmetric
  */
 object RCTaps {
   def apply[T <: Data](params: RCFilterParams[T]): scala.collection.immutable.Vector[Double] = {
