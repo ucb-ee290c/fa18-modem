@@ -226,7 +226,6 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     io.out.bits.pktEnd := io.in.bits.pktEnd
     stfDropper.io.in.iq := io.in.bits.iq(0)
     stfDropper.io.keep := (curState === lt || curState === data) // Put this in FSM
-    pulseGen.io.in := (curState === lt || curState === data)
     io.out.bits.iq(0) := stfDropper.io.out.iq
     io.pErr := coarseOffset + fineOffset 
 
@@ -385,16 +384,15 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
 }
 
 // The following modules are for testing purposes only
-/*
 class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params: CFOParams[T]) extends Module {
   val io = IO( new Bundle{
     val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
     val prOut = Output(params.protoIQ)
     val out = Decoupled(PacketBundle(1, params.protoIQ))
     val pErr = Output(params.protoZ)
-    val cErr = Output(params.protoZ)
-    val fErr = Output(params.protoZ)
-    val curState = Output(UInt(3.W))
+    //val cErr = Output(params.protoZ)
+    //val fErr = Output(params.protoZ)
+    //val curState = Output(UInt(3.W))
   })
 
   val phaseRotator = Module( new PhaseRotator(params) )
@@ -411,12 +409,13 @@ class CFOCorrection[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
   cfoEstimator.io.in.bits.iq(0) := phaseRotator.io.out.bits.iq
   io.out <> cfoEstimator.io.out
   io.pErr := cfoEstimator.io.pErr
-  io.cErr := cfoEstimator.io.cErr
-  io.fErr := cfoEstimator.io.fErr
+  //io.cErr := cfoEstimator.io.cErr
+  //io.fErr := cfoEstimator.io.fErr
   io.prOut := phaseRotator.io.out.bits.iq
-  io.curState := cfoEstimator.io.curState
+  //io.curState := cfoEstimator.io.curState
 
  }
+/*
 class COEWrapper[T<:chisel3.Data:Real:ConvertableTo:BinaryRepresentation](val params: CFOParams[T], stLength: Int) extends Module {
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(params.protoIQ))

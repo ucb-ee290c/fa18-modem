@@ -20,13 +20,13 @@ class PreambleTester[T <: chisel3.Data](c: PreambleAdder[T], trials: Seq[IQ], to
   poke(c.io.out.ready, 1)
   for (trial <- trials){
     poke(c.io.in.bits.pktStart, 1)
-    for(iq <- trial.iniq){
+    for(iq <- trial.iqin){
       poke(c.io.in.bits.pktStart, 0)
       poke(c.io.in.bits.iq(0), iq)
       peek(c.io.out.bits.iq)
       step(1)
     }
-    (0 until 320).foreach{
+    for ( i <-0 until 320){
       peek(c.io.out.bits.iq)
       step(1)
       }
@@ -39,8 +39,8 @@ class PreambleTester[T <: chisel3.Data](c: PreambleAdder[T], trials: Seq[IQ], to
   */
 object FixedPreambleTester {
   def apply(params: FixedPreambleParams, trials: Seq[IQ], tolLSBs: Int=3): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "verilator", "-fiwv"), () => new PreambleTester(params)) {
-      c => new PreambleTester(c, trials, reals, cfo, tolLSBs)
+    chisel3.iotesters.Driver.execute(Array("-tbn", "verilator", "-fiwv"), () => new PreambleAdder(params)) {
+      c => new PreambleTester(c, trials, tolLSBs)
     }
   }
 }

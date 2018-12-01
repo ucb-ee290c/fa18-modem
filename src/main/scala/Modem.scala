@@ -53,7 +53,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
 
   val phaseRotator = Module( new PhaseRotator(rxParams.cfoParams) )
   val pktDetect = Module( new PacketDetect(rxParams.pktDetectParams) )
-  val cfoEstimator = Module( new CFOCorrection(rxParams.cfoParams) )
+  val cfoEstimator = Module( new CFOEstimation(rxParams.cfoParams) )
   val cyclicPrefix = Module( new CyclicPrefix(rxParams.cyclicPrefixParams) )
   val fft = Module( new FFT(rxParams.fftParams) )
   val eq = Module( new Equalizer(rxParams.equalizerParams) )

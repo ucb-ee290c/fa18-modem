@@ -17,7 +17,7 @@ class PreambleAdderIO[T <: Data](params: PacketBundleParams[T]) extends Bundle {
   override def cloneType: this.type = PreambleAdderIO(params).asInstanceOf[this.type]
 }
 object PreambleAdderIO {
-  def apply[T <: Data](params: PacketBundleParams[T]): CFOIO[T] =
+  def apply[T <: Data](params: PacketBundleParams[T]): PreambleAdderIO[T] =
     new PreambleAdderIO(params)
 }
 
@@ -26,17 +26,17 @@ case class FixedPreambleParams(
   iqWidth: Int,
   stLength: Int = 160,
   ltLength: Int = 160,
-) extends CFOParams[FixedPoint] {
+) extends PreambleParams[FixedPoint] {
   val protoIQ = DspComplex(FixedPoint(iqWidth.W, (iqWidth-3).BP)).cloneType
 }
 
-class PreambleAdder[T<:Data:ConvertableTo](val params: PreambleParams[T]) extends Module {
+class PreambleAdder[T<:Data:Ring:ConvertableTo](val params: PreambleParams[T]) extends Module {
   val io = IO( PreambleAdderIO(params) )
 
   val inputBuffer = (0 until (params.stLength + params.ltLength)).foldLeft(io.in.bits.iq(0)){(prev, cur) => RegNext(prev)}
   // val stfVec = VecInit(IEEE80211.stf)
   // val ltfVec = VecInit(IEEE80211.ltf)
-  val preambleVec = VecInit(IEEE80211.stf :+ IEEE80211.ltf)
+  val preambleVec = VecInit((IEEE80211.stf ++ IEEE80211.ltf).map{x => DspComplex(ConvertableTo[T].fromDouble(x.real), ConvertableTo[T].fromDouble(x.imag))})
 
   val idle :: preamble :: data :: Nil = Enum(3)
   val nxtState = Wire(UInt(2.W))
@@ -44,8 +44,8 @@ class PreambleAdder[T<:Data:ConvertableTo](val params: PreambleParams[T]) extend
   val preambleCounter = Counter(params.stLength + params.ltLength)
 
   io.out.valid := false.B
-  io.out.bits.iq(0).real := ConvertableTo[T].fromDouble(0.0)
-  io.out.bits.iq(0).imag := ConvertableTo[T].fromDouble(0.0)
+  io.out.bits.iq.real := ConvertableTo[T].fromDouble(0.0)
+  io.out.bits.iq.imag := ConvertableTo[T].fromDouble(0.0)
   switch(curState){
     is(idle){
       preambleCounter.value := 0.U
@@ -63,7 +63,7 @@ class PreambleAdder[T<:Data:ConvertableTo](val params: PreambleParams[T]) extend
     }
     is(data){
       io.out.valid := true.B
-      io.out.bits.iq(0) := inputBuffer
+      io.out.bits.iq := inputBuffer
       nxtState := Mux(io.in.bits.pktEnd, idle, data)
     }
   }
