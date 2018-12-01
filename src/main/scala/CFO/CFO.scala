@@ -191,7 +191,6 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
   val io = IO(CFOEIO(params))
 
   val cordic = Module ( new IterativeCordic(params) )
-  val pulseGen = Module ( new OneCyclePulseGen )
   val stfDropper = Module ( new STFDropper(params) )
 
   if(params.preamble == true){
@@ -230,8 +229,6 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     pulseGen.io.in := (curState === lt || curState === data)
     io.out.bits.iq(0) := stfDropper.io.out.iq
     io.pErr := coarseOffset + fineOffset 
-    io.cErr := coarseOffset 
-    io.fErr := fineOffset
 
     coe.io.in.bits := io.in.bits.iq(0)
     foe.io.in.bits := io.in.bits.iq(0)
@@ -264,7 +261,6 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
      foe.io.in.valid := false.B
 
      nxtState := idle
-     io.curState := curState
 
     //stMul := (delayIQByST.conj() * io.in.bits.iq(0))
     //ltMul := (delayIQByLT.conj() * io.in.bits.iq(0))

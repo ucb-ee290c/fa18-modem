@@ -33,7 +33,7 @@ case class PreambleTestVectors(randcfo: Int = 50000) {
   //val width = 1
 //}
 
-class PacketAdderSpec extends FlatSpec with Matchers {
+class PreambleAdderSpec extends FlatSpec with Matchers {
   val vecs = PreambleTestVectors()
   behavior of "Add Preamble"
 
