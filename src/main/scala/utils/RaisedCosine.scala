@@ -13,7 +13,7 @@ object RCTaps {
   def apply[T <: Data](params: RCFilterParams[T]): scala.collection.immutable.Vector[Double] = {
     require(params.symbolSpan >= 1)
     require(params.sampsPerSymbol >= 1)
-    require(params.alpha > 0.0)
+    require(params.alpha >= 0.0)
     require(params.alpha <= 1.0)
     val ntaps = params.sampsPerSymbol * params.symbolSpan + 1
     val N = linspace(0, ntaps-1, ntaps)
