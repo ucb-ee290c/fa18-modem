@@ -75,7 +75,7 @@ object FinalRxParams {
             }
             val equalizerParams = FixedEqualizerParams(width, binaryPoint=width-3,
                 carrierMask=Seq.fill(1)(false) ++ Seq.fill(26)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(6)(false) ++ Seq.fill(27)(true),
-                nSubcarriers=nfft)
+                nSubcarriers=nfft, preambleSymbol=IEEE80211.ltfFreq)
             val cfoParams = FixedCFOParams(width=1, iqWidth=width, stLength=160,
                                            ltLength=160, preamble=true, stagesPerCycle=1)
             val fftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,

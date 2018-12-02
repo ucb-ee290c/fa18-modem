@@ -5,12 +5,16 @@ import chisel3.experimental.FixedPoint
 import chisel3.util._
 import dsptools.numbers._
 
+import breeze.linalg.DenseVector
+import breeze.math.Complex
+
 
 trait EqualizerParams[T <: Data] extends PacketBundleParams[T] {
   //val mu: Double                  // Unused. In place for pilot-based equalization later.
   //val pilots: Seq[Int]            // Unused. List of subcarrier indices containing channel pilots.
   val carrierMask: Seq[Boolean]   // Mask of subcarriers containing data or a pilot, which should be equalized.
   val nSubcarriers: Int           // Total number of subcarriers coming from the FFT.
+  val preambleSymbol: DenseVector[Complex]
 }
 
 case class FixedEqualizerParams(
@@ -20,7 +24,8 @@ case class FixedEqualizerParams(
   //pilots: Seq[Int] = Seq(5, 21, 43, 59),
   // Default to non-fft-shifted output from fft block, 802.11a mask
   carrierMask: Seq[Boolean] = Seq.fill(1)(false) ++ Seq.fill(26)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(6)(false) ++ Seq.fill(27)(true),
-  nSubcarriers: Int = 64
+  nSubcarriers: Int = 64,
+  preambleSymbol: DenseVector[Complex] = IEEE80211.ltfFreq
 ) extends EqualizerParams[FixedPoint] {
   val protoIQ = DspComplex(FixedPoint(width.W, binaryPoint.BP)).cloneType
 }
@@ -145,7 +150,7 @@ class Equalizer[T <: Data : Real : BinaryRepresentation](params: EqualizerParams
   val nLTFCarriers = params.carrierMask.map(c => if (c) 1 else 0).reduce(_ + _)
   val ltfIdxs = VecInit(params.carrierMask zip (0 until params.carrierMask.length) filter {case (b, i) => b} map {case (b, i) => i.U})
   val ltfWires = Seq.fill(params.nSubcarriers)(Wire(params.protoIQ))
-  ltfWires zip (IEEE80211.ltfFreq.toScalaVector) foreach {
+  ltfWires zip (params.preambleSymbol.toScalaVector) foreach {
     case (w, x) => w := DspComplex.wire(Real[T].fromDouble(x.real), Real[T].fromDouble(x.imag))
   }
   val ltfTable = VecInit(ltfWires)
