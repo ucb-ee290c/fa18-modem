@@ -24,7 +24,7 @@ object FinalTxParams {
                 val prefixLength = nfft/4
                 val symbolLength = nfft
             }
-	    val serParams = UIntBitsSerDesParams( dataWidth = 1,bitsWidth = 48,ratio = 48,maxVal = 1)
+	    val serParams = UIntBitsSerDesParams(dataWidth = 1, ratio = 48)
 
             val ifftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = nfft, binPoint = width - 3)
