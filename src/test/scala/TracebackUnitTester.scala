@@ -3,81 +3,62 @@ package modem
 import dsptools.DspTester
 
 import chisel3._
-trait HasTesterUtil[T <: Module] extends DspTester[T] {
-
-  def wait_for_assert(signal: Bool, maxCyclesWait: Int) {
-    require(maxCyclesWait > 0, "maximum number of cycles to wait must be positive")
-    var cyclesWaiting = 0
-    while (!peek(signal) && cyclesWaiting < maxCyclesWait) {
-      cyclesWaiting += 1
-      if (cyclesWaiting >= maxCyclesWait) {
-        expect(false, "waited for input too long")
-      }
-      step(1)
-    }
-  }
-
-  def poke_seq[U <: chisel3.Data](sig_vec: Vec[U], stim_seq: Seq[Double]) {
-    stim_seq.zipWithIndex.foreach { case (value, index) => poke(sig_vec(index), value) }
-  }
-
-  def expect_seq[U <: chisel3.Data](sig_vec: Vec[U], exp_seq: Seq[Double]) {
-    exp_seq.zipWithIndex.foreach { case (expected, index) => expect(sig_vec(index), expected) }
-  }
-}
-
-class TracebackUnitTester[T <: chisel3.Data](c: Traceback[T]) extends DspTester(c) with HasTesterUtil[Traceback[T]] {
+trait HasTracebackTesterUtil[T <: Module] extends DspTester[T] {
   def check_expected_if_valid[U <: chisel3.Data](sig_vec: Vec[U], expected: Seq[Seq[Int]], idx: Int, valid: Bool): Int = {
     if (peek(valid) && idx < expected.length) {
-      expect_seq(sig_vec, expected(idx).map(_.toDouble))
+      sig_vec.zip(expected(idx)).foreach { case (sig, exp) => expect(sig, exp) }
       idx + 1
     } else {
       idx
     }
   }
+}
+
+class TracebackUnitTester[T <: chisel3.Data](c: Traceback[T]) extends DspTester(c)
+      with HasTesterUtil[Traceback[T]] with HasTracebackTesterUtil[Traceback[T]] {
   val expected_out = Seq(Seq(0, 1, 0, 1), Seq(1, 0, 0, 0), Seq(0, 0, 0, 1), Seq(0, 1, 1, 0))
-  val inPMs = Seq(
-    Seq(0, 3, 3, 3),      // 0
-    Seq(2, 3, 0, 3),      // 2
-    Seq(3, 1, 3, 1),      // 1
-    Seq(2, 2, 2, 2),      // 0
-    Seq(2, 3, 3, 2),      // 0
-    Seq(3, 2, 3, 4),      // 1
-    Seq(2, 4, 4, 4),      // 0 <-
-    Seq(2, 5, 5, 5),      // 0
-    Seq(2, 5, 5, 5),      // 0
-    Seq(2, 5, 5, 5),      // 0
-    Seq(2, 5, 5, 5),      // 0 <-
-    Seq(2, 100, 0, 100),  // 2
-    Seq(3, 1, 3, 1),      // 1
-    Seq(2, 2, 2, 2),      // 0
-    Seq(3, 3, 3, 2),      // 0 <-
-    Seq(3, 2, 3, 4),      // 1
-    Seq(2, 4, 4, 4),      // 0
-    Seq(2, 5, 5, 5),      // 0
-    Seq(2, 5, 5, 5)       // 0 <-
-  )
-  val inSPs = Seq(
-    Seq(0, 0, 0, 0),      //
-    Seq(0, 3, 0, 3),      //
-    Seq(0, 2, 0, 2),      //
-    Seq(1, 3, 1, 3),      //
-    Seq(0, 3, 1, 2),      //
-    Seq(0, 3, 1, 3),      //
-    Seq(1, 2, 1, 3),      // <-
-    Seq(0, 3, 1, 2),      //
-    Seq(0, 3, 1, 2),      //
-    Seq(0, 3, 1, 2),      //
-    Seq(0, 3, 1, 2),      // <-
-    Seq(0, 3, 0, 3),      //
-    Seq(0, 2, 0, 2),      //
-    Seq(1, 3, 1, 3),      //
-    Seq(0, 3, 1, 2),      // <-
-    Seq(0, 3, 1, 3),      //
-    Seq(1, 2, 1, 3),      //
-    Seq(0, 3, 1, 2),      //
-    Seq(0, 3, 1, 2)       // <-
-  )
+  val inPMs: IndexedSeq[IndexedSeq[BigInt]] = IndexedSeq(
+    IndexedSeq(0, 3, 3, 3),      // 0
+    IndexedSeq(2, 3, 0, 3),      // 2
+    IndexedSeq(3, 1, 3, 1),      // 1
+    IndexedSeq(2, 2, 2, 2),      // 0
+    IndexedSeq(2, 3, 3, 2),      // 0
+    IndexedSeq(3, 2, 3, 4),      // 1
+    IndexedSeq(2, 4, 4, 4),      // 0 <-
+    IndexedSeq(2, 5, 5, 5),      // 0
+    IndexedSeq(2, 5, 5, 5),      // 0
+    IndexedSeq(2, 5, 5, 5),      // 0
+    IndexedSeq(2, 5, 5, 5),      // 0 <-
+    IndexedSeq(2, 100, 0, 100),  // 2
+    IndexedSeq(3, 1, 3, 1),      // 1
+    IndexedSeq(2, 2, 2, 2),      // 0
+    IndexedSeq(3, 3, 3, 2),      // 0 <-
+    IndexedSeq(3, 2, 3, 4),      // 1
+    IndexedSeq(2, 4, 4, 4),      // 0
+    IndexedSeq(2, 5, 5, 5),      // 0
+    IndexedSeq(2, 5, 5, 5)       // 0 <-
+  ).map(_.map(BigInt(_)))
+  val inSPs: IndexedSeq[IndexedSeq[BigInt]] = IndexedSeq(
+    IndexedSeq(0, 0, 0, 0),      //
+    IndexedSeq(0, 3, 0, 3),      //
+    IndexedSeq(0, 2, 0, 2),      //
+    IndexedSeq(1, 3, 1, 3),      //
+    IndexedSeq(0, 3, 1, 2),      //
+    IndexedSeq(0, 3, 1, 3),      //
+    IndexedSeq(1, 2, 1, 3),      // <-
+    IndexedSeq(0, 3, 1, 2),      //
+    IndexedSeq(0, 3, 1, 2),      //
+    IndexedSeq(0, 3, 1, 2),      //
+    IndexedSeq(0, 3, 1, 2),      // <-
+    IndexedSeq(0, 3, 0, 3),      //
+    IndexedSeq(0, 2, 0, 2),      //
+    IndexedSeq(1, 3, 1, 3),      //
+    IndexedSeq(0, 3, 1, 2),      // <-
+    IndexedSeq(0, 3, 1, 3),      //
+    IndexedSeq(1, 2, 1, 3),      //
+    IndexedSeq(0, 3, 1, 2),      //
+    IndexedSeq(0, 3, 1, 2)       // <-
+  ).map(_.map(BigInt(_)))
   var out_idx = 0
 
   poke(c.io.enable, 0)
@@ -88,15 +69,15 @@ class TracebackUnitTester[T <: chisel3.Data](c: Traceback[T]) extends DspTester(
   poke(c.io.enable, 1)
   poke(c.io.headInfo.valid, 0)
   inPMs.zip(inSPs).foreach { case (inPM, inSP) => {
-    poke_seq(c.io.inPM, inPM.map(_.toDouble))
-    poke_seq(c.io.inSP, inSP.map(_.toDouble))
+    poke(c.io.inPM, inPM.reverse)
+    poke(c.io.inSP, inSP.reverse)
     out_idx = check_expected_if_valid(c.io.out.bits, expected_out, out_idx, c.io.out.valid)
     step(1)
   }}
 
   while (out_idx < expected_out.length) {
     wait_for_assert(c.io.out.valid, 50)
-    expect_seq(c.io.out.bits, expected_out(out_idx).map(_.toDouble))
+    c.io.out.bits.zip(expected_out(out_idx)).foreach { case (sig, exp) => expect(sig, exp) }
     out_idx += 1
     step(1)
   }

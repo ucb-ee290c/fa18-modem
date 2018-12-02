@@ -3,15 +3,8 @@ package modem
 import dsptools.DspTester
 
 import chisel3._
-class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends DspTester(c) with HasTesterUtil[ViterbiDecoder[T]] {
-  def check_expected_if_valid[U <: chisel3.Data](sig_vec: Vec[U], expected: Seq[Seq[Int]], idx: Int, valid: Bool): Int = {
-    if (peek(valid) && idx < expected.length) {
-      expect_seq(sig_vec, expected(idx).map(_.toDouble))
-      idx + 1
-    } else {
-      idx
-    }
-  }
+class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends DspTester(c)
+      with HasTesterUtil[ViterbiDecoder[T]] with HasTracebackTesterUtil[ViterbiDecoder[T]] {
   val expected_out = Seq(
     Seq(1, 0, 1, 1, 0),
     Seq(0, 0, 0, 0, 0),
@@ -344,7 +337,7 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
 
   while (out_idx < expected_out.length) {
     wait_for_assert(c.io.out.valid, 50)
-    expect_seq(c.io.out.bits, expected_out(out_idx).map(_.toDouble))
+    c.io.out.bits.zip(expected_out(out_idx)).foreach { case (sig, exp) => expect(sig, exp) }
     out_idx += 1
     step(1)
   }
