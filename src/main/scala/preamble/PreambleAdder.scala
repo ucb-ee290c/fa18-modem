@@ -36,7 +36,8 @@ class PreambleAdder[T<:Data:Ring:ConvertableTo](val params: PreambleParams[T]) e
   val inputBuffer = (0 until (params.stLength + params.ltLength)).foldLeft(io.in.bits.iq(0)){(prev, cur) => RegNext(prev)}
   // val stfVec = VecInit(IEEE80211.stf)
   // val ltfVec = VecInit(IEEE80211.ltf)
-  val preambleVec = VecInit((IEEE80211.stf ++ IEEE80211.ltf).map{x => DspComplex(ConvertableTo[T].fromDouble(x.real), ConvertableTo[T].fromDouble(x.imag))})
+  val preambleVecReal = VecInit((IEEE80211.stf ++ IEEE80211.ltf).map{x => ConvertableTo[T].fromDouble(x.real)})
+  val preambleVecImag = VecInit((IEEE80211.stf ++ IEEE80211.ltf).map{x => ConvertableTo[T].fromDouble(x.imag)})
 
   val idle :: preamble :: data :: Nil = Enum(3)
   val nxtState = Wire(UInt(2.W))
@@ -46,6 +47,9 @@ class PreambleAdder[T<:Data:Ring:ConvertableTo](val params: PreambleParams[T]) e
   io.out.valid := false.B
   io.out.bits.iq.real := ConvertableTo[T].fromDouble(0.0)
   io.out.bits.iq.imag := ConvertableTo[T].fromDouble(0.0)
+  
+  nxtState := idle
+  io.in.ready := true.B
   switch(curState){
     is(idle){
       preambleCounter.value := 0.U
@@ -54,7 +58,8 @@ class PreambleAdder[T<:Data:Ring:ConvertableTo](val params: PreambleParams[T]) e
     }
     is(preamble){
       io.out.valid := true.B
-      io.out.bits.iq := preambleVec(preambleCounter.value)
+      io.out.bits.iq.real := preambleVecReal(preambleCounter.value)
+      io.out.bits.iq.imag := preambleVecImag(preambleCounter.value)
       when(io.out.ready){
         nxtState := Mux(preambleCounter.inc(), data, preamble)
       }.otherwise{
