@@ -24,10 +24,10 @@ class PreambleTester[T <: chisel3.Data](c: PreambleAdder[T], trials: Seq[IQ], tf
     val attempt = trial.iqin zip tf.iqin
     for((iq, tfiq) <- attempt){
       poke(c.io.in.bits.iq(0), iq)
-      peek(c.io.out.bits.iq)
+      peek(c.io.out.bits.iq(0))
       step(1)
       fixTolLSBs.withValue(tolLSBs){
-        expect(c.io.out.bits.iq, tfiq)
+        expect(c.io.out.bits.iq(0), tfiq)
       }
       poke(c.io.in.bits.pktStart, 0)
     }
@@ -35,7 +35,7 @@ class PreambleTester[T <: chisel3.Data](c: PreambleAdder[T], trials: Seq[IQ], tf
       peek(c.io.out.bits.iq)
       step(1)
       fixTolLSBs.withValue(tolLSBs){
-        expect(c.io.out.bits.iq, trials(0).iqin(i))
+        expect(c.io.out.bits.iq(0), trials(0).iqin(i))
       }
       //step(1)
       }
