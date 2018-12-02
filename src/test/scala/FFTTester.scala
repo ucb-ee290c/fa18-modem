@@ -2,12 +2,10 @@ package modem
 
 import dsptools.DspTester
 
-import breeze.math.{Complex}
+import breeze.math.Complex
 
 /**
- * DspTester for FixedFFT
- *
- * Run each trial in @trials
+ * DspTester for FFT
  */
 class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Complex], pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 5) extends DspTester(c) with HasTesterUtil[FFT[T]] {
   val maxCyclesWait = scala.math.max(50, c.params.numPoints * 3)
@@ -26,16 +24,19 @@ class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Comple
   wait_for_assert(c.io.out.valid, maxCyclesWait)
   expect(c.io.out.bits.pktStart, pktStart)
   expect(c.io.out.bits.pktEnd  , pktEnd)
-  fixTolLSBs.withValue(tolLSBs) { expect_seq(c.io.out.bits.iq, out) }
+  fixTolLSBs.withValue(tolLSBs) { expect_complex_seq(c.io.out.bits.iq, out) }
 }
 
+/**
+ * DspTester for IFFT
+ */
 class IFFTTester[T <: chisel3.Data](c: IFFT[T], inp: Seq[Complex], out: Seq[Complex], pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 2) extends DspTester(c) with HasTesterUtil[IFFT[T]] {
   val maxCyclesWait = scala.math.max(50, c.params.numPoints * 3)
 
   poke(c.io.out.ready, 1)
   poke(c.io.in.valid, 1)
 
-  poke_seq(c.io.in.bits.iq, inp)
+  poke_complex_seq(c.io.in.bits.iq, inp)
   poke(c.io.in.bits.pktStart, pktStart)
   poke(c.io.in.bits.pktEnd  , pktEnd)
   wait_for_assert(c.io.in.ready, maxCyclesWait)
@@ -50,7 +51,7 @@ class IFFTTester[T <: chisel3.Data](c: IFFT[T], inp: Seq[Complex], out: Seq[Comp
 }
 
 /**
- * Convenience function for running tests
+ * Convenience functions for running tests
  */
 object FixedFFTTester {
   def apply(params: FixedFFTParams, inp: Seq[Complex], out: Seq[Complex]): Boolean = {
