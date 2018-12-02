@@ -33,7 +33,7 @@ case class FixedPreambleParams(
 class PreambleAdder[T<:Data:Ring:ConvertableTo](val params: PreambleParams[T]) extends Module {
   val io = IO( PreambleAdderIO(params) )
 
-  val inputBuffer = (0 until (params.stLength + params.ltLength)).foldLeft(io.in.bits.iq(0)){(prev, cur) => RegNext(prev)}
+  val inputBuffer = (0 to (params.stLength + params.ltLength)).foldLeft(io.in.bits.iq(0)){(prev, cur) => RegNext(prev)}
   // val stfVec = VecInit(IEEE80211.stf)
   // val ltfVec = VecInit(IEEE80211.ltf)
   val preambleVecReal = VecInit((IEEE80211.stf ++ IEEE80211.ltf).map{x => ConvertableTo[T].fromDouble(x.real)})
@@ -54,6 +54,8 @@ class PreambleAdder[T<:Data:Ring:ConvertableTo](val params: PreambleParams[T]) e
     is(idle){
       preambleCounter.value := 0.U
       io.out.valid := false.B
+      io.out.bits.iq.real := ConvertableTo[T].fromDouble(0.0)
+      io.out.bits.iq.imag := ConvertableTo[T].fromDouble(0.0)
       nxtState := Mux(io.in.bits.pktStart, preamble, idle)
     }
     is(preamble){
