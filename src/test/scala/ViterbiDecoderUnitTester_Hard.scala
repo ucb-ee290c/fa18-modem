@@ -472,13 +472,13 @@ class ViterbiDecoderUnitTester_Hard[T <: chisel3.Data, U <: chisel3.Data](c: Vit
   step(1)
   expect(c.io.out.valid, 0)
 
-//  step(1)
-//  expect(c.io.out.valid, 1)
-//  expect(c.io.out.bits(0), 0)   // bit 16~20
-//  expect(c.io.out.bits(1), 0)
-//  expect(c.io.out.bits(2), 0)
-//  expect(c.io.out.bits(3), 0)
-//  expect(c.io.out.bits(4), 0)
+  step(1)
+  expect(c.io.out.valid, 1)
+  expect(c.io.out.bits(0), 0)   // bit 16~20
+  expect(c.io.out.bits(1), 0)
+  expect(c.io.out.bits(2), 0)
+  expect(c.io.out.bits(3), 0)
+  expect(c.io.out.bits(4), 0)
 }
 
 object HardViterbiDecoderTester {

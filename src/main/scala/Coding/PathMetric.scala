@@ -59,7 +59,6 @@ class PathMetric[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) e
       val tmpAcc      = Wire(Vec(N, Vec(params.numInputs, params.pmBitType.cloneType)))
 
       val minPM       = Wire(Vec(params.nStates, params.pmBitType.cloneType))
-      val tmpPMMin    = Wire(Vec(params.nStates - 1, params.pmBitType.cloneType))
 
       for (currentInput <- 0 until params.numInputs){
         for (currentStates <- 0 until params.nStates){
@@ -71,28 +70,21 @@ class PathMetric[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) e
 
       for (nRow <- 0 until params.nStates){
         when(tmpAcc(nRow)(0) < tmpAcc(nRow)(1)){
-//          pmRegs(nRow)        := tmpAcc(nRow)(0)
           minPM(nRow)         := tmpAcc(nRow)(0)
           survivalPath(nRow)  := tmpSP(nRow)(0)
         }.otherwise{
-//          pmRegs(nRow)        := tmpAcc(nRow)(1)
           minPM(nRow)        := tmpAcc(nRow)(1)
           survivalPath(nRow)  := tmpSP(nRow)(1)
         }
       }
 
-//      val tmpPMMin2 = pmRegs.reduceLeft((x, y) => {
-//        val comp = x < y
-//        (Mux(comp, x, y), Mux(comp, x._2, y._2))
-//      })._2
-
-      tmpPMMin(0)           := Mux(minPM(0) < minPM(1), minPM(0), minPM(1))
-      for (i <- 1 until params.nStates - 1) {
-        tmpPMMin(i)         := Mux(tmpPMMin(i - 1) < minPM(i + 1), tmpPMMin(i - 1), minPM(i + 1))
-      }
+      val tmpPMMin = minPM.reduceLeft((x, y) => {
+        val comp = x < y
+        (Mux(comp, x, y))
+      })
 
       for (nRow <- 0 until params.nStates){
-        when(tmpPMMin(params.nStates - 2) >= initVal){
+        when(tmpPMMin >= initVal){
           pmRegs(nRow)  := minPM(nRow) - initVal
         }.otherwise{
           pmRegs(nRow)  := minPM(nRow)

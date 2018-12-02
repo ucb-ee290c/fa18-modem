@@ -82,7 +82,9 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   wrAddrPrev := wrAddr
   wrAddr     := wrAddrPrev
   // Update write address (with wrapping)
-  when (io.enable) { wrAddr := Mux(wrAddrPrev < (addrSize - 1).U, wrAddrPrev + 1.U, 0.U) }
+//  when (io.enable) {
+    wrAddr := Mux(wrAddrPrev < (addrSize - 1).U, wrAddrPrev + 1.U, 0.U)
+//  }
 
   // Update traceback counters
   tracebackCounterPorts.foreach(cntr => { cntr := cntr - 1.U })
@@ -93,7 +95,8 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   // Update counterD
   when (nextStateWait && state_next =/= state) {
     counterD := 0.U
-  } .elsewhen (state === sWaitRest && io.enable) {
+//  } .elsewhen (state === sWaitRest && io.enable) {
+  } .elsewhen (state === sWaitRest) {
     counterD := counterD + 1.U
   }
 
@@ -132,8 +135,9 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   }
 
   // setup registers for address
-  when (io.enable) {
+//  when (io.enable) {
     mem.write(wrAddr, io.inSP)
+//  }
 
     // Find the state corresponding to the smallest PM
     val tmpPMMinIndex = io.inPM.zipWithIndex.map(elem => (elem._1, elem._2.U)).reduceLeft((x, y) => {
@@ -173,15 +177,17 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
     val delay = D + L - 1
 
     // delay read port selection to be in sync with output
-    val selReadPortReg_delayed = ShiftRegister(selReadPortReg, delay, io.enable)
+//    val selReadPortReg_delayed = ShiftRegister(selReadPortReg, delay, io.enable)
+    val selReadPortReg_delayed = ShiftRegister(selReadPortReg, delay, true.B)
     io.out.bits := decodeReg(selReadPortReg_delayed)
 
     when (io.out.fire()) {
       outValid := false.B
     } .otherwise {
-      outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, false.B, io.enable)
+//      outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, false.B, io.enable)
+      outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, true.B)
     }
-  }
+
 
   io.out.valid := outValid
 }

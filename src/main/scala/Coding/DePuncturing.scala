@@ -136,7 +136,10 @@ class DePuncturing[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
   when(io.isHead === true.B){
     pktCntReg := 0.U
   }
-  when(io.isHead === true.B || pktCntReg >= io.headInfo.bits.dataLen || bitCntReg >= (params.n * params.H).U) {
+
+  // if the current bit is header, or pktCntReg exceeds data length, or received n*H bits,
+  // set enReg to false.B
+  when(io.isHead === true.B || pktCntReg >= io.headInfo.bits.dataLen || ((bitCntReg >= (params.n * params.H).U) && (io.in.valid === false.B))) {
     enReg := false.B
   }
 
