@@ -2,10 +2,10 @@ package modem
 
 import org.scalatest.{FlatSpec, Matchers}
 
-class HeaderUnitSpec extends FlatSpec with Matchers {
+class HeaderUnitSpec_Fixed extends FlatSpec with Matchers {
   behavior of "HeaderUnitSpec"
 
-  val params = HardCoding(
+  val params = FixedCoding(
     k = 1,
     n = 2,
     K = 3,
@@ -15,14 +15,15 @@ class HeaderUnitSpec extends FlatSpec with Matchers {
     H = 24,
 //    H = 6,
     genPolynomial = List(7, 6), // generator polynomial
+//    genPolynomial = List(7, 5),
     tailBitingEn = false,
     tailBitingScheme = 0,
     protoBitsWidth = 16,
     bitsWidth = 48,
-    softDecision = false
+    softDecision = true
   )
   it should "Extract Header information" in {
 
-    HardHeaderTester(params) should be (true)
+    FixedHeaderTester(params) should be (true)
   }
 }

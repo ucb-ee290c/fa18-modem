@@ -5,7 +5,7 @@ import org.scalatest.{FlatSpec, Matchers}
 class ViterbiDecoderUnitSpec extends FlatSpec with Matchers {
   behavior of "Viterbi Decoder"
 
-  val params = FixedCoding(
+  val params = HardCoding(
     k = 1,
     n = 2,
     K = 3,
@@ -22,6 +22,6 @@ class ViterbiDecoderUnitSpec extends FlatSpec with Matchers {
   )
   it should "Traceback" in {
 
-    FixedViterbiDecoderTester(params) should be (true)
+    HardViterbiDecoderTester(params) should be (true)
   }
 }

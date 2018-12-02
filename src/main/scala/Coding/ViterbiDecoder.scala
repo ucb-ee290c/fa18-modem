@@ -8,7 +8,7 @@ import dsptools.numbers._
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // Description: Viterbi decoder + de-puncturing + header extractor
-class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
+class ViterbiDecoder[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) extends Module {
   require(params.m > 1)
   require(params.k > 0)
   require(params.n > 0)
@@ -33,11 +33,11 @@ class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
     val out_sp    = Output(Vec(params.nStates, UInt(params.m.W)))       // storing Survival Path
   })
 
-  val arbiterModule               = Module(new Arbiter[T](params))
-  val HeaderExtModule             = Module(new HeaderExtractor[T](params))
-  val DePuncturingModule          = Module(new DePuncturing[T](params))
-  val pathMetricModule            = Module(new PathMetric[T](params))
-  val tracebackModule             = Module(new Traceback[T](params))
+  val arbiterModule               = Module(new Arbiter[T, U](params))
+  val HeaderExtModule             = Module(new HeaderExtractor[T, U](params))
+  val DePuncturingModule          = Module(new DePuncturing[T, U](params))
+  val pathMetricModule            = Module(new PathMetric[T, U](params))
+  val tracebackModule             = Module(new Traceback[T, U](params))
 
   // Arbiter
   arbiterModule.io.inHead         := DePuncturingModule.io.outHead
@@ -53,7 +53,7 @@ class ViterbiDecoder[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   // De-Puncturing connection
   io.in_soft                      <> DePuncturingModule.io.in           // for soft-input decoding
-  io.in_hard                      <> DePuncturingModule.io.in_hard
+//  io.in_hard                      <> DePuncturingModule.io.in_hard
   DePuncturingModule.io.isHead    := arbiterModule.io.isHead
   DePuncturingModule.io.hdrEnd    := arbiterModule.io.hdrEnd
   DePuncturingModule.io.headInfo  <> HeaderExtModule.io.headInfo

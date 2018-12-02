@@ -17,8 +17,8 @@ class DePuncturingUnitSpec extends FlatSpec with Matchers {
     tailBitingEn = false,
     tailBitingScheme = 0,
     protoBitsWidth = 16,
-    bitsWidth = 2,
-    softDecision = false
+    bitsWidth = 48,
+    softDecision = true
   )
   it should "de-puncturing code" in {
     FixedDePuncturingTester(params) should be (true)

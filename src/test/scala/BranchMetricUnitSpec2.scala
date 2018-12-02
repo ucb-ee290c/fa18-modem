@@ -28,8 +28,10 @@ class BranchMetricUnitSpec2 extends FlatSpec with Matchers {
     val outputTable = trellisObj.output_table
 //    val inSeq0      = Seq.fill(n)(Random.nextFloat).map(_.round).map(2 * _ - 1)
 //    val inSeq1      = Seq.fill(n)(Random.nextFloat).map(_.round).map(2 * _ - 1)
-    val inSeq0      = Seq.fill(n)(Random.nextFloat).map(2 * _ - 1)
-    val inSeq1      = Seq.fill(n)(Random.nextFloat).map(2 * _ - 1)
+//    val inSeq0      = Seq.fill(n)(Random.nextFloat).map(2 * _ - 1)
+//    val inSeq1      = Seq.fill(n)(Random.nextFloat).map(2 * _ - 1)
+    val inSeq0      = Seq.fill(n)((1).toFloat)
+    val inSeq1      = Seq.fill(n)((-1).toFloat)
     val inSeq       = inSeq0.zip(inSeq1)
 
     val baseTrial   = BranchMetricInOut2(inBit0=0, inBit1=0, outBitSeq=outputTable)

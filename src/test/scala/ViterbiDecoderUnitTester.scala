@@ -2,7 +2,7 @@ package modem
 
 import dsptools.DspTester
 
-class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends DspTester(c) {
+class ViterbiDecoderUnitTester[T <: chisel3.Data, U <: chisel3.Data](c: ViterbiDecoder[T, U]) extends DspTester(c) {
   poke(c.io.out.ready, 1)
   poke(c.io.in_soft.valid, 0)
   poke(c.io.in_soft.bits.pktStart, 0)
@@ -372,8 +372,8 @@ class ViterbiDecoderUnitTester[T <: chisel3.Data](c: ViterbiDecoder[T]) extends 
   expect(c.io.out.bits(4), 0)
 }
 
-object FixedViterbiDecoderTester {
-  def apply(params: FixedCoding): Boolean = {
+object HardViterbiDecoderTester {
+  def apply(params: HardCoding): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new ViterbiDecoder(params)) {
       c => new ViterbiDecoderUnitTester(c)
     }

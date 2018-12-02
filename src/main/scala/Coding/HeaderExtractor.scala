@@ -8,9 +8,9 @@ import dsptools.numbers._
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // Description: 48-bit minimum latency Viterbi-Decoder to extract information from header block
-class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
+class HeaderExtractor[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) extends Module {
   val io = IO(new Bundle {
-    val in        = Input(Vec((params.n * params.H), SInt(2.W)))      // from De-Puncturing
+    val in        = Input(Vec((params.n * params.H), params.protoBits.cloneType))      // from De-Puncturing
     val isHead    = Input(Bool())                                     // from arbiter
     val headInfo  = Decoupled(DecodeHeadBundle())                     // to De-Puncturing
   })
@@ -22,12 +22,13 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
   val N                   = params.nStates    // # of possible states
   val pmBits              = params.pmBits
   val survivalPath        = SyncReadMem(H, Vec(N, UInt(m.W)))
-  val pmRegs              = RegInit(VecInit(Seq.fill(N)(0.U(pmBits.W))))
-  val addrReg             = RegInit(0.U(log2Ceil(H).W))
+  val pmRegs              = Reg(Vec(N, params.pmBitType.cloneType)) //TODO: to enable tail-biting decoding, I need RegInit
+  //  val pmRegs              = RegInit(VecInit(Seq.fill(N){ConvertableTo[U].fromInt(0)}))
+  val addrReg = RegInit(0.U(log2Ceil(H).W))
   val addrWire            = Wire(UInt(log2Ceil(H).W))
   val counter             = RegInit(0.U(log2Ceil(H*2).W))
   val SPcalcCompleted     = RegInit(false.B)    // flag for SP & PM calculation
-  val initVal             = 16.U(pmBits.W)
+  val initVal             = ConvertableTo[U].fromInt(16)
   val numRows             = math.pow(2.0, (m-1).asInstanceOf[Double]).asInstanceOf[Int]
   val tmpSP               = Wire(Vec(N, Vec(params.numInputs, UInt(m.W))))
   val decodeReg           = Reg(Vec(H, UInt(params.k.W)))
@@ -37,7 +38,7 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
     }
   }
 
-  val branchMetricModule: BranchMetric[T] = Module(new BranchMetric[T](params))
+  val branchMetricModule: BranchMetric[T, U] = Module(new BranchMetric[T, U](params))
   (0 until params.n).map(i => {branchMetricModule.io.in(i) := io.in(counter + i.U)})
 
   addrWire  := addrReg
@@ -45,21 +46,25 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   // when Arbiter raised io.hdrEnd, reset pmRegs and raise startDecode
   when (io.isHead === false.B){
+    addrReg := 0.U
+    counter := 0.U
+    SPcalcCompleted := false.B
+
     when(params.tailBitingEn.asBool() === false.B) {          // for zero-flushing
-      pmRegs(0) := 0.U
+      pmRegs(0) := ConvertableTo[U].fromInt(0)
       (1 until N).map(i => { pmRegs(i) := initVal})
     }
   }
 
   when(io.isHead === true.B && SPcalcCompleted === false.B){
     // temporary matrix for Path Metric calculation
-    val tmpPM   = Wire(Vec(N, Vec(params.numInputs, UInt(pmBits.W))))
+    val tmpPM       = Wire(Vec(N, Vec(params.numInputs, params.pmBitType.cloneType)))
     // temporary matrix for Branch Metric calculation
-    val tmpBM   = Wire(Vec(N, Vec(params.numInputs, UInt((log2Ceil(params.n)+1).W))))
+    val tmpBM       = Wire(Vec(N, Vec(params.numInputs, params.BMoutdec.cloneType)))
     // temporary matrix for ACS (mainly for accumulation)
-    val tmpAcc  = Wire(Vec(N, Vec(params.numInputs, UInt(pmBits.W))))
-    // wire for syncreadmem.write()
-    val tmpMemWire          = Wire(Vec(N, UInt(m.W)))
+    val tmpAcc      = Wire(Vec(N, Vec(params.numInputs, params.pmBitType.cloneType)))
+    // wire for SyncReadMem.write()
+    val tmpMemWire  = Wire(Vec(N, UInt(m.W)))
 
     for (currentInput <- 0 until params.numInputs){
       for (currentStates <- 0 until N){
@@ -95,15 +100,14 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
 
   // declare variables for decoding process
   val tmpSPReg          = RegInit(0.U(m.W))
-//  val tmpSPWire         = Wire(UInt(m.W))
   val lengthInfoWire    = Wire(Vec(12, UInt(12.W)))
   val outValid          = RegInit(false.B)
   val tbCounter         = RegInit(0.U(log2Ceil(H).W))
   val en_mem            = true.B
-  val readMemWire       = Wire(Vec(N, UInt(m.W)))
 
   // start decoding !
   when(SPcalcCompleted === true.B) {
+    val readMemWire       = Wire(Vec(N, UInt(m.W)))
     val tmpPMMinIndex = pmRegs.zipWithIndex.map(elem => (elem._1, elem._2.U)).reduceLeft((x, y) => {
       val comp = x._1 < y._1
       (Mux(comp, x._1, y._1), Mux(comp, x._2, y._2))
@@ -127,12 +131,11 @@ class HeaderExtractor[T <: Data: Real](params: CodingParams[T]) extends Module {
       counter := 0.U
       SPcalcCompleted := false.B
       outValid := true.B
-      (0 until N).map(i => {pmRegs(i) := 0.U})
+      (0 until N).map(i => {ConvertableTo[U].fromInt(0)})
       (0 until N*H).map(i => {survivalPath.write(i.U, VecInit(Seq.fill(N){0.U}))})
     }
+    readMemWire := survivalPath.read(addrWire - 1.U)
   }
-
-  readMemWire := survivalPath.read(addrWire - 1.U)
 
   when(io.headInfo.fire()){
     outValid      := false.B

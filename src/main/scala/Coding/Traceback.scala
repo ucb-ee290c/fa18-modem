@@ -9,7 +9,7 @@ import dsptools.numbers._
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // more comments are available on traceback_backup1.scala file
 // assuming continous Viterbi Decoding
-class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
+class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) extends Module {
   require(params.D >= 4)
 
   val io = IO(new Bundle {

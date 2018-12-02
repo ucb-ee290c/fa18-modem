@@ -2,7 +2,7 @@ package modem
 
 import dsptools.DspTester
 
-class ArbiterUnitTester[T <: chisel3.Data](c: Arbiter[T]) extends DspTester(c) {
+class ArbiterUnitTester[T <: chisel3.Data](c: Arbiter[T, T]) extends DspTester(c) {
   poke(c.io.lenCnt, 0)
   poke(c.io.hdrPktLatch, 0)
   expect(c.io.isHead, 0)

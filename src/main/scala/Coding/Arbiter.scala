@@ -10,7 +10,7 @@ import modem.{BranchMetric, CodingParams, Trellis}
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // Description: Arbiter identifies whether the incoming packet contains header information or payload
-class Arbiter[T <: Data: Real](params: CodingParams[T]) extends Module {
+class Arbiter[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) extends Module {
   val io = IO(new Bundle{
     val inHead      = Input(Vec((params.n * params.H), SInt(2.W)))  // from De-Puncturing
     val lenCnt      = Input(Bool())                                 // from De-Puncturing

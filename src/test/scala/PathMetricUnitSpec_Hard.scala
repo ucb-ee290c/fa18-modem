@@ -2,12 +2,12 @@ package modem
 
 import org.scalatest.{FlatSpec, Matchers}
 
-class PathMetricUnitSpec extends FlatSpec with Matchers {
+class PathMetricUnitSpec_Hard extends FlatSpec with Matchers {
   behavior of "Path Metric UnitSpec"
 
   it should "Calculate Path Metric" in {
 
-    val params = FixedCoding(
+    val params = HardCoding(
       k = 1,
       n = 2,
       K = 3,
@@ -20,9 +20,9 @@ class PathMetricUnitSpec extends FlatSpec with Matchers {
       tailBitingScheme = 0,
       protoBitsWidth = 16,
       bitsWidth = 48,
-      softDecision = true
+      softDecision = false
     )
 
-    FixedPathMetricTester(params) should be (true)
+    HardPathMetricTester(params) should be (true)
   }
 }
