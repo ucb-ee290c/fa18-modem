@@ -12,15 +12,16 @@ class BranchMetricUnitSpec2 extends FlatSpec with Matchers {
     n = 2,
     K = 3,
     L = 7,
-    O = 6,
+//    O = 6,
     D = 36,
     H = 24,
     genPolynomial = List(7, 5), // generator polynomial
     tailBitingEn = false,
-    tailBitingScheme = 0,
+//    tailBitingScheme = 0,
     protoBitsWidth = 16,
     bitsWidth = 48,
-    softDecision = true
+    softDecision = true,
+    FFTPoint = 64
   )
   it should "calculate Branch Metrics2" in {
     val n = 10
@@ -28,8 +29,10 @@ class BranchMetricUnitSpec2 extends FlatSpec with Matchers {
     val outputTable = trellisObj.output_table
 //    val inSeq0      = Seq.fill(n)(Random.nextFloat).map(_.round).map(2 * _ - 1)
 //    val inSeq1      = Seq.fill(n)(Random.nextFloat).map(_.round).map(2 * _ - 1)
-    val inSeq0      = Seq.fill(n)(Random.nextFloat).map(2 * _ - 1)
-    val inSeq1      = Seq.fill(n)(Random.nextFloat).map(2 * _ - 1)
+//    val inSeq0      = Seq.fill(n)(Random.nextFloat).map(2 * _ - 1)
+//    val inSeq1      = Seq.fill(n)(Random.nextFloat).map(2 * _ - 1)
+    val inSeq0      = Seq.fill(n)((1).toFloat)
+    val inSeq1      = Seq.fill(n)((-1).toFloat)
     val inSeq       = inSeq0.zip(inSeq1)
 
     val baseTrial   = BranchMetricInOut2(inBit0=0, inBit1=0, outBitSeq=outputTable)

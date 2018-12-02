@@ -7,13 +7,20 @@ import chisel3.util._
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // Description: Convolutional encoder for 802.11a standard
-class ConvCoding[T <: Data](params: CodingParams[T]) extends Module {
+class ConvCoding[T <: Data, U <: Data](params: CodingParams[T, U]) extends Module {
   val io = IO(new Bundle {
     val in        = Flipped(Decoupled(UInt(1.W)))
     val out       = Output(Vec(params.n, UInt(1.W)))
 
     val inReady   = Input(UInt(1.W))      // takes ready signal from interleaver buffer
+    val isHeadIn  = Input(Bool())
+    val pktStrIn  = Input(Bool())
+    val pktEndIn  = Input(Bool())
+
     val outReady  = Output(UInt(1.W))
+    val isHeadOut = Output(Bool())
+    val pktStrOut = Output(Bool())
+    val pktEndOut = Output(Bool())
   })
   // Note: m+1 memory will be instantiated because input bit will also be stored in mem(0) for simpler implementation
   val shiftReg          = RegInit(VecInit(Seq.fill(params.K)(0.U(1.W)))) // initialze memory with all zeros
@@ -23,6 +30,9 @@ class ConvCoding[T <: Data](params: CodingParams[T]) extends Module {
   val n_cnt             = RegInit(0.U(log2Ceil(params.L).W))  // Create a counter             // may not be used
   val tail_cnt          = RegInit(0.U(log2Ceil(params.m).W))  // for zero termination         // may not be used
   val outReadyReg       = RegInit(0.U(1.W))
+  val isHeadReg         = RegInit(false.B)
+  val pktStrReg         = RegInit(false.B)
+  val pktEndReg         = RegInit(false.B)
 
   val genPolyList       = CodingUtils.dec2bitarray(params.genPolynomial, params.K)
   val genPolyVec        = Wire(Vec(params.n, Vec(params.K, UInt(1.W))))
@@ -75,8 +85,14 @@ class ConvCoding[T <: Data](params: CodingParams[T]) extends Module {
   // connect registers to output
   (0 until params.n).map(i => {io.out(i) := AXWires(i)(params.K-1)})   // zero-flush output buffer
 
+  isHeadReg     := io.isHeadIn
+  pktStrReg     := io.pktStrIn
+  pktEndReg     := io.pktEndIn
+
+  io.isHeadOut  := isHeadReg
+  io.pktStrOut  := pktStrReg
+  io.pktEndOut  := pktEndReg
   outReadyReg   := io.inReady
   io.outReady   := outReadyReg    // introducing a single clk cycle delay since ConvCoding has 1 clk cycle delay
   io.in.ready   := io.inReady
-
 }

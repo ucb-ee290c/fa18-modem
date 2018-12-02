@@ -2,7 +2,7 @@ package modem
 
 import dsptools.DspTester
 
-class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T]) extends DspTester(c) {
+class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTester(c) {
   poke(c.io.inReady, 0)
   poke(c.io.isHead, 1)
   poke(c.io.puncMatrix(0), 1)

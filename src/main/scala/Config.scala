@@ -11,7 +11,7 @@ trait TXParams[T<:Data, U<:Data] {
     val ifftParams: FFTParams[T]
     val firParams: RCFilterParams[T]
     val modulatorParams: ModFFTParams[T,U]
-    val encoderParams: CodingParams[U]
+    val encoderParams: CodingParams[T, U]
     val serParams: BitsSerDesParams[U]
 }
 
@@ -63,7 +63,7 @@ trait RXParams[T<:Data, U<:Data, V<:Data] {
   val fftParams: FFTParams[T]
   val bitsBundleParams: BitsBundleParams[U]
   val demodParams: DemodulationParams[T,U]
-  val viterbiParams: CodingParams[T]
+  val viterbiParams: CodingParams[T, U]
 }
 
 object FinalRxParams {

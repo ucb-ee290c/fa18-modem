@@ -2,7 +2,7 @@ package modem
 
 import dsptools.DspTester
 
-class EncodingUnitTester[T <: chisel3.Data](c: Encoding[T]) extends DspTester(c) {
+class EncodingUnitTester[T <: chisel3.Data](c: Encoding[T, T]) extends DspTester(c) {
   /*
 Following is for G=(7, 5)
 State | In  | Out | Next State
@@ -128,6 +128,7 @@ State | In  | Out | Next State
   expect(c.io.out.valid, 1)
   expect(c.io.in.ready, 1)
   poke(c.io.in.bits, 1)
+  expect(c.io.modCtrl, 0)
 }
 
   /**
