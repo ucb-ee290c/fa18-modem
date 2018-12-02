@@ -38,4 +38,18 @@ class RCFilterSpec extends FlatSpec with Matchers {
     val trials = Seq(RCIQ(vecs.doubleImpulse, doubleImpResponse))
     FixedRCFilterTester(params, trials) should be (true)
   }
+
+  val rectParams = FixedRCFilterParams(
+    dataWidth = 16,
+    binaryPoint = 13,
+    alpha = 0.0,
+    sampsPerSymbol = 1,
+    symbolSpan = 1
+  )
+  val rectTaps = RCTaps(rectParams)
+  val rectResponse = (rectTaps.tail.reverse ++ rectTaps).map{x => Complex(x, 0)}
+  it should "act as identity" in {
+    val trials = Seq(RCIQ(vecs.impulse, rectResponse))
+    FixedRCFilterTester(rectParams, trials) should be (true)
+  }
 }

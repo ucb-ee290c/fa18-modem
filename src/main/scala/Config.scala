@@ -11,6 +11,7 @@ trait TXParams[T<:Data, U<:Data] {
     val firParams: RCFilterParams[T]
     val modulatorParams: ModFFTParams[T,U]
     val encoderParams: CodingParams[U]
+    val serParams: BitsSerDesParams[U]
 }
 
 object FinalTxParams {
@@ -23,11 +24,13 @@ object FinalTxParams {
                 val prefixLength = nfft/4
                 val symbolLength = nfft
             }
+	    val serParams = UIntBitsSerDesParams( dataWidth = 1,bitsWidth = 48,ratio = 48,maxVal = 1)
+
             val ifftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = nfft, binPoint = width - 3)
             val modulatorParams = FixedModFFTParams(
                 dataWidth=width,
-		        bitsWidth=48,
+		bitsWidth=48,
                 twiddleWidth=width,
                 numPoints=nfft,
                 Ncbps=48,
@@ -41,7 +44,7 @@ object FinalTxParams {
                 sampsPerSymbol = 4,
                 symbolSpan = 2
             )
-            val encoderParams = HardEncoding()
+            val encoderParams = TxCoding()
         }
         txParams
     }
