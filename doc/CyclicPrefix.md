@@ -44,6 +44,7 @@ Decoupled interface
 
 
 ## Tests
+`sbt test`
 The block's tests include whether it
 - Removes the prefix from a single symbol
 - Removes the prefixes from multiple symbols
