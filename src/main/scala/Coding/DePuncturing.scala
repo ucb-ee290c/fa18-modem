@@ -15,8 +15,7 @@ class DePuncturing[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
 
     val hdrPktLatch = Output(Bool())
 
-    val in          = Flipped(Decoupled(BitsBundle(params)))      // from Demod
-//    val in_hard     = Input(Vec(params.n * params.H, SInt(2.W)))  // from Demod
+    val in          = Flipped(Decoupled(BitsBundle(params)))      // from Demodulator
     val isHead      = Input(Bool())                               // from arbiter
     val hdrEnd      = Input(Bool())                               // from arbiter
     val headInfo    = Flipped(Decoupled(DecodeHeadBundle()))      // from Head Extractor
@@ -114,7 +113,6 @@ class DePuncturing[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
   val o_cnt         = RegInit(0.U(log2Ceil(params.n * params.H).W))              // counter for data vector tracker
   val p_cnt         = RegInit(0.U(log2Ceil(params.n * params.H).W))              // counter for outReg tracker
   val h_cnt         = RegInit(0.U(6.W))
-//  val bufData       = RegInit(VecInit(Seq.fill(params.n)(0.S(2.W))))  // buffer for Data
   val bufData       = Reg(Vec(params.n, params.protoBits.cloneType))  // buffer for Data
   val pktLatch      = RegInit(false.B)
   val pktCntReg     = RegInit(0.U(15.W))

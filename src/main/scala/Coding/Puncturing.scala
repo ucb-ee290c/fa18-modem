@@ -56,6 +56,7 @@ class Puncturing[T <: Data, U <: Data](params: CodingParams[T, U]) extends Modul
     3/4 -> 2.U  ->  R3 && R4
    */
   when(io.isHead === true.B){
+    // select puncturing rate
     when( ((io.puncMatrix(0).toBool() || io.puncMatrix(1).toBool()) && !io.puncMatrix(2).toBool() && io.puncMatrix(3).toBool()) === true.B)
     { // rate = 1/2
       puncMatBitWidth := CodingVariables.puncMatBitWidth1.U
@@ -98,6 +99,7 @@ class Puncturing[T <: Data, U <: Data](params: CodingParams[T, U]) extends Modul
       (0 until 2).map(i => { puncListColSumReg(i) := CodingVariables.puncListColSum1(i).U })
     }
 
+    // select modulation scheme
     when(io.puncMatrix(0).toBool() && io.puncMatrix(1).toBool()){
       modCtrlReg := 0.U   // BPSK
     }.elsewhen(!io.puncMatrix(0).toBool() && io.puncMatrix(1).toBool()){

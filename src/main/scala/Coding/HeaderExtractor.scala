@@ -20,18 +20,18 @@ class HeaderExtractor[T <: Data: Real, U <: Data: Real](params: CodingParams[T, 
   val H                   = params.H          // # of bits in header block
   val m                   = params.m          // # of memory for convolutional coding
   val N                   = params.nStates    // # of possible states
-  val pmBits              = params.pmBits
+
   val survivalPath        = SyncReadMem(H, Vec(N, UInt(m.W)))
-  val pmRegs              = Reg(Vec(N, params.pmBitType.cloneType)) //TODO: to enable tail-biting decoding, I need RegInit
+  val pmRegs              = Reg(Vec(N, params.pmBitType.cloneType))   //TODO: to enable tail-biting decoding, I need RegInit
   //  val pmRegs              = RegInit(VecInit(Seq.fill(N){ConvertableTo[U].fromInt(0)}))
   val addrReg = RegInit(0.U(log2Ceil(H).W))
   val addrWire            = Wire(UInt(log2Ceil(H).W))
   val counter             = RegInit(0.U(log2Ceil(H*2).W))
-  val SPcalcCompleted     = RegInit(false.B)    // flag for SP & PM calculation
-  val initVal             = ConvertableTo[U].fromInt(16)
+  val SPcalcCompleted     = RegInit(false.B)                  // flag for SP & PM calculation
+  val initVal             = ConvertableTo[U].fromInt(16)      // initial PM value for zero-flushing Viterbi Decoder
   val numRows             = math.pow(2.0, (m-1).asInstanceOf[Double]).asInstanceOf[Int]
-  val tmpSP               = Wire(Vec(N, Vec(params.numInputs, UInt(m.W))))
-  val decodeReg           = Reg(Vec(H, UInt(params.k.W)))
+  val tmpSP               = Wire(Vec(N, Vec(params.numInputs, UInt(m.W))))  // temporarily store survival-path info
+  val decodeReg           = Reg(Vec(H, UInt(params.k.W)))     // decoded header info will be stored in decodeReg
   for (currentInput <- 0 until params.numInputs){
     for (currentStates <- 0 until N){
       tmpSP(currentStates/2+currentInput*numRows)(currentStates%2) := currentStates.U
@@ -66,6 +66,7 @@ class HeaderExtractor[T <: Data: Real, U <: Data: Real](params: CodingParams[T, 
     // wire for SyncReadMem.write()
     val tmpMemWire  = Wire(Vec(N, UInt(m.W)))
 
+    // add BM to current PM to calculate the next PM
     for (currentInput <- 0 until params.numInputs){
       for (currentStates <- 0 until N){
         tmpPM(currentStates/2+currentInput*numRows)(currentStates%2)      := pmRegs(currentStates)
@@ -74,6 +75,7 @@ class HeaderExtractor[T <: Data: Real, U <: Data: Real](params: CodingParams[T, 
       }
     }
 
+    // ACS
     for (nRow <- 0 until N){
       when(tmpAcc(nRow)(0) < tmpAcc(nRow)(1)){
         pmRegs(nRow) := tmpAcc(nRow)(0)
@@ -83,14 +85,17 @@ class HeaderExtractor[T <: Data: Real, U <: Data: Real](params: CodingParams[T, 
         tmpMemWire(nRow) := tmpSP(nRow)(1)
       }
     }
+
+    // record survival path in SRAM
     survivalPath.write(addrWire, tmpMemWire)
 
+    // increase memory address pointer offset
     when(addrReg < (H-1).U){
       addrReg := addrReg + 1.U
       counter := counter + params.n.U
     }.otherwise{
       addrReg := addrReg + 1.U
-      SPcalcCompleted := true.B           // need to reset this later
+      SPcalcCompleted := true.B           // Traceback starts once SPcalcCompleted is raised to high
     }
   }
 
@@ -108,14 +113,19 @@ class HeaderExtractor[T <: Data: Real, U <: Data: Real](params: CodingParams[T, 
   // start decoding !
   when(SPcalcCompleted === true.B) {
     val readMemWire       = Wire(Vec(N, UInt(m.W)))
+
+    // find the index of the minimum path metric at the end of trellis
     val tmpPMMinIndex = pmRegs.zipWithIndex.map(elem => (elem._1, elem._2.U)).reduceLeft((x, y) => {
       val comp = x._1 < y._1
       (Mux(comp, x._1, y._1), Mux(comp, x._2, y._2))
     })._2
 
+    // start traceback from here. Decoded value from the last trellis is caluclated separately from the rest.
     when(counter === (params.n*(H-1)).U){
       decodeReg(counter/(params.n.U)) := tmpPMMinIndex >> (m-1)     // grab the minimum PM
       tmpSPReg                        := tmpPMMinIndex
+
+    // read recorded survival path from SRAM. Its MSB represents the decoded value.
     }.otherwise{
       decodeReg(counter/(params.n.U)) := readMemWire(tmpSPReg) >> (m-1)
       tmpSPReg                        := readMemWire(tmpSPReg)
@@ -134,6 +144,8 @@ class HeaderExtractor[T <: Data: Real, U <: Data: Real](params: CodingParams[T, 
       (0 until N).map(i => {ConvertableTo[U].fromInt(0)})
       (0 until N*H).map(i => {survivalPath.write(i.U, VecInit(Seq.fill(N){0.U}))})
     }
+
+    // SRAM read takes 1 clk cycle.
     readMemWire := survivalPath.read(addrWire - 1.U)
   }
 

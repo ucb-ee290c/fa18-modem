@@ -24,15 +24,14 @@ class BranchMetric[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
   for (currentStates <- 0 until params.nStates) {
     for (currentInputs <- 0 until params.numInputs) {
       for (r <- 0 until params.n) {
-        if(params.softDecision == false) { // hard decision
-          when(io.in(r) === ConvertableTo[T].fromInt(0)) {
+        if(params.softDecision == false) { // hard decision. Calculate Hamming distance
+          when(io.in(r) === ConvertableTo[T].fromInt(0)) {    // for the punctured value, skip hamming distance calculation
             io.out(currentStates)(currentInputs)(r) := ConvertableTo[U].fromInt(0)
           }.otherwise {
             io.out(currentStates)(currentInputs)(r) := Mux(io.in(r) === ConvertableTo[T].fromInt(2 * trellisObj.output_table(currentStates)(currentInputs)(r) - 1), ConvertableTo[U].fromInt(0), ConvertableTo[U].fromInt(1))
           }
-        } else {
+        } else {    // Soft-Input decoding. Using L1 Norm to calculate Euclidean distance
           io.out(currentStates)(currentInputs)(r) := ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r))*io.in(r)*(-1)
-//          io.out(currentStates)(currentInputs)(r) := ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r))*io.in(r)
         }
       }
       io.out_dec(currentStates)(currentInputs)  := io.out(currentStates)(currentInputs).reduce(_ + _)

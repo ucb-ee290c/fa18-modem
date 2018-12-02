@@ -22,16 +22,16 @@ trait CodingParams[T <: Data, U <: Data] extends BitsBundleParams[T] {
 //  val fbPolynomial: List[Int]       // feedback generator polynomial for Recursive Systematic Coding (Turbo Code) -> currently not supporting
   val tailBitingEn: Boolean         // 0: disable tail-biting, 1: enable tail-biting
   val tailBitingScheme: Int         // 0: zero tail-biting. 1: sophisticated tail-biting
-  val numInputs: Int
-  val pmBits: Int
-  val softDecision: Boolean       // will always perform soft-decoding
-  val BMout : U
-  val BMoutdec : U
-  val pmBitType: U
+  val numInputs: Int                // combination of input values: 2^k
+  val pmBits: Int                   // define path-metric output bit width
+  val softDecision: Boolean         // choose decoding type: false = hard-decoding. true = soft-decoding
+  val BMout : U                     // define branch-metric output1 type
+  val BMoutdec : U                  // define branch-metric output2 type
+  val pmBitType: U                  // define path-metric input/output type
   val FFTPoint: Int                 // how many clk cycles takes to get the next OFDM symbol?
 }
 
-case class FixedCoding(
+case class FixedCoding(             // case class for soft-input
   k: Int = 1,
   n: Int = 2,
   K: Int = 3,
@@ -59,7 +59,7 @@ case class FixedCoding(
   val pmBitType = FixedPoint((protoBitsWidth+log2Ceil(n)+7).W, (protoBitsWidth-3).BP)
 }
 
-case class HardCoding(
+case class HardCoding(             // case class for hard-decoding
   k: Int = 1,
   n: Int = 2,
   K: Int = 3,
@@ -87,7 +87,7 @@ case class HardCoding(
   val pmBitType = UInt(pmBits.W)
 }
 
-case class TxCoding(
+case class TxCoding(              // case class for encoding (Tx)
    k: Int = 1,
    n: Int = 2,
    K: Int = 3,
@@ -115,6 +115,7 @@ case class TxCoding(
   val pmBitType = UInt(1.W)
 }
 
+// data type for puncturing block
 class MACctrl[T <: Data, U <: Data](params: CodingParams[T, U]) extends Bundle {
   val isHead      = Input(Bool())                   // indicate whether the current block is header
   val puncMatrix  = Input(Vec(4, UInt(1.W)))        // from MAC layer
@@ -124,7 +125,7 @@ object MACctrl {
   def apply[T <: Data, U <: Data](params: CodingParams[T, U]): MACctrl[T, U] = new MACctrl(params)
 }
 
-class DecodeHeadBundle[T <: Data]() extends Bundle {
+class DecodeHeadBundle[T <: Data]() extends Bundle {    // data type for head-extractor
   val rate: Vec[UInt] = Vec(4, UInt(1.W))
   val dataLen: UInt   = UInt(12.W)
 
