@@ -1,11 +1,11 @@
-#define RX_WRITE 0x2000
-#define RX_WRITE_COUNT 0x2008
-#define RX_READ 0x2100
-#define RX_READ_COUNT 0x2108
-#define TX_WRITE 0x3000
-#define TX_WRITE_COUNT 0x3008
-#define TX_READ 0x3100
-#define TX_READ_COUNT 0x3108
+//#define RX_WRITE 0x2000
+//#define RX_WRITE_COUNT 0x2008
+//#define RX_READ 0x2100
+//#define RX_READ_COUNT 0x2108
+#define TX_WRITE 0x2000
+#define TX_WRITE_COUNT 0x2008
+#define TX_READ 0x2100
+#define TX_READ_COUNT 0x2108
 
 #include <stdio.h>
 
@@ -64,9 +64,9 @@ void run_modem(uint64_t data) {
   // SIGNAL field
   // rate 6Mbps, R, length 6,    parity, 0s
   // 1101        0  011000000000 1       000000
-  uint64_t packSignal = pack_cordic(0xd30080, 1, 0, 1, 0xd, 0);
-  uint64_t packService = pack_cordic(0xf0f0f0, 0, 0, 0, 0xd, 0);
-  uint64_t packData = pack_cordic(data, 0, 1, 0, 0xd, 0);
+  uint64_t packSignal = pack_modem_tx(0xd30080, 1, 0, 1, 0xd, 0);
+  uint64_t packService = pack_modem_tx(0xf0f0f0, 0, 0, 0, 0xd, 0);
+  uint64_t packData = pack_modem_tx(data, 0, 1, 0, 0xd, 0);
 
   // Write data
   while(reg_read8(TX_WRITE_COUNT) > 4) {
@@ -77,26 +77,26 @@ void run_modem(uint64_t data) {
   reg_write64(TX_WRITE, packData);
 
   // Read SIGNAL
-  while (reg_read8(RX_READ_COUNT) == 0) {
+  while (reg_read8(TX_READ_COUNT) == 0) {
     printf("Waiting for read queue...\n");
   }
-  uint64_t result = reg_read64(RX_READ);
+  uint64_t result = reg_read64(TX_READ);
   printf("packet start: %d\n", unpack_rx_pktStart(result));
   printf("packet end: %d\n", unpack_rx_pktEnd(result));
   printf("packet SIGNAL: %u\n", unpack_rx_bits(result));
   // Read SERVICE
-  while (reg_read8(RX_READ_COUNT) == 0) {
+  while (reg_read8(TX_READ_COUNT) == 0) {
     printf("Waiting for read queue...\n");
   }
-  result = reg_read64(RX_READ);
+  result = reg_read64(TX_READ);
   printf("packet start: %d\n", unpack_rx_pktStart(result));
   printf("packet end: %d\n", unpack_rx_pktEnd(result));
   printf("packet SERVICE: %u\n", unpack_rx_bits(result));
   // Read DATA
-  while (reg_read8(RX_READ_COUNT) == 0) {
+  while (reg_read8(TX_READ_COUNT) == 0) {
     printf("Waiting for read queue...\n");
   }
-  result = reg_read64(RX_READ);
+  result = reg_read64(TX_READ);
   printf("packet start: %d\n", unpack_rx_pktStart(result));
   printf("packet end: %d\n", unpack_rx_pktEnd(result));
   printf("packet DATA: %u\n", unpack_rx_bits(result));

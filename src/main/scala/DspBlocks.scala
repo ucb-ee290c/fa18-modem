@@ -318,10 +318,11 @@ class TXThing[T<:Data:Real:BinaryRepresentation, U<:Data]
   val depth: Int = 8,
 )(implicit p: Parameters) extends LazyModule {
   // instantiate lazy modules
-  val writeQueue = LazyModule(new TLWriteQueue(depth, AddressSet(0x2200, 0xff)))
+  //val writeQueue = LazyModule(new TLWriteQueue(depth, AddressSet(0x2200, 0xff)))
+  val writeQueue = LazyModule(new TLWriteQueue(depth))
   val tx = LazyModule(new TLTXBlock(txParams))
-  val readQueue = LazyModule(new TLReadQueue(depth, AddressSet(0x2300, 0xff)))
-
+  //val readQueue = LazyModule(new TLReadQueue(depth, AddressSet(0x2300, 0xff)))
+  val readQueue = LazyModule(new TLReadQueue(depth))
   // connect streamNodes of queues and cordic
   readQueue.streamNode := tx.streamNode := writeQueue.streamNode
 
