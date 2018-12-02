@@ -88,8 +88,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   demod.io.in <> eq.io.out
 
   // Decoder
-  decode.io.in_soft <> demod.io.out
-  decode.io.in_hard := dummyReg
+  decode.io.in <> demod.io.out
 
   io.out <> decode.io.out
 }

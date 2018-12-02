@@ -11,7 +11,7 @@ trait TXParams[T<:Data, U<:Data] {
     val ifftParams: FFTParams[T]
     val firParams: RCFilterParams[T]
     val modulatorParams: ModFFTParams[T,U]
-    val encoderParams: CodingParams[T, U]
+    val encoderParams: CodingParams[U, U]
     val serParams: BitsSerDesParams[U]
 }
 
@@ -48,7 +48,20 @@ object FinalTxParams {
                 sampsPerSymbol = 4,
                 symbolSpan = 2
             )
-            val encoderParams = TxCoding()
+            val encoderParams = TxCoding(
+                k = 1,
+                n = 2,
+                K = 3,
+                L = 35,
+                D = 7,
+                H = 24,
+                genPolynomial = List(7, 5), // generator polynomial
+                tailBitingEn = false,
+                protoBitsWidth = 16,
+                bitsWidth = 6,
+                softDecision = false,
+                FFTPoint = 64
+            )
         }
         txParams
     }
@@ -63,7 +76,8 @@ trait RXParams[T<:Data, U<:Data, V<:Data] {
   val fftParams: FFTParams[T]
   val bitsBundleParams: BitsBundleParams[U]
   val demodParams: DemodulationParams[T,U]
-  val viterbiParams: CodingParams[T, U]
+  val viterbiParams: CodingParams[U, V]   // for hard coding
+  // val viterbiParams: CodingParams[T, T]   // for soft coding
 }
 
 object FinalRxParams {
@@ -86,7 +100,20 @@ object FinalRxParams {
                                            numPoints = nfft, binPoint = width - 3)
             val bitsBundleParams = BitsBundleParams(nBitPerSymbol, SInt(2.W))
             val demodParams = HardDemodParams(width=nfft, dataWidth=width, dataBinaryPoint=width - 3, bitsWidth=nBitPerSymbol, hsmod=1)
-            val viterbiParams = FixedCoding()
+            val viterbiParams = HardCoding(
+              k = 1,
+              n = 2,
+              K = 3,
+              L = 2,
+              D = 5,
+              H = 24,
+              genPolynomial = List(7, 6), // generator polynomial
+              tailBitingEn = false,
+              protoBitsWidth = 16,
+              bitsWidth = 48,
+              softDecision = false,
+              FFTPoint = 64
+            )
         }
         rxParams
     }
