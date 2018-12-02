@@ -20,7 +20,8 @@ class HeaderUnitSpec_Fixed extends FlatSpec with Matchers {
     tailBitingScheme = 0,
     protoBitsWidth = 16,
     bitsWidth = 48,
-    softDecision = true
+    softDecision = true,
+    FFTPoint = 64
   )
   it should "Extract Header information" in {
 

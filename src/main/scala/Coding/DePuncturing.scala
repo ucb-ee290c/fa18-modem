@@ -21,8 +21,8 @@ class DePuncturing[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
     val hdrEnd      = Input(Bool())                               // from arbiter
     val headInfo    = Flipped(Decoupled(DecodeHeadBundle()))      // from Head Extractor
 
-    val outData     = Output(Vec(params.n, params.protoBits))            // to PathMetric
-    val outHead     = Output(Vec(params.n * params.H, params.protoBits)) // to HeadExtractor
+    val outData     = Output(Vec(params.n, params.protoBits.cloneType))            // to PathMetric
+    val outHead     = Output(Vec(params.n * params.H, params.protoBits.cloneType)) // to HeadExtractor
     val lenCnt      = Output(Bool())                              // to arbiter
     val outEnable   = Output(Bool())                              // to PathMetric
     val modCtrl     = Output(UInt(2.W))
@@ -121,7 +121,7 @@ class DePuncturing[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
   val lenCntReg     = RegInit(true.B)
   val bitCntReg     = RegInit((params.n * params.H).U(log2Ceil(params.n * params.H).W))
   val enReg         = RegInit(false.B)
-  val inReg         = Reg(Vec(params.n * params.H, params.protoBits))
+  val inReg         = Reg(Vec(params.n * params.H, params.protoBits.cloneType))
 
   when(io.in.fire()){
     for(i <- 0 until (params.n * params.H)) {
@@ -153,7 +153,6 @@ class DePuncturing[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
       enReg     := false.B
       lenCntReg := false.B
       bitCntReg := (params.n * params.H).U
-      printf("io.hdrEnd === true \n")
       // when it starts receiving payload
     // need to count number of bits it has received.
     // Once all the data has been received, raise 'lenCntReg' and 'headInfoReady' registers
@@ -166,7 +165,7 @@ class DePuncturing[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
           bufData(i.U) := inReg(p_cnt - 1.U + puncIndicesReg((o_cnt+i.U) % params.n.U)(((o_cnt+i.U) / params.n.U) % puncMatBitWidth))
           // o_cnt + i.U / params.n.U % puncMatBitWidth.U must reach to puncMatBitWidth.U-1
         }.otherwise{          // add dummy bits
-          bufData(i.U) := ConvertableTo[U].fromInt(0)
+          bufData(i.U) := ConvertableTo[T].fromInt(0)
         }
       }
       enReg := true.B
@@ -189,12 +188,12 @@ class DePuncturing[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
     lenCntReg := true.B
     headInfoReady := true.B
   }
-  printf(p"pktCntReg = ${pktCntReg} \n")
-  printf(p"pktLatch = ${pktLatch} \n")
-  printf(p"bitCntReg = ${bitCntReg} \n")
-  printf(p"lenCntReg = ${lenCntReg} \n")
-  printf(p"enReg = ${enReg} \n")
-  printf(p"io.head = ${io.isHead}\n")
+//  printf(p"pktCntReg = ${pktCntReg} \n")
+//  printf(p"pktLatch = ${pktLatch} \n")
+//  printf(p"bitCntReg = ${bitCntReg} \n")
+//  printf(p"lenCntReg = ${lenCntReg} \n")
+//  printf(p"enReg = ${enReg} \n")
+//  printf(p"io.head = ${io.isHead}\n")
 
   // connect registers to output
   io.in.ready       := bitCntReg >= (params.n * params.H).U

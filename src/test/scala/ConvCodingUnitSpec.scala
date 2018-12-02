@@ -18,7 +18,8 @@ class ConvCodingUnitSpec extends FlatSpec with Matchers {
     tailBitingScheme = 0,
     protoBitsWidth = 16,
     bitsWidth = 48,
-    softDecision = false
+    softDecision = false,
+    FFTPoint = 64
   )
   it should "Convolution code" in {
     FixedConvCodingTester(params) should be (true)

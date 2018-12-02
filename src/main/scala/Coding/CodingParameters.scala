@@ -28,6 +28,7 @@ trait CodingParams[T <: Data, U <: Data] extends BitsBundleParams[T] {
   val BMout : U
   val BMoutdec : U
   val pmBitType: U
+  val FFTPoint: Int                 // how many clk cycles takes to get the next OFDM symbol?
 }
 
 case class FixedCoding(
@@ -46,6 +47,7 @@ case class FixedCoding(
   protoBitsWidth: Int = 16,
   bitsWidth: Int = 48,
   softDecision: Boolean = true,
+  FFTPoint: Int = 64
 ) extends CodingParams[FixedPoint, FixedPoint] {
   val protoBits = FixedPoint(protoBitsWidth.W, (protoBitsWidth-3).BP)
   val m = K - 1
@@ -73,6 +75,7 @@ case class HardCoding(
   protoBitsWidth: Int = 16,
   bitsWidth: Int = 48,
   softDecision: Boolean = false,
+  FFTPoint: Int = 64
 ) extends CodingParams[SInt, UInt] {
   val protoBits = SInt(2.W)
   val m = K - 1
@@ -100,6 +103,7 @@ case class TxCoding(
    protoBitsWidth: Int = 16,
    bitsWidth: Int = 48,
    softDecision: Boolean = false,
+   FFTPoint: Int = 64
 ) extends CodingParams[UInt, UInt] {
   val protoBits = UInt(1.W)
   val m = K - 1

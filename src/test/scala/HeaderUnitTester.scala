@@ -7,7 +7,7 @@ class HeaderUnitTester[T <: chisel3.Data, U <: chisel3.Data](c: HeaderExtractor[
     step(1)
     step(1)
     poke(c.io.headInfo.ready, 1)
-    poke(c.io.isHead, 1)
+    poke(c.io.isHead, 0)
 
     poke(c.io.in(0), 1)
     poke(c.io.in(1), 1)
@@ -57,7 +57,9 @@ class HeaderUnitTester[T <: chisel3.Data, U <: chisel3.Data](c: HeaderExtractor[
     poke(c.io.in(45), -1)           // tail 4
     poke(c.io.in(46), -1)
     poke(c.io.in(47), -1)           // tail 5
-
+    step(1)
+    poke(c.io.isHead, 1)
+    step(1)
     step(48)
 
     expect(c.io.headInfo.bits.rate(0), 1)

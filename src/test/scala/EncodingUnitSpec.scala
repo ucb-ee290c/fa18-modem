@@ -18,7 +18,8 @@ class EncodingUnitSpec extends FlatSpec with Matchers {
     tailBitingScheme = 0,
     protoBitsWidth = 16,
     bitsWidth = 6,
-    softDecision = false
+    softDecision = false,
+    FFTPoint = 64
   )
   it should "Convolutional Encoding" in {
 

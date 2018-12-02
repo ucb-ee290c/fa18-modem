@@ -2,10 +2,10 @@ package modem
 
 import org.scalatest.{FlatSpec, Matchers}
 
-class TracebackUnitSpec extends FlatSpec with Matchers {
+class TracebackUnitSpec_Hard extends FlatSpec with Matchers {
   behavior of "TracebackUnitSpec"
 
-  val params = FixedCoding(
+  val params = HardCoding(
     k = 1,
     n = 2,
     K = 3,
@@ -18,11 +18,11 @@ class TracebackUnitSpec extends FlatSpec with Matchers {
     tailBitingScheme = 0,
     protoBitsWidth = 16,
     bitsWidth = 48,
-    softDecision = true,
+    softDecision = true ,
     FFTPoint = 64
   )
   it should "Traceback" in {
 
-    FixedTracebackTester(params) should be (true)
+    HardTracebackTester(params) should be (true)
   }
 }

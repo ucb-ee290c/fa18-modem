@@ -12,7 +12,7 @@ import modem.{BranchMetric, CodingParams, Trellis}
 // Description: Arbiter identifies whether the incoming packet contains header information or payload
 class Arbiter[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) extends Module {
   val io = IO(new Bundle{
-    val inHead      = Input(Vec((params.n * params.H), SInt(2.W)))  // from De-Puncturing
+//    val inHead      = Input(Vec((params.n * params.H), params.protoBits))  // from De-Puncturing
     val lenCnt      = Input(Bool())                                 // from De-Puncturing
     val hdrPktLatch = Input(Bool())                                 // from De-Puncturing
 
@@ -28,12 +28,12 @@ class Arbiter[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) exte
     hdrCounter  := 1.U
   }.elsewhen(io.hdrPktLatch === true.B && isHeadReg === true.B){
     hdrCounter := hdrCounter + 1.U
-    when(hdrCounter === (params.H-1).U){
+    when(hdrCounter === (params.FFTPoint-1).U){
       hdrCounter  := 0.U
       isHeadReg   := false.B
     }
   }
-  when(hdrCounter === (params.H-2).U){
+  when(hdrCounter === (params.FFTPoint-2).U){        // PDSU is available 62 clk cycles after the first header bit is received
     hdrEndReg   := true.B
   }.otherwise{
     hdrEndReg   := false.B

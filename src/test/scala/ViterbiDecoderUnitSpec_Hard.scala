@@ -2,27 +2,27 @@ package modem
 
 import org.scalatest.{FlatSpec, Matchers}
 
-class TracebackUnitSpec extends FlatSpec with Matchers {
-  behavior of "TracebackUnitSpec"
+class ViterbiDecoderUnitSpec_Hard extends FlatSpec with Matchers {
+  behavior of "Viterbi Decoder"
 
-  val params = FixedCoding(
+  val params = HardCoding(
     k = 1,
     n = 2,
     K = 3,
-    L = 3,
-    O = 6,
-    D = 4,
+    L = 2,
+    O = 48,
+    D = 5,
     H = 24,
     genPolynomial = List(7, 6), // generator polynomial
     tailBitingEn = false,
     tailBitingScheme = 0,
     protoBitsWidth = 16,
     bitsWidth = 48,
-    softDecision = true,
+    softDecision = false,
     FFTPoint = 64
   )
   it should "Traceback" in {
 
-    FixedTracebackTester(params) should be (true)
+    HardViterbiDecoderTester(params) should be (true)
   }
 }

@@ -20,7 +20,8 @@ class PathMetricUnitSpec extends FlatSpec with Matchers {
       tailBitingScheme = 0,
       protoBitsWidth = 16,
       bitsWidth = 48,
-      softDecision = true
+      softDecision = true,
+      FFTPoint = 64
     )
 
     FixedPathMetricTester(params) should be (true)
