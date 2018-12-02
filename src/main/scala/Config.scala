@@ -7,6 +7,7 @@ import dsptools.numbers._
 trait TXParams[T<:Data, U<:Data] {
     val iqBundleParams: IQBundleParams[T]
     val cyclicPrefixParams: CyclicPrefixParams[T]
+    val preambleParams: PreambleParams[T]
     val ifftParams: FFTParams[T]
     val firParams: RCFilterParams[T]
     val modulatorParams: ModFFTParams[T,U]
@@ -24,13 +25,16 @@ object FinalTxParams {
                 val prefixLength = nfft/4
                 val symbolLength = nfft
             }
-	    val serParams = UIntBitsSerDesParams(dataWidth = 1, ratio = 48)
+
+            val preambleParams = FixedPreambleParams(iqWidth = width)
+
+	        val serParams = UIntBitsSerDesParams(dataWidth = 1, ratio = 48)
 
             val ifftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = nfft, binPoint = width - 3)
             val modulatorParams = FixedModFFTParams(
                 dataWidth=width,
-		bitsWidth=48,
+        		bitsWidth=48,
                 twiddleWidth=width,
                 numPoints=nfft,
                 Ncbps=48,
