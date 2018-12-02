@@ -233,10 +233,12 @@ class EqualizerSpec extends FlatSpec with Matchers {
 
   val eqParams = FixedEqualizerParams(
     width=16,
-    mu=0.25,
-    pilots=Seq(5, 21, 43, 59),
+    binaryPoint=13,
+    // mu=0.25,
+    // pilots=Seq(5, 21, 43, 59),
     carrierMask=Seq.fill(1)(false) ++ Seq.fill(26)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(6)(false) ++ Seq.fill(27)(true),
-    nSubcarriers=64
+    nSubcarriers=64,
+    preambleSymbol=IEEE80211.ltfFreq
   )
   it should "pass data" in {
     val trials = Seq(IQWide(vecs.tvClean(0), Option(vecs.tvClean(1))))
@@ -262,8 +264,9 @@ class ChannelInverterSpec extends FlatSpec with Matchers {
 
   val params = FixedEqualizerParams(
     width=16,
-    mu=0.25,
-    pilots=Seq(5, 21, 43, 59),
+    binaryPoint=13,
+    // mu=0.25,
+    // pilots=Seq(5, 21, 43, 59),
     carrierMask=Seq.fill(1)(false) ++ Seq.fill(27)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(5)(false) ++ Seq.fill(27)(true),
     nSubcarriers=64
   )

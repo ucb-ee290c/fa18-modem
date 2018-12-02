@@ -1,5 +1,11 @@
 language: scala
-sudo: false
+sudo: true
+
+before_install:
+  - sudo apt-get install -y device-tree-compiler
+addons:
+  apt:
+    update: true
 
 cache:
   directories:
@@ -20,3 +26,5 @@ install:
 
 script:
   - sbt $SBT_ARGS test
+  - cd verisim
+  - make

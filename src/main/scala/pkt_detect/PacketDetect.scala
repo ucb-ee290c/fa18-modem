@@ -40,6 +40,18 @@ case class FixedPacketDetectParams(
 }
 
 /**
+  * Bundle type that describes the input, state, and output of PacketDetect
+  */
+class PacketDetectBundle[T <: Data](params: PacketDetectParams[T]) extends Bundle {
+  val iq: DspComplex[T] = params.protoIQ.cloneType
+
+  override def cloneType: this.type = PacketDetectBundle(params).asInstanceOf[this.type]
+}
+object PacketDetectBundle {
+  def apply[T <: Data](params: PacketDetectParams[T]): PacketDetectBundle[T] = new PacketDetectBundle[T](params)
+}
+
+/**
   * Bundle type for debug data
   */
 class PacketDetectDebugBundle[T <: Data](params: PacketDetectParams[T]) extends Bundle {
@@ -60,8 +72,10 @@ object PacketDetectDebugBundle {
   * Bundle type as IO for packet detect modules
   */
 class PacketDetectIO[T <: Data](params: PacketDetectParams[T]) extends Bundle {
-  val in = Flipped(Decoupled(IQBundle(IQBundleParams(params.protoIQ))))
-  val out = Decoupled(PacketBundle(PacketBundleParams(1, params.protoIQ)))
+  val in = Flipped(Decoupled(PacketDetectBundle(params)))
+  val out = Decoupled(PacketDetectBundle(params))
+
+  val pktStart = Output(Bool())
 
   val debug = Output(PacketDetectDebugBundle[T](params))
 
@@ -95,7 +109,7 @@ class Correlator[T <: Data : Real : BinaryRepresentation](params: PacketDetectPa
     map(x => x >> log2Ceil(params.correlationWindow)).reduce(_ + _)
   io.corrDenom := corrDenomVal
   if (params.correlationThreshVal == 0.75) {
-    // Compare numerator to 0.75 denominator
+    // Compare 0.75 numerate to denominator for the
     val corrComp = corrNumVal > ((corrDenomVal >> 1) + (corrDenomVal >> 2))
     io.correlated := corrComp
   } else {
@@ -148,12 +162,9 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   // State machine states
   val sFlushing :: sNoPkt :: sNoPktValid :: sPkt :: sPktValid :: Nil = Enum(5)
   val state = RegInit(sFlushing)
-  val nextState = Wire(sFlushing.cloneType)
   val flushCounter = RegInit(0.U(8.W))
   val isValid = state === sNoPktValid || state === sPktValid
   val isPkt = state === sPkt || state === sPktValid
-  val isNextValid = nextState === sNoPktValid || nextState === sPktValid
-  val isNextPkt = nextState === sPkt || nextState === sPktValid
 
   // Store inputs for processing
   val iqBuf = RegNext(io.in.bits.iq)
@@ -178,7 +189,7 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   }
 
   // Power Threshold
-  val powerMeter = PowerMeter(Vec(dataVec.drop(dataVec.length - params.powerThreshWindow)), params)
+  val powerMeter = PowerMeter(VecInit(dataVec.drop(dataVec.length - params.powerThreshWindow)), params)
   val powerHigh = powerMeter.io.powerHigh
   val powerLow = powerMeter.io.powerLow
 
@@ -192,13 +203,14 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   if (params.correlationThresh) {
     // Reverse dataVec to have denominator based on earlier-in-time data
 //    corrComp := Correlator(Vec(dataVec.reverse), params)
-    val (cmp, num, denom) = Correlator(Vec(dataVec.reverse), params)
+    val (cmp, num, denom) = Correlator(VecInit(dataVec.reverse), params)
     corrComp := cmp
     corrNum := num
     corrDenom := denom
   }
 
   // State Update
+  val nextState = Wire(sFlushing.cloneType)
   when (flushCounter < windowSize.U) {
     nextState := sFlushing // Do an initial flush of the registers
     flushCounter := flushCounter + 1.U
@@ -229,17 +241,13 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   state := nextState
 
   // Output Logic
-  io.in.ready := state =!= sFlushing
   // pktStart goes high on transition from nopkt to pkt
   val pktStartReg = Reg(Bool())
-  val pktStopReg  = Reg(Bool())
-  pktStartReg := !isPkt && isNextPkt
-  pktStopReg := isPkt && !isNextPkt
-  // Assign outputs
-  io.out.bits.pktStart := pktStartReg
-  io.out.bits.pktEnd  := pktStopReg
-  io.out.bits.iq(0) := dataVec(dataVec.length - 1)
-  io.out.valid := isNextPkt && isNextValid
+  pktStartReg := (nextState === sPktValid || nextState === sPkt) && (state === sNoPkt || state === sNoPktValid)
+  io.pktStart := pktStartReg
+  io.in.ready := state =!= sFlushing
+  io.out.bits.iq := dataVec(dataVec.length - 1)
+  io.out.valid := (nextState === sPktValid)
 
   // debug output
   io.debug.corrComp := corrComp
@@ -249,5 +257,3 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   io.debug.powerLow := powerLow
   io.debug.iq := dataVec(windowSize-1)// dataVec(0) * dataVec(0).conj()
 }
-
-

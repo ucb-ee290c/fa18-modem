@@ -6,8 +6,6 @@ import chisel3.util._
 
 import dsptools.numbers._
 
-import scala.math._
-
 /**
  * Base class for Serializer/Deserializer parameters
  *
@@ -23,6 +21,30 @@ object SerDesParams {
     val ratio = serdesRatio
   }
 }
+
+trait BitsSerDesParams[T <: Data] extends BitsBundleParams[T] {
+  val ratio: Int
+  val bitsWidth: Int
+  lazy val width = ratio
+}
+object BitsSerDesParams {
+  def apply[T <: Data](proto: T, serdesRatio: Int, bitsWidth1: Int): BitsSerDesParams[T] = new BitsSerDesParams[T] {
+    val protoBits = proto
+    val bitsWidth = bitsWidth1
+    val ratio = serdesRatio
+  }
+}
+
+case class UIntBitsSerDesParams(
+  ratio: Int,
+  // width of Input and Output
+  bitsWidth: Int,
+  dataWidth: Int,
+  maxVal: Int
+) extends BitsSerDesParams[UInt] {
+  val protoBits = UInt(dataWidth.W)
+}
+
 
 /**
  * Serializer/Deserializer parameters object for fixed-point Serializer/Deserializer
@@ -40,8 +62,8 @@ case class FixedSerDesParams(
  * Bundle type as IO for Deserializer modules
  */
 class DeserializerIO[T <: Data : Ring](params: SerDesParams[T]) extends Bundle {
-  val in  = Flipped(Decoupled(SerialPacketBundle(params)))
-  val out = Decoupled(DeserialPacketBundle(params))
+  val in  = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
+  val out = Decoupled(PacketBundle(params))
 
   override def cloneType: this.type = DeserializerIO(params).asInstanceOf[this.type]
 }
@@ -92,7 +114,7 @@ class Deserializer[T <: Data : Real : BinaryRepresentation](val params: SerDesPa
   }
 
   // Shift register
-  deser.iq.foldRight(io.in.bits.iq) {
+  deser.iq.foldRight(io.in.bits.iq(0)) {
     case (reg, inp) => {
       when (io.in.fire()) { reg := inp }
       reg
@@ -108,8 +130,8 @@ class Deserializer[T <: Data : Real : BinaryRepresentation](val params: SerDesPa
  * Bundle type as IO for Serializer modules
  */
 class SerializerIO[T <: Data : Ring](params: SerDesParams[T]) extends Bundle {
-  val in  = Flipped(Decoupled(DeserialPacketBundle(params)))
-  val out = Decoupled(SerialPacketBundle(params))
+  val in  = Flipped(Decoupled(PacketBundle(params)))
+  val out = Decoupled(PacketBundle(1, params.protoIQ))
 
   override def cloneType: this.type = SerializerIO(params).asInstanceOf[this.type]
 }
@@ -117,6 +139,18 @@ object SerializerIO {
   def apply[T <: Data : Ring](params: SerDesParams[T]): SerializerIO[T] =
     new SerializerIO(params)
 }
+
+class BitsSerializerIO[T <: Data](params: BitsSerDesParams[T]) extends Bundle {
+  val in  = Flipped(Decoupled(BitsBundle(params)))
+  val out = Decoupled(BitsBundle(1, params.protoBits))
+
+  override def cloneType: this.type = BitsSerializerIO(params).asInstanceOf[this.type]
+}
+object BitsSerializerIO {
+  def apply[T <: Data](params: BitsSerDesParams[T]): BitsSerializerIO[T] =
+    new BitsSerializerIO(params)
+}
+
 
 class Serializer[T <: Data : Real : BinaryRepresentation](val params: SerDesParams[T]) extends Module {
   val io = IO(SerializerIO(params))
@@ -154,7 +188,7 @@ class Serializer[T <: Data : Real : BinaryRepresentation](val params: SerDesPara
 
   cntr := cntr_next
 
-  io.out.bits.iq := in_flopped.iq(cntr)
+  io.out.bits.iq(0) := in_flopped.iq(cntr)
   io.out.bits.pktStart := in_flopped.pktStart && (cntr === 0.U)
   io.out.bits.pktEnd := in_flopped.pktEnd && serLast
   io.out.valid := state === sComp
@@ -163,3 +197,52 @@ class Serializer[T <: Data : Real : BinaryRepresentation](val params: SerDesPara
   // 2. done with current in_flopped
   io.in.ready := state === sIdle || (io.out.fire() && serLast)
 }
+
+class BitsSerializer[T <: Data](val params: BitsSerDesParams[T]) extends Module {
+  val io = IO(BitsSerializerIO(params))
+
+  val sIdle :: sComp :: Nil = Enum(2)
+  val state = RegInit(sIdle)
+
+  val in_flopped = Reg(io.in.bits.cloneType)
+
+  val cntr = RegInit(0.U(log2Up(params.ratio).W))
+  val cntr_next = Wire(cntr.cloneType)
+
+  val serLast = cntr === (params.ratio - 1).U
+
+  cntr_next := cntr
+
+  when (state === sIdle) {
+    when (io.in.fire()) {
+      cntr_next := 0.U
+      in_flopped := io.in.bits
+      state := sComp
+    }
+  } .elsewhen (io.out.fire()) {
+    when (serLast) {
+      when (io.in.fire()) {
+        cntr_next := 0.U
+        in_flopped := io.in.bits
+      } .otherwise {
+        state := sIdle
+      }
+    } .otherwise {
+      cntr_next := cntr + 1.U
+    }
+  }
+
+  cntr := cntr_next
+
+  //io.out.bits.iq(0) := in_flopped.iq(cntr)
+  io.out.bits.bits(0) := in_flopped.bits(cntr)
+
+  io.out.bits.pktStart := in_flopped.pktStart && (cntr === 0.U)
+  io.out.bits.pktEnd := in_flopped.pktEnd && serLast
+  io.out.valid := state === sComp
+  // Serializer can receive more data if...
+  // 1. idle
+  // 2. done with current in_flopped
+  io.in.ready := state === sIdle || (io.out.fire() && serLast)
+}
+

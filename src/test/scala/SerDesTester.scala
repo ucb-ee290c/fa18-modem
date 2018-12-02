@@ -24,9 +24,19 @@ trait HasTesterUtil[T <: Module] extends DspTester[T] {
     stim_seq.zipWithIndex.foreach { case (value, index) => poke(sig_vec(index), value) }
   }
 
+  def poke_seqb[U <: chisel3.Data](sig_vec: Vec[U], stim_seq: Seq[Int]) {
+    stim_seq.zipWithIndex.foreach { case (value, index) => poke(sig_vec(index), value) }
+  }
+
+
   def expect_seq[U <: chisel3.Data](sig_vec: Vec[DspComplex[U]], exp_seq: Seq[Complex]) {
     exp_seq.zipWithIndex.foreach { case (expected, index) => expect(sig_vec(index), expected) }
   }
+
+  def expect_seqb[U <: chisel3.Data](sig_vec: Vec[U], exp_seq: Seq[Int]) {
+    exp_seq.zipWithIndex.foreach { case (expected, index) => expect(sig_vec(index), expected) }
+  }
+
 }
 
 /**
@@ -40,7 +50,7 @@ class DeserializerTester[T <: chisel3.Data](c: Deserializer[T], inp: Seq[Complex
   poke(c.io.in.valid, 1)
 
   inp.zipWithIndex.foreach { case (value, index) =>
-    poke(c.io.in.bits.iq, value)
+    poke(c.io.in.bits.iq(0), value)
     poke(c.io.in.bits.pktStart, (index == 0))
     poke(c.io.in.bits.pktEnd  , (index == inp.length - 1))
     wait_for_assert(c.io.in.ready, maxCyclesWait)
@@ -86,7 +96,37 @@ class SerializerTester[T <: chisel3.Data](c: Serializer[T], inp: Seq[Complex], t
       wait_for_assert(c.io.out.valid, maxCyclesWait)
       expect(c.io.out.bits.pktStart, (out_idx == 0))
       expect(c.io.out.bits.pktEnd  , (out_idx == inp.length - 1))
-      fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq, inp(out_idx)) }
+      fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq(0), inp(out_idx)) }
+      out_idx += 1
+      step(1)
+    }
+    poke(c.io.in.valid, 1)
+  }
+}
+class BitsSerializerTester[T <: chisel3.Data](c: BitsSerializer[T], inp: Seq[Int], tolLSBs: Int = 1) extends DspTester(c) with HasTesterUtil[BitsSerializer[T]] {
+  val maxCyclesWait = 5
+  assert(inp.length % c.params.ratio == 0, "input sequence should be a multiple of deser ratio")
+
+  poke(c.io.out.ready, 1)
+  poke(c.io.in.valid, 1)
+
+  var out_idx = 0
+
+  for (deser_idx <- 0 until inp.length / c.params.ratio) {
+    poke_seqb(c.io.in.bits.bits, inp.slice(deser_idx * c.params.ratio, (deser_idx + 1) * c.params.ratio))
+
+    poke(c.io.in.bits.pktStart, deser_idx == 0)
+    poke(c.io.in.bits.pktEnd  , deser_idx == inp.length / c.params.ratio - 1)
+
+    wait_for_assert(c.io.in.ready, maxCyclesWait)
+    step(1)
+
+    poke(c.io.in.valid, 0)
+    for (i <- 0 until c.params.ratio) {
+      wait_for_assert(c.io.out.valid, maxCyclesWait)
+      expect(c.io.out.bits.pktStart, (out_idx == 0))
+      expect(c.io.out.bits.pktEnd  , (out_idx == inp.length - 1))
+      fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.bits(0), inp(out_idx)) }
       out_idx += 1
       step(1)
     }
@@ -94,11 +134,12 @@ class SerializerTester[T <: chisel3.Data](c: Serializer[T], inp: Seq[Complex], t
   }
 }
 
+
 class DesSerTestModule[T <: Data : Real : BinaryRepresentation](val params: SerDesParams[T]) extends Module {
   val io = IO(new Bundle {
-    val in = Flipped(Decoupled(SerialPacketBundle(params)))
-    val out = Decoupled(SerialPacketBundle(params))
-    val debug = Output(DeserialPacketBundle(params))
+    val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
+    val out = Decoupled(PacketBundle(1, params.protoIQ))
+    val debug = Output(PacketBundle(params))
     val debug_valid = Output(Bool())
     val debug_ready = Output(Bool())
   })
@@ -128,7 +169,7 @@ class DesSerTester[T <: chisel3.Data](c: DesSerTestModule[T], inp: Seq[Complex],
   var out_idx = 0
 
   inp.zipWithIndex.foreach { case (value, index) =>
-    poke(c.io.in.bits.iq, value)
+    poke(c.io.in.bits.iq(0), value)
     poke(c.io.in.bits.pktStart, (index == 0))
     poke(c.io.in.bits.pktEnd  , (index == inp.length - 1))
     wait_for_assert(c.io.in.ready, maxCyclesWait)
@@ -139,7 +180,7 @@ class DesSerTester[T <: chisel3.Data](c: DesSerTestModule[T], inp: Seq[Complex],
         wait_for_assert(c.io.out.valid, maxCyclesWait)
         expect(c.io.out.bits.pktStart, (out_idx == 0))
         expect(c.io.out.bits.pktEnd  , (out_idx == inp.length - 1))
-        fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq, inp(out_idx)) }
+        fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq(0), inp(out_idx)) }
         out_idx += 1
         step(1)
       }
@@ -161,6 +202,12 @@ object FixedSerializerTester {
     dsptools.Driver.execute(() => new Serializer(params), TestSetup.dspTesterOptions) { c => new SerializerTester(c, inp) }
   }
 }
+object UIntSerializerTester {
+  def apply(params: UIntBitsSerDesParams, inp: Seq[Int]): Boolean = {
+    dsptools.Driver.execute(() => new BitsSerializer(params), TestSetup.dspTesterOptions) { c => new BitsSerializerTester(c, inp) }
+  }
+}
+
 object FixedDesSerTester {
   def apply(params: FixedSerDesParams, inp: Seq[Complex]): Boolean = {
     dsptools.Driver.execute(() => new DesSerTestModule(params), TestSetup.dspTesterOptions) { c => new DesSerTester(c, inp) }

@@ -16,7 +16,7 @@ class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Comple
   poke(c.io.in.valid, 1)
 
   inp.zipWithIndex.foreach { case (value, index) =>
-    poke(c.io.in.bits.iq, value)
+    poke(c.io.in.bits.iq(0), value)
     poke(c.io.in.bits.pktStart, (pktStart && (index == 0)))
     poke(c.io.in.bits.pktEnd  , (pktEnd && (index == inp.length - 1)))
     wait_for_assert(c.io.in.ready, maxCyclesWait)
@@ -44,7 +44,7 @@ class IFFTTester[T <: chisel3.Data](c: IFFT[T], inp: Seq[Complex], out: Seq[Comp
     wait_for_assert(c.io.out.valid, maxCyclesWait)
     expect(c.io.out.bits.pktStart, (pktStart && (index == 0)))
     expect(c.io.out.bits.pktEnd  , (pktEnd && (index == inp.length - 1)))
-    fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq, value) }
+    fixTolLSBs.withValue(tolLSBs) { expect(c.io.out.bits.iq(0), value) }
     step(1)
   }
 }

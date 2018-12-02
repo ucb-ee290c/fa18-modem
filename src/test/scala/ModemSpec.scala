@@ -13,8 +13,8 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val trials = Seq(DspComplex(1.U,0.U))
   // These are  bogus placeholder numbers
-  val iqWidth = 5
-  val binPoint = iqWidth - 3
+  val iqWidth = 16
+  val binPoint = 13
   val numPoints = 64
   val bitsWidth = 48
   val prfxLength = 16
@@ -26,7 +26,13 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val fixedPktDetectParams = FixedPacketDetectParams(iqWidth = iqWidth)
 
-  val fixedEqualizerParams = FixedEqualizerParams(width = iqWidth)
+  val fixedCyclicPrefixParams = new CyclicPrefixParams[FixedPoint] {
+    val protoIQ = fixedIQParams.protoIQ
+    val prefixLength = numPoints / 4
+    val symbolLength = numPoints
+  }
+
+  val fixedEqualizerParams = FixedEqualizerParams(width = iqWidth, binaryPoint = binPoint)
 
   val fixedCFOParams = FixedCFOParams(iqWidth = iqWidth, stagesPerCycle = 5)
 
@@ -45,22 +51,26 @@ class FixedRXSpec extends FlatSpec with Matchers {
 
   val hardBitsBundleParams = BitsBundleParams(width = bitsWidth, proto = SInt(2.W))
 
-  val hardDemodParams = HardDemodParams(width = 64, iqWidth = iqWidth, bitsWidth = bitsWidth)
+  val hardDemodParams = HardDemodParams(width = 64, dataWidth = iqWidth, dataBinaryPoint = binPoint, bitsWidth = bitsWidth, hsmod=1)
 
   val hardViterbiParams = FixedCoding()
+
+  val rxParams = new RXParams[FixedPoint, SInt, UInt] {
+    val iqBundleParams = fixedIQParams
+    val pktDetectParams = fixedPktDetectParams
+    val cyclicPrefixParams = fixedCyclicPrefixParams
+    val equalizerParams = fixedEqualizerParams
+    val cfoParams = fixedCFOParams
+    val fftParams = fixedFFTParams
+    val bitsBundleParams = hardBitsBundleParams
+    val demodParams = hardDemodParams
+    val viterbiParams = hardViterbiParams
+  }
 
   it should "receive ofdm" in {
     //val trials = Seq(1)
     FixedRXTester(
-      fixedIQParams,
-      fixedPktDetectParams,
-      fixedEqualizerParams,
-      fixedCFOParams,
-      fixedCPParams,
-      fixedFFTParams,
-      hardBitsBundleParams,
-      hardDemodParams,
-      hardViterbiParams,
+      rxParams,
       trials) should be (true)
   }
 }
