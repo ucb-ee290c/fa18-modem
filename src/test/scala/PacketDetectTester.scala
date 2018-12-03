@@ -21,7 +21,7 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
   def getIQOut(c: PacketDetect[T], v: Vector[Complex]): Vector[Complex] = {
     var vout = v
     if (peek(c.io.out.valid)) {
-      //vout = vout :+ peek(c.io.out.bits.iq(0))
+      vout = vout :+ peek(c.io.out.bits.iq(0))
     }
     vout
   }
