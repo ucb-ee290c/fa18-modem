@@ -10,15 +10,16 @@ class DePuncturingUnitSpec extends FlatSpec with Matchers {
     n = 2,
     K = 3,
     L = 7,
-    O = 10,
+//    O = 10,
     D = 36,
     H = 5,
     genPolynomial = List(7, 5), // generator polynomial
     tailBitingEn = false,
-    tailBitingScheme = 0,
+//    tailBitingScheme = 0,
     protoBitsWidth = 16,
-    bitsWidth = 2,
-    softDecision = false
+    bitsWidth = 48,
+    softDecision = true,
+    FFTPoint = 64
   )
   it should "de-puncturing code" in {
     FixedDePuncturingTester(params) should be (true)

@@ -5,6 +5,7 @@ package modem
  */
 object CodingUtils {
 
+  // convert bit array to decimal number
   def bitarray2dec(in_bitarray: Array[Int]) ={
     val len: Int = in_bitarray.length
     val num = Array.fill(len){0}
@@ -15,6 +16,7 @@ object CodingUtils {
     num(len-1)
   }
 
+  // convert decimal to bit array
   def dec2bitarray_unit(in_number: Int, bit_width: Int) = {
     val bitarray = Array.fill(bit_width){0}
     val binary_string = in_number.toBinaryString
@@ -30,6 +32,7 @@ object CodingUtils {
     bitarray
   }
 
+  // convert decimal to bit array
   def dec2bitarray(genPolynoimial: List[Int], bit_width: Int) = {
     val numRow = genPolynoimial.length
     val bitarray = Array.ofDim[Int](numRow, bit_width)
@@ -39,6 +42,7 @@ object CodingUtils {
     bitarray
   }
 
+  // Obsolete
   def findMinBitWidth(arg: List[Int]): Int = {
     val result: Int = math.ceil(math.log10(arg.max)/math.log10(2)).asInstanceOf[Int]
     result

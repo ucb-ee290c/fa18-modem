@@ -9,7 +9,7 @@ case class BranchMetricInOut2_SINT(
   outBitSeq: Array[Array[Array[Int]]]
 )
 
-class BranchMetricUnitTester2_SINT[T <: chisel3.Data](c: BranchMetric_backup[T], trials: Seq[BranchMetricInOut2_SINT]) extends DspTester(c) {
+class BranchMetricUnitTester2_SINT[T <: chisel3.Data, U <: chisel3.Data](c: BranchMetric[T, U], trials: Seq[BranchMetricInOut2_SINT]) extends DspTester(c) {
 
   for(trial <- trials){
     poke(c.io.in(0), trial.inBit0)
@@ -27,7 +27,7 @@ class BranchMetricUnitTester2_SINT[T <: chisel3.Data](c: BranchMetric_backup[T],
 
 object FixedBranchMetricTester2_SINT {
   def apply(params: HardCoding, trials: Seq[BranchMetricInOut2_SINT]): Boolean = {
-    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new BranchMetric_backup(params)) {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new BranchMetric(params)) {
       c => new BranchMetricUnitTester2_SINT(c, trials)
     }
   }

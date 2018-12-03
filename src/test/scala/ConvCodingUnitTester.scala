@@ -2,7 +2,7 @@ package modem
 
 import dsptools.DspTester
 
-class ConvCodingUnitTester[T <: chisel3.Data](c: ConvCoding[T]) extends DspTester(c) {
+class ConvCodingUnitTester[T <: chisel3.Data](c: ConvCoding[T, T]) extends DspTester(c) {
   /*
   Following is for G=(7, 5)
   State | In  | Out | Next State
@@ -19,30 +19,40 @@ class ConvCodingUnitTester[T <: chisel3.Data](c: ConvCoding[T]) extends DspTeste
   11    | 1   | 10  | 11
    */
   // currently there is 1 delay after taking input
-//  poke(c.io.inReady, 0)
+  poke(c.io.inReady, 0)
+  poke(c.io.isHeadIn, 0)
+  poke(c.io.in.valid, 0)
+  poke(c.io.pktStrIn, 1)
+  poke(c.io.pktEndIn, 0)
+  expect(c.io.out(0), 0)
+  expect(c.io.out(1), 0)
+  poke(c.io.in.bits, 0)
+  expect(c.io.isHeadOut, 0)
+
+  step(1)
+  poke(c.io.pktStrIn, 0)
+  poke(c.io.pktEndIn, 0)
+  poke(c.io.inReady, 0)
   poke(c.io.in.valid, 0)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 0)
   poke(c.io.in.bits, 0)
+  expect(c.io.isHeadOut, 0)
 
   step(1)
-//  poke(c.io.inReady, 0)
-  poke(c.io.in.valid, 0)
-  expect(c.io.out(0), 0)
-  expect(c.io.out(1), 0)
-  poke(c.io.in.bits, 0)
-
-  step(1)
-//  poke(c.io.inReady, 1)
+  poke(c.io.inReady, 1)
   poke(c.io.in.valid, 1)
+  poke(c.io.isHeadIn, 1)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 0)
   poke(c.io.in.bits, 1)
+  expect(c.io.isHeadOut, 0)
 
   step(1)
   expect(c.io.out(0), 1)
   expect(c.io.out(1), 1)    // state 10
   poke(c.io.in.bits, 1)
+  expect(c.io.isHeadOut, 1)
 
   step(1)
   expect(c.io.out(0), 0)
@@ -102,7 +112,7 @@ class ConvCodingUnitTester[T <: chisel3.Data](c: ConvCoding[T]) extends DspTeste
     * Convenience function for running tests
     */
 object FixedConvCodingTester {
-  def apply(params: FixedCoding): Boolean = {
+  def apply(params: TxCoding): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new ConvCoding(params)) {
       c => new ConvCodingUnitTester(c)
     }

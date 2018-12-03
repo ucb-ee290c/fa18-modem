@@ -10,10 +10,11 @@ case class PreambleTestVectors(randcfo: Int = 50000) {
   val stfTV = IEEE80211.stf
   val ltfTV = IEEE80211.ltf
   val r = new scala.util.Random
-  val randData = Seq.fill(640){Complex(2*(r.nextFloat)-1, 2*(r.nextFloat)-1)}
-  // val randData = Seq.fill(20){Complex(0.0, 0.0)}
+  val randData = Seq.fill(320){Complex(2*(r.nextFloat)-1, 2*(r.nextFloat)-1)}
+   //val randData = Seq.fill(320){Complex(0.0, 0.0)}
 
   val rawTFTV = stfTV ++ ltfTV ++ randData
+  val tfTV = stfTV ++ ltfTV
   val cleanTV = IEEE80211.addCFO(in = rawTFTV, cfo = 0.0, sampleRate = 20.0e6)
   val cfoTV = IEEE80211.addCFO(in = rawTFTV, cfo = randcfo, sampleRate = 20.0e6)
   val cfoSTV = IEEE80211.addCFO(in = stfTV, cfo = 100010, sampleRate = 20.0e6)
@@ -46,7 +47,8 @@ class PreambleAdderSpec extends FlatSpec with Matchers {
 
   it should "add a preamble" in {
     val trials = Seq(IQ(vecs.randData, None))
-    FixedPreambleTester(fixedCFOParams, trials, 3) should be (true)
+    val tfVec = Seq(IQ(vecs.tfTV, None))
+    FixedPreambleTester(fixedCFOParams, trials, tfVec, 3) should be (true)
   }
 }
 
