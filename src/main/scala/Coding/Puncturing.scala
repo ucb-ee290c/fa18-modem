@@ -132,11 +132,13 @@ class Puncturing[T <: Data, U <: Data](params: CodingParams[T, U]) extends Modul
         bufInterleaver(p_cnt - 1.U + puncIndicesReg((o_cnt+i.U) % params.n.U)(((o_cnt+i.U) / params.n.U) % puncMatBitWidth)) := io.in(i.U)
       }
     }
+
     p_cnt := p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)
     o_cnt := o_cnt + params.n.U
     when(p_cnt >= (params.bitsWidth.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
       outValid  := true.B
       p_cnt := 0.U
+
     }
     when((o_cnt >= (params.bitsWidth - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
       o_cnt := 0.U

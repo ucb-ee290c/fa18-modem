@@ -75,6 +75,7 @@ class TracebackUnitTester_Hard[T <: chisel3.Data, U <: chisel3.Data](c: Tracebac
     out_idx = check_expected_if_valid(c.io.out.bits, expected_out, out_idx, c.io.out.valid)
     step(1)
   }}
+  poke(c.io.enable, 0)
 
   while (out_idx < expected_out.length) {
     wait_for_assert(c.io.out.valid, 50)

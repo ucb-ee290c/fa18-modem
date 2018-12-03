@@ -5,13 +5,18 @@ import dsptools.DspTester
 class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTester(c) {
   poke(c.io.inReady, 0)
   poke(c.io.isHead, 1)
+  poke(c.io.pktStrIn, 1)
+  poke(c.io.pktEndIn, 0)
+  poke(c.io.out.ready, 1)
   poke(c.io.puncMatrix(0), 1)
-  poke(c.io.puncMatrix(1), 0)
+  poke(c.io.puncMatrix(1), 1)
   poke(c.io.puncMatrix(2), 0)
   poke(c.io.puncMatrix(3), 1)
   step(1)
   poke(c.io.inReady, 1)
   poke(c.io.isHead, 0)
+  poke(c.io.pktStrIn, 0)
+  poke(c.io.pktEndIn, 0)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 1)
   expect(c.io.out.bits(0), 0)
@@ -50,7 +55,7 @@ class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTe
   expect(c.io.out.bits(3), 1)
   expect(c.io.out.bits(4), 0)
   expect(c.io.out.bits(5), 0)
-//  expect(c.io.out.valid, 0)
+  expect(c.io.out.valid, 0)
   step(1)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 0)
@@ -60,7 +65,7 @@ class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTe
   expect(c.io.out.bits(3), 1)  // check point. next: 2
   expect(c.io.out.bits(4), 0)
   expect(c.io.out.bits(5), 1)
-//  expect(c.io.out.valid, 2)
+  expect(c.io.out.valid, 1)
   step(1)
   poke(c.io.in(0), 0)
   poke(c.io.in(1), 1)
@@ -70,7 +75,7 @@ class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTe
   expect(c.io.out.bits(3), 1)
   expect(c.io.out.bits(4), 0)
   expect(c.io.out.bits(5), 1)  // check point. next: 1
-//  expect(c.io.out.valid, 0)
+  expect(c.io.out.valid, 0)
   step(1)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 0)
@@ -80,7 +85,7 @@ class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTe
   expect(c.io.out.bits(3), 1)
   expect(c.io.out.bits(4), 0)
   expect(c.io.out.bits(5), 1)
-//  expect(c.io.out.valid, 0)
+  expect(c.io.out.valid, 0)
   step(1)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 1)
@@ -90,7 +95,7 @@ class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTe
   expect(c.io.out.bits(3), 1)
   expect(c.io.out.bits(4), 1)
   expect(c.io.out.bits(5), 0)
-//  expect(c.io.out.valid, 0)
+  expect(c.io.out.valid, 1)
   step(1)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 1)
@@ -100,7 +105,7 @@ class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTe
   expect(c.io.out.bits(3), 1)  // check point. next: 1
   expect(c.io.out.bits(4), 1)
   expect(c.io.out.bits(5), 0)
-//  expect(c.io.out.valid, 0)
+  expect(c.io.out.valid, 0)
   step(1)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 1)
@@ -110,7 +115,7 @@ class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTe
   expect(c.io.out.bits(3), 1)
   expect(c.io.out.bits(4), 1)  // check point. next: 1
   expect(c.io.out.bits(5), 0)
-//  expect(c.io.out.valid, 2)
+  expect(c.io.out.valid, 0)
   step(1)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 1)
@@ -120,7 +125,7 @@ class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTe
   expect(c.io.out.bits(3), 1)
   expect(c.io.out.bits(4), 1)
   expect(c.io.out.bits(5), 1)  // check point. next: 1
-//  expect(c.io.out.valid, 0)
+  expect(c.io.out.valid, 1)
   step(1)
   poke(c.io.in(0), 1)
   poke(c.io.in(1), 1)
@@ -130,14 +135,14 @@ class PuncturingUnitTester[T <: chisel3.Data](c: Puncturing[T, T]) extends DspTe
   expect(c.io.out.bits(3), 1)
   expect(c.io.out.bits(4), 1)
   expect(c.io.out.bits(5), 1)
-//  expect(c.io.out.valid, 0)
+  expect(c.io.out.valid, 0)
 }
 
   /**
     * Convenience function for running tests
     */
 object FixedPuncturingTester {
-  def apply(params: FixedCoding): Boolean = {
+  def apply(params: TxCoding): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Puncturing(params)) {
       c => new PuncturingUnitTester(c)
     }
