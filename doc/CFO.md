@@ -1,4 +1,4 @@
-# Carrier Frequency Offset Estimation/Correctoion
+# Carrier Frequency Offset Estimation/Correction
 ### Sean Huang (<sehuang@berkeley.edu>)
 
 ## Overview
