@@ -1,5 +1,5 @@
 # Carrier Frequency Offset Estimation/Correctoion
-### Sean Huang <sehuang@berkeley.edu>
+### Sean Huang (<sehuang@berkeley.edu>)
 
 ## Overview
 The CFO Estimator uses the short and long training preambles in the Wi-Fi 802.11a OFDM frame to perform coarse and fine frequency offset estimation. The coarse estimation is performed using the short training field, which is made up of 10 repeating groups of 16 samples each. The estimation uses the fact that each sample should be the same as one delayed by 16 samples to determine the phase shift between the two samples, and then averages this shift over the entire training field to get a coarse per sample phase offset estimation. The fine offset estimation works in the same way, acting on the long training field, which is made up of 2 groups of 64 samples each.
