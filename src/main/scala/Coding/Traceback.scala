@@ -68,35 +68,35 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
 
   // FSM states
   val sIdle :: sWaitFirst :: sDecodeFirst :: sWaitRest :: sDecodeRest :: Nil = Enum(5)
-  val state      = RegInit(sIdle)
-  val state_next = Wire(state.cloneType)
+  val state     = RegInit(sIdle)
+  val nextState = Wire(state.cloneType)
 
-  val nextStateDecode = state_next === sDecodeFirst || state_next === sDecodeRest
-  val nextStateWait   = state_next === sWaitFirst   || state_next === sWaitRest
+  val nextStateDecode = nextState === sDecodeFirst || nextState === sDecodeRest
+  val nextStateWait   = nextState === sWaitFirst   || nextState === sWaitRest
 
-  state_next := state
-  state      := state_next
+  nextState := state
+  state     := nextState
 
   // Memory write address
   val wrAddr = Wire(wrAddrPrev.cloneType)
   wrAddrPrev := wrAddr
   wrAddr     := wrAddrPrev
-  // Update write address (with wrapping)
-//  when (io.enable) {
+  // Update write address (with wrapping) and write to memory
+  when (io.enable) {
+    mem.write(wrAddr, io.inSP)
     wrAddr := Mux(wrAddrPrev < (addrSize - 1).U, wrAddrPrev + 1.U, 0.U)
-//  }
+  }
 
   // Update traceback counters
   tracebackCounterPorts.foreach(cntr => { cntr := cntr - 1.U })
-  when (nextStateDecode && state_next =/= state) {
+  when (nextStateDecode && nextState =/= state) {
     tracebackCounterPorts(selReadPortWire) := (D + L - 2).U
   }
 
   // Update counterD
-  when (nextStateWait && state_next =/= state) {
+  when (nextStateWait && nextState =/= state) {
     counterD := 0.U
-//  } .elsewhen (state === sWaitRest && io.enable) {
-  } .elsewhen (state === sWaitRest) {
+  } .elsewhen (state === sWaitRest && io.enable) {
     counterD := counterD + 1.U
   }
 
@@ -104,24 +104,24 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   when (io.enable) {
     switch (state) {
       is (sIdle) {
-        state_next := sWaitFirst
+        nextState := sWaitFirst
         wrAddr := 0.U
       }
       is (sWaitFirst) {
         when (wrAddr % (D + L).U === (D + L - 2).U) {
-          state_next       := sDecodeFirst
+          nextState        := sDecodeFirst
           rdAddrOffsetBase := 0.U
-          cntLenReg        := D.U
           selReadPortWire  := 0.U
+          cntLenReg        := D.U
           rdAddrOffsetPorts(selReadPortWire) := 0.U
         }
       }
       is (sDecodeFirst) {
-        state_next := sWaitRest
+        nextState := sWaitRest
       }
       is (sWaitRest) {
         when (counterD === (D - 2).U) {
-          state_next           := sDecodeRest
+          nextState            := sDecodeRest
           rdAddrOffsetBaseNext := Mux(rdAddrOffsetBase < (addrSize - D).U, rdAddrOffsetBase + D.U, rdAddrOffsetBase - (addrSize - D).U)
           cntLenReg            := cntLenReg + D.U
           selReadPortWire      := Mux(selReadPortReg === (numReadPorts - 1).U, 0.U, selReadPortReg + 1.U)
@@ -129,65 +129,57 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
         }
       }
       is (sDecodeRest) {
-        state_next := Mux(cntLenReg >= dataLen, sIdle, sWaitRest)
+        nextState := Mux(cntLenReg >= dataLen, sIdle, sWaitRest)
       }
     }
   }
 
-  // setup registers for address
-//  when (io.enable) {
-    mem.write(wrAddr, io.inSP)
-//  }
+  // Find the state corresponding to the smallest PM
+  val newPMMinIndex = io.inPM.zipWithIndex.map(elem => (elem._1, elem._2.U)).reduceLeft((x, y) => {
+    val comp = x._1 < y._1
+    (Mux(comp, x._1, y._1), Mux(comp, x._2, y._2))
+  })._2
 
-    // Find the state corresponding to the smallest PM
-    val tmpPMMinIndex = io.inPM.zipWithIndex.map(elem => (elem._1, elem._2.U)).reduceLeft((x, y) => {
-      val comp = x._1 < y._1
-      (Mux(comp, x._1, y._1), Mux(comp, x._2, y._2))
-    })._2
-
-    // Read from memory
-    val mem_rv = Wire(Vec(numReadPorts, Vec(params.nStates, UInt(m.W))))
-    mem_rv.zipWithIndex.foreach {
-      case (wire, idx) => {
-        val rdAddrUnwrapped = rdAddrOffsetPorts(idx) +& tracebackCounterPorts(idx)
-        val rdAddr = Mux(rdAddrUnwrapped <= (addrSize - 1).U, rdAddrUnwrapped, rdAddrUnwrapped - addrSize.U)
-        wire := mem.read(rdAddr)
-      }
+  // Read from memory
+  val mem_rv = Wire(Vec(numReadPorts, Vec(params.nStates, UInt(m.W))))
+  mem_rv.zipWithIndex.foreach {
+    case (wire, idx) => {
+      val rdAddrUnwrapped = rdAddrOffsetPorts(idx) +& tracebackCounterPorts(idx)
+      val rdAddr = Mux(rdAddrUnwrapped <= (addrSize - 1).U, rdAddrUnwrapped, rdAddrUnwrapped - addrSize.U)
+      wire := mem.read(rdAddr)
     }
+  }
 
-    val tmpSPReg = Reg(Vec(numReadPorts, UInt(m.W)))
-    val tmpSPWire = Wire(Vec(numReadPorts, UInt(m.W)))
+  val tmpSPReg  = Reg(Vec(numReadPorts, UInt(m.W)))
+  val tmpSPWire = Wire(Vec(numReadPorts, UInt(m.W)))
 
-    tmpSPReg  := tmpSPWire
-    tmpSPWire := tmpSPReg
+  tmpSPReg  := tmpSPWire
+  tmpSPWire := tmpSPReg
 
-    val decodeReg  = Reg(Vec(numReadPorts, Vec(D, UInt(params.k.W))))
+  val decodeReg  = Reg(Vec(numReadPorts, Vec(D, UInt(params.k.W))))
 
-    for (i <- 0 until numReadPorts) {
-      when (tracebackCounterPorts(i) === (D + L - 2).U) {
-        tmpSPWire(i) := io.inSP(tmpPMMinIndex) // Load from input
-      } .otherwise {
-        tmpSPWire(i) := mem_rv(i)(tmpSPReg(i)) // Load from memory
-      }
-      when (tracebackCounterPorts(i) < D.U) {
-        decodeReg(i)(tracebackCounterPorts(i)) := tmpSPWire(i)(m - 1)
-      }
-    }
-
-    val delay = D + L - 1
-
-    // delay read port selection to be in sync with output
-//    val selReadPortReg_delayed = ShiftRegister(selReadPortReg, delay, io.enable)
-    val selReadPortReg_delayed = ShiftRegister(selReadPortReg, delay, true.B)
-    io.out.bits := decodeReg(selReadPortReg_delayed)
-
-    when (io.out.fire()) {
-      outValid := false.B
+  for (i <- 0 until numReadPorts) {
+    when (tracebackCounterPorts(i) === (D + L - 2).U) {
+      tmpSPWire(i) := io.inSP(newPMMinIndex) // Load from input
     } .otherwise {
-//      outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, false.B, io.enable)
-      outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, true.B)
+      tmpSPWire(i) := mem_rv(i)(tmpSPReg(i)) // Load from memory
     }
+    when (tracebackCounterPorts(i) < D.U) {
+      decodeReg(i)(tracebackCounterPorts(i)) := tmpSPWire(i)(m - 1)
+    }
+  }
 
+  val delay = D + L - 1
+
+  // delay read port selection to be in sync with output
+  val selReadPortReg_delayed = ShiftRegister(selReadPortReg, delay, true.B)
+  io.out.bits := decodeReg(selReadPortReg_delayed)
+
+  when (io.out.fire()) {
+    outValid := false.B
+  } .otherwise {
+    outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, true.B)
+  }
 
   io.out.valid := outValid
 }
