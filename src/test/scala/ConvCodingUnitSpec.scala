@@ -5,7 +5,7 @@ import org.scalatest.{FlatSpec, Matchers}
 class ConvCodingUnitSpec extends FlatSpec with Matchers {
   behavior of "ConvCodingUnitSpec"
 
-  val params = FixedCoding(
+  val params = TxCoding(
     k = 1,
     n = 2,
     K = 3,

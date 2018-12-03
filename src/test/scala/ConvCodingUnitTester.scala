@@ -19,16 +19,20 @@ class ConvCodingUnitTester[T <: chisel3.Data](c: ConvCoding[T, T]) extends DspTe
   11    | 1   | 10  | 11
    */
   // currently there is 1 delay after taking input
-//  poke(c.io.inReady, 0)
+  poke(c.io.inReady, 0)
   poke(c.io.isHeadIn, 0)
   poke(c.io.in.valid, 0)
+  poke(c.io.pktStrIn, 1)
+  poke(c.io.pktEndIn, 0)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 0)
   poke(c.io.in.bits, 0)
   expect(c.io.isHeadOut, 0)
 
   step(1)
-//  poke(c.io.inReady, 0)
+  poke(c.io.pktStrIn, 0)
+  poke(c.io.pktEndIn, 0)
+  poke(c.io.inReady, 0)
   poke(c.io.in.valid, 0)
   expect(c.io.out(0), 0)
   expect(c.io.out(1), 0)
@@ -36,7 +40,7 @@ class ConvCodingUnitTester[T <: chisel3.Data](c: ConvCoding[T, T]) extends DspTe
   expect(c.io.isHeadOut, 0)
 
   step(1)
-//  poke(c.io.inReady, 1)
+  poke(c.io.inReady, 1)
   poke(c.io.in.valid, 1)
   poke(c.io.isHeadIn, 1)
   expect(c.io.out(0), 0)
@@ -108,7 +112,7 @@ class ConvCodingUnitTester[T <: chisel3.Data](c: ConvCoding[T, T]) extends DspTe
     * Convenience function for running tests
     */
 object FixedConvCodingTester {
-  def apply(params: FixedCoding): Boolean = {
+  def apply(params: TxCoding): Boolean = {
     chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new ConvCoding(params)) {
       c => new ConvCodingUnitTester(c)
     }
