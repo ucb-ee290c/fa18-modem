@@ -5,7 +5,7 @@ import org.scalatest.{FlatSpec, Matchers}
 class PuncturingUnitSpec extends FlatSpec with Matchers {
   behavior of "PuncturingUnitSpec"
 
-  val params = FixedCoding(
+  val params = TxCoding(
     k = 1,
     n = 2,
     K = 3,
@@ -17,7 +17,7 @@ class PuncturingUnitSpec extends FlatSpec with Matchers {
     tailBitingEn = false,
 //    tailBitingScheme = 0,
     protoBitsWidth = 16,
-    bitsWidth = 48,
+    bitsWidth = 6,
     softDecision = false,
     FFTPoint = 64
   )
