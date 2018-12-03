@@ -9,12 +9,12 @@ import dsptools.numbers._
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // more comments are available on traceback_backup1.scala file
 // assuming continous Viterbi Decoding
-class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
+class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) extends Module {
   require(params.D >= 4)
 
   val io = IO(new Bundle {
     // ignore very first PM & SP
-    val inPM    = Input(Vec(params.nStates, UInt(params.pmBits.W))) // storing Path Metric
+    val inPM    = Input(Vec(params.nStates, params.pmBitType.cloneType)) // storing Path Metric
     val inSP    = Input(Vec(params.nStates, UInt(params.m.W))) // storing Survival Path
     val enable  = Input(Bool())
     val out     = Decoupled(Vec(params.D, UInt(params.k.W)))
@@ -141,7 +141,7 @@ class Traceback[T <: Data: Real](params: CodingParams[T]) extends Module {
       (Mux(comp, x._1, y._1), Mux(comp, x._2, y._2))
     })._2
 
-    // Read from meory
+    // Read from memory
     val mem_rv = Wire(Vec(numReadPorts, Vec(params.nStates, UInt(m.W))))
     mem_rv.zipWithIndex.foreach {
       case (wire, idx) => {

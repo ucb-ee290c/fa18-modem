@@ -10,15 +10,16 @@ class ViterbiDecoderUnitSpec extends FlatSpec with Matchers {
     n = 2,
     K = 3,
     L = 2,
-    O = 48,
+//    O = 48,
     D = 5,
     H = 24,
     genPolynomial = List(7, 6), // generator polynomial
     tailBitingEn = false,
-    tailBitingScheme = 0,
+//    tailBitingScheme = 0,
     protoBitsWidth = 16,
     bitsWidth = 48,
-    softDecision = false
+    softDecision = true,
+    FFTPoint = 64
   )
   it should "Traceback" in {
 
