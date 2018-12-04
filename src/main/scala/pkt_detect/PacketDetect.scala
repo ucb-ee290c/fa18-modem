@@ -165,7 +165,6 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
     }
   }
   .elsewhen(state === sPktValid || state === sNoPktValid) {
-    printf("bringing in new data\n")
     dataVec(0) := iqBuf
     for (i <- 1 until windowSize) {
       dataVec(i) := dataVec(i - 1)
@@ -231,15 +230,16 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   // Output Logic
   io.in.ready := state =!= sFlushing
   // pktStart goes high on transition from nopkt to pkt
-  val pktStartReg = Reg(Bool())
-  val pktStopReg  = Reg(Bool())
-  pktStartReg := !isPkt && isNextPkt
-  pktStopReg := isPkt && !isNextPkt
+  val pktStartReg = RegNext(!isPkt && isNextPkt)
+  // val pktEndReg  = RegNext(isPkt && !isNextPkt)
+  // We need to delay these signals to let pktEnd have the visibility into nextState it needs
+  val validReg = RegNext(isNextPkt && isNextValid)
+  val iqReg = RegNext(dataVec(dataVec.length - 1))
   // Assign outputs
   io.out.bits.pktStart := pktStartReg
-  io.out.bits.pktEnd  := pktStopReg
-  io.out.bits.iq(0) := dataVec(dataVec.length - 1)
-  io.out.valid := isNextPkt && isNextValid
+  io.out.bits.pktEnd  := isPkt && !isNextPkt
+  io.out.bits.iq(0) := iqReg
+  io.out.valid := validReg
 
   // debug output
   io.debug.corrComp := corrComp
