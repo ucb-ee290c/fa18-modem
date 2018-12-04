@@ -32,8 +32,8 @@ class BranchMetric[T <: Data: Real: Ring, U <: Data: Real](params: CodingParams[
           }
         } else {    // Soft-Input decoding. Using L1 Norm to calculate Euclidean distance
           // either one works fine
-//          io.out(currentStates)(currentInputs)(r) := ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r))*io.in(r)*(-1)
-          io.out(currentStates)(currentInputs)(r) := Mux(io.in(r) >= ConvertableTo[T].fromInt(0), io.in(r) - ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r)), -1*(io.in(r) - ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r))))
+          io.out(currentStates)(currentInputs)(r) := ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r))*io.in(r)*(-1)
+//          io.out(currentStates)(currentInputs)(r) := Mux(io.in(r) >= ConvertableTo[T].fromInt(0), io.in(r) - ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r)), -1*(io.in(r) - ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r))))
         }
       }
       io.out_dec(currentStates)(currentInputs)  := io.out(currentStates)(currentInputs).reduce(_ + _)
