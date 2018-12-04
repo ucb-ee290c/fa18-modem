@@ -28,9 +28,9 @@ case class PacketDetectTestVectors() {
     Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1)) ++
     Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(16)(Complex(0, 0))
   val tvPwrCorrOut: Seq[Complex] =
-    Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(8)(Complex(-1, 1)) ++
     Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1)) ++
-    Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1))
+    Seq.fill(8)(Complex(-1, 1)) ++ Seq.fill(8)(Complex(1, -1)) ++ Seq.fill(8)(Complex(-1, 1)) ++
+    Seq.fill(8)(Complex(1, -1))
 }
 
 
