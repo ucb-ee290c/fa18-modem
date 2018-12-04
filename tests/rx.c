@@ -116,6 +116,19 @@ void run_modem(uint64_t data) {
     reg_write64(RX_WRITE, packPlusPlus);
   }
 
+  // Write zeros to end packet
+  for (i=0; i < 80; ++i) {
+    while(reg_read8(RX_WRITE_COUNT) > 0) {
+      printf("Waiting for modem queue to empty...\n");
+    }
+    reg_write64(RX_WRITE, 0LL);
+    reg_write64(RX_WRITE, 0LL);
+    reg_write64(RX_WRITE, 0LL);
+    reg_write64(RX_WRITE, 0LL);
+    reg_write64(RX_WRITE, 0LL);
+    reg_write64(RX_WRITE, 0LL);
+  }
+
   // Read SIGNAL
   while (reg_read8(RX_READ_COUNT) == 0) {
     printf("Waiting for read queue...\n");
