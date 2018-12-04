@@ -114,7 +114,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(IQBundle(rxParams.iqBundleParams)))
     //val out = Decoupled(BitsBundle(bitsBundleParams))
-    val out = Decoupled(Vec(36, UInt(1.W)))
+    val out = Decoupled(Vec(5, UInt(1.W)))
   })
 
   val phaseRotator = Module( new PhaseRotator(rxParams.cfoParams) )
@@ -160,17 +160,19 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   decode.io.in <> demod.io.out
 
   io.out <> decode.io.out
+  io.in.ready := true.B
+
 }
 
 trait HasPeripheryModem extends BaseSubsystem {
   // Instantiate rx chain
-  //val rxChain = LazyModule(new RXThing(FinalRxParams(16, 64, 48)))
+  val rxChain = LazyModule(new RXThing(FinalRxParams(16, 64, 48)))
   // Instantiate tx chain
-  val txChain = LazyModule(new TXThing(FinalTxParams(16, 64, 48)))
- //pbus.toVariableWidthSlave(Some("rxWrite")) { rxChain.writeQueue.mem.get }
- // pbus.toVariableWidthSlave(Some("rxRead")) { rxChain.readQueue.mem.get }
-  pbus.toVariableWidthSlave(Some("txWrite")) { txChain.writeQueue.mem.get }
-  pbus.toVariableWidthSlave(Some("txRead")) { txChain.readQueue.mem.get }
+  //val txChain = LazyModule(new TXThing(FinalTxParams(16, 64, 48)))
+  pbus.toVariableWidthSlave(Some("rxWrite")) { rxChain.writeQueue.mem.get }
+  pbus.toVariableWidthSlave(Some("rxRead")) { rxChain.readQueue.mem.get }
+  //pbus.toVariableWidthSlave(Some("txWrite")) { txChain.writeQueue.mem.get }
+  //pbus.toVariableWidthSlave(Some("txRead")) { txChain.readQueue.mem.get }
 }
 // trait ModemParams[T<:Data, U<:Data] extends PacketBundleParams[T] with BitsBundleParams[U] {
 //   val foo: Int

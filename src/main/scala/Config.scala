@@ -58,7 +58,7 @@ object FinalTxParams {
                 genPolynomial = List(7, 5), // generator polynomial
                 tailBitingEn = false,
                 protoBitsWidth = 16,
-                bitsWidth = 6,
+                bitsWidth = 48,
                 softDecision = false,
                 FFTPoint = 64
             )

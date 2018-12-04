@@ -1,0 +1,86 @@
+# Preference setting overrides
+gui_create_pref_key -category {Globals} -key {load_detail_for_funcov} -value_type {bool} -value {false}
+gui_create_pref_category -category {schem_obj_name}
+gui_create_pref_key -category {schem_obj_name} -key {show_cell_and_pin_with_symbol_name} -value_type {bool} -value {false}
+gui_create_pref_key -category {schem_pin_hc} -key {textExtFont} -value_type {string} -value {Helvetica,10,-1,5,50,0,0,0,0,0}
+
+# State setting overrides
+gui_state_default_create -off -ini
+gui_set_state_value -category Globals -key recent_databases -value {{gui_open_db -file /tools/projects/meng_wei/hw4_cordic/fa18-at/verisim/oute2.vcd -design V1} {gui_open_db -file /tools/projects/meng_wei/hw4_cordic/fa18-at/verisim/oute2.vcd -design V2} {gui_open_db -file /tools/projects/meng_wei/hw4_cordic/fa18-at/verisim/oute2.vcd.vpd -design V1} {gui_open_db -file /tools/projects/meng_wei/hw4_cordic/fa18-at/verisim/oute1.vcd -design V1} {gui_open_db -file /users/meng_wei/out1.vcd -design V1}}
+gui_set_state_value -category Globals -key recent_sessions -value {{gui_load_session -ignore_errors -file /tools/projects/meng_wei/serdes_model/build/vcs-sim-rtl/DVEfiles//crash_02.20-15.49/dve_session02.20-15.49.tcl} {gui_load_session -ignore_errors -file /tools/projects/meng_wei/serdes_model/build/vcs-sim-rtl/DVEfiles//crash_02.20-15.35/dve_session02.20-15.35.tcl} {gui_load_session -ignore_errors -file /tools/projects/meng_wei/serdes_model/build/vcs-sim-rtl/DVEfiles//crash_02.20-14.32/dve_session02.20-14.32.tcl} {gui_load_session -ignore_errors -file /tools/projects/meng_wei/serdes_model/build/vcs-sim-rtl/DVEfiles//crash_02.18-21.23/dve_session02.18-21.23.tcl}}
+gui_set_state_value -category Layout -key child_console_size_x -value 1097
+gui_set_state_value -category Layout -key child_console_size_y -value 147
+gui_set_state_value -category Layout -key child_data_coltype -value 46
+gui_set_state_value -category Layout -key child_data_colvariable -value 277
+gui_set_state_value -category Layout -key child_data_size_x -value 379
+gui_set_state_value -category Layout -key child_data_size_y -value 298
+gui_set_state_value -category Layout -key child_driver_size_x -value 614
+gui_set_state_value -category Layout -key child_driver_size_y -value 179
+gui_set_state_value -category Layout -key child_hier_col3 -value {-1}
+gui_set_state_value -category Layout -key child_hier_colhier -value 248
+gui_set_state_value -category Layout -key child_hier_colpd -value 0
+gui_set_state_value -category Layout -key child_hier_coltype -value 107
+gui_set_state_value -category Layout -key child_hier_size_x -value 191
+gui_set_state_value -category Layout -key child_hier_size_y -value 298
+gui_set_state_value -category Layout -key child_schematic_docknewline -value false
+gui_set_state_value -category Layout -key child_schematic_pos_x -value {-2}
+gui_set_state_value -category Layout -key child_schematic_pos_y -value {-15}
+gui_set_state_value -category Layout -key child_schematic_size_x -value 733
+gui_set_state_value -category Layout -key child_schematic_size_y -value 385
+gui_set_state_value -category Layout -key child_source_docknewline -value false
+gui_set_state_value -category Layout -key child_source_pos_x -value {-2}
+gui_set_state_value -category Layout -key child_source_pos_y -value {-15}
+gui_set_state_value -category Layout -key child_source_size_x -value 530
+gui_set_state_value -category Layout -key child_source_size_y -value 293
+gui_set_state_value -category Layout -key child_wave_colname -value 147
+gui_set_state_value -category Layout -key child_wave_colvalue -value 147
+gui_set_state_value -category Layout -key child_wave_left -value 299
+gui_set_state_value -category Layout -key child_wave_right -value 729
+gui_set_state_value -category Layout -key main_pos_x -value 107
+gui_set_state_value -category Layout -key main_pos_y -value 294
+gui_set_state_value -category Layout -key main_size_x -value 1204
+gui_set_state_value -category Layout -key main_size_y -value 838
+gui_set_state_value -category Layout -key stand_source_child_docknewline -value false
+gui_set_state_value -category Layout -key stand_source_child_pos_x -value {-2}
+gui_set_state_value -category Layout -key stand_source_child_pos_y -value {-15}
+gui_set_state_value -category Layout -key stand_source_child_size_x -value 672
+gui_set_state_value -category Layout -key stand_source_child_size_y -value 293
+gui_set_state_value -category Layout -key stand_wave_child_docknewline -value false
+gui_set_state_value -category Layout -key stand_wave_child_pos_x -value {-2}
+gui_set_state_value -category Layout -key stand_wave_child_pos_y -value {-15}
+gui_set_state_value -category Layout -key stand_wave_child_size_x -value 1038
+gui_set_state_value -category Layout -key stand_wave_child_size_y -value 524
+gui_set_state_value -category Layout -key stand_wave_top_pos_x -value 59
+gui_set_state_value -category Layout -key stand_wave_top_pos_y -value 287
+gui_set_state_value -category Layout -key stand_wave_top_size_x -value 1092
+gui_set_state_value -category Layout -key stand_wave_top_size_y -value 915
+gui_create_state_key -category FindDialog -key m_pMatchCase -value_type bool -value false
+gui_create_state_key -category FindDialog -key m_pMatchWord -value_type bool -value false
+gui_create_state_key -category FindDialog -key m_pUseCombo -value_type string -value {}
+gui_create_state_key -category FindDialog -key m_pWrapAround -value_type bool -value true
+gui_create_state_key -category SearchDialog -key MatchCase -value_type bool -value false
+gui_create_state_key -category SearchDialog -key MatchWord -value_type bool -value true
+gui_create_state_key -category SearchDialog -key SearchMode -value_type string -value Wildcards
+gui_create_state_key -category SearchDialog -key UseCombo -value_type bool -value true
+gui_state_default_create -off
+
+# Begin command logging
+gui_open_db -file /tools/projects/meng_wei/modem/fa18-modem/verisim/modem.vcd -design V1
+gui_list_expand -id  Hier.1   TOP
+gui_list_expand -id  Hier.1   TOP.TestHarness
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut -current_item_type Scope  -selected  { TOP.TestHarness.dut   }
+gui_list_expand -id  Hier.1   TOP.TestHarness.dut
+gui_list_expand -id  Hier.1   TOP.TestHarness.dut.txChain
+gui_list_expand -id  Hier.1   TOP.TestHarness.dut.txChain.tx
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.readQueue -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.readQueue   }
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.tx -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.tx   }
+gui_list_expand -id  Hier.1   TOP.TestHarness.dut.txChain.tx.tx
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.tx.tx.cyclicPrefix -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.tx.tx.cyclicPrefix   }
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.tx.tx -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.tx.tx   }
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.tx.tx.cyclicPrefix -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.tx.tx.cyclicPrefix   }
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.tx.tx.encoder -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.tx.tx.encoder   }
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.tx.tx.cyclicPrefix -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.tx.tx.cyclicPrefix   }
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.tx.tx.modulator -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.tx.tx.modulator   }
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.tx.tx -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.tx.tx   }
+gui_list_collapse -id  Hier.1   TOP.TestHarness.dut.txChain.tx
+gui_list_select -id Hier.1 -current_item_name TOP.TestHarness.dut.txChain.readQueue -current_item_type Scope  -selected  { TOP.TestHarness.dut.txChain.readQueue   }
