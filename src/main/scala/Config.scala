@@ -105,7 +105,7 @@ object FinalRxParams {
               n = 2,
               K = 3,
               L = 2,
-              D = 5,
+              D = 8,
               H = 24,
               genPolynomial = List(7, 6), // generator polynomial
               tailBitingEn = false,

@@ -160,7 +160,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   decode.io.in <> demod.io.out
 
   io.out <> decode.io.out
-  io.in.ready := true.B
+  //io.in.ready := true.B
 
 }
 
