@@ -40,6 +40,10 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
   val preambleAdder = Module( new PreambleAdder(txParams.preambleParams) )
   val fir = Module( new RCFilter(txParams.firParams) )
 
+  val puncMatrixBuf = RegNext(next = io.in.bits.puncMatrix, enable = io.in.fire())
+  val isHeadBuf = RegNext(next = io.in.bits.isHead, enable = io.in.fire())
+  val mod_ctrlBuf = RegNext(next = io.in.bits.mod_ctrl, enable = io.in.fire())
+
   //encoder.io.in <> io.in
   serilizer.io.in.bits.bits:= io.in.bits.data.bits
   serilizer.io.in.bits.pktStart := io.in.bits.data.pktStart
@@ -51,12 +55,12 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
   encoder.io.pktEndIn  := serilizer.io.out.bits.pktEnd
   encoder.io.in.valid := serilizer.io.out.valid
   encoder.io.out.ready := serilizer.io.in.ready
-  encoder.io.mac.isHead := io.in.bits.isHead
-  encoder.io.mac.puncMatrix := io.in.bits.puncMatrix
+  encoder.io.mac.isHead := isHeadBuf
+  encoder.io.mac.puncMatrix := puncMatrixBuf
   modulator.io.in <> encoder.io.out
   modulator.io.out.ready := encoder.io.in.ready
 
-  modulator.io.mod_ctrl := io.mod_ctrl
+  modulator.io.mod_ctrl := mod_ctrlBuf
   //ifft.io.in <> modulator.io.in
   val z0 = Ring[T].zero
   ifft.io.in.valid := modulator.io.out.valid
@@ -104,7 +108,7 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
   preambleAdder.io.in <> cyclicPrefix.io.out
   fir.io.in <> preambleAdder.io.out
   io.out <> fir.io.out
-  io.in.ready := fir.io.in.ready
+  io.in.ready := serializer.io.in.ready
 
 }
 
