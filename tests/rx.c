@@ -15,7 +15,7 @@
  * Make sure these #defines are correct for your chosen parameters.
  * You'll get really strange (and wrong) results if they do not match.
  */
-#define BITS_WIDTH 24
+#define BITS_WIDTH 8
 #define BITS_MASK ((1L << BITS_WIDTH) - 1)
 #define PKT_START_MASK (1L << BITS_WIDTH)
 #define PKT_END_MASK (1L << (BITS_WIDTH + 1))
@@ -24,19 +24,16 @@
 #define PUNCTURE_MASK (((1L << PUNCTURE_WIDTH) - 1) << (BITS_WIDTH + 3))
 #define MODULATION_MASK (3L << (BITS_WIDTH + PUNCTURE_WIDTH + 3))
 
+#define FP1 (1L << 13)
+#define FPM1 (0xd000)
 
 /**
  * Pack modem fields into 64-bit unsigned integer.
  * Make sure the #defines above are correct!
  * You will need to pack into multiple uint64_t if 2 * XY_WIDTH + Z_WIDTH + 1 > 64
  */
-uint64_t pack_modem_tx(int64_t bits, uint8_t pktStart, uint8_t pktEnd,
-                    uint8_t isHead, uint8_t puncture, uint8_t modulation) {
-  return bits | (pktStart & 0x1) << BITS_WIDTH |
-         (pktEnd & 0x1) << (BITS_WIDTH + 1) |
-         (isHead & 0x1) << (BITS_WIDTH + 2) |
-         (puncture & 0xf) << (BITS_WIDTH + 3) |
-         (modulation & 0x3) << (BITS_WIDTH + PUNCTURE_WIDTH + 3);
+uint64_t pack_modem_rx(int16_t inphase, int16_t quadrature) {
+  return quadrature | (inphase << 16);
 }
 
 /*
@@ -64,17 +61,60 @@ void run_modem(uint64_t data) {
   // SIGNAL field
   // rate 6Mbps, R, length 6,    parity, 0s
   // 1101        0  011000000000 1       000000
-  uint64_t packSignal = pack_modem_tx(0xd30080, 1, 0, 1, 0xd, 0);
-  uint64_t packService = pack_modem_tx(0xf0f0f0, 0, 0, 0, 0xd, 0);
-  uint64_t packData = pack_modem_tx(data, 0, 1, 0, 0xd, 0);
+  uint64_t packPlusPlus = pack_modem_rx(FP1, FP1);
+  uint64_t packPlusMinus = pack_modem_rx(FP1, FPM1);
+  uint64_t packMinusPlus = pack_modem_rx(FPM1, FP1);
+  uint64_t packMinusMinus = pack_modem_rx(FPM1, FPM1);
 
   // Write data
-  while(reg_read8(RX_WRITE_COUNT) > 4) {
-    printf("Waiting for cordic queue to empty...\n");
+  int i;
+  // Write STF
+  for (i=0; i < 80; ++i) {
+    while(reg_read8(RX_WRITE_COUNT) > 6) {
+      printf("Waiting for modem queue to empty...\n");
+    }
+    reg_write64(RX_WRITE, packPlusPlus);
+    reg_write64(RX_WRITE, packMinusMinus);
   }
-  reg_write64(RX_WRITE, packSignal);
-  reg_write64(RX_WRITE, packService);
-  reg_write64(RX_WRITE, packData);
+
+  // Write LTF
+  for (i=0; i < 80; ++i) {
+    while(reg_read8(RX_WRITE_COUNT) > 6) {
+      printf("Waiting for modem queue to empty...\n");
+    }
+    reg_write64(RX_WRITE, packPlusMinus);
+    reg_write64(RX_WRITE, packMinusPlus);
+  }
+
+
+  // Write SIGNAL
+  for (i=0; i < 80; ++i) {
+    while(reg_read8(RX_WRITE_COUNT) > 6) {
+      printf("Waiting for modem queue to empty...\n");
+    }
+    reg_write64(RX_WRITE, packPlusPlus);
+    reg_write64(RX_WRITE, packMinusPlus);
+  }
+
+
+  // Write SERVICE
+  for (i=0; i < 80; ++i) {
+    while(reg_read8(RX_WRITE_COUNT) > 6) {
+      printf("Waiting for modem queue to empty...\n");
+    }
+    reg_write64(RX_WRITE, packMinusMinus);
+    reg_write64(RX_WRITE, packMinusPlus);
+  }
+
+
+  // Write DATA
+  for (i=0; i < 80; ++i) {
+    while(reg_read8(RX_WRITE_COUNT) > 6) {
+      printf("Waiting for modem queue to empty...\n");
+    }
+    reg_write64(RX_WRITE, packPlusMinus);
+    reg_write64(RX_WRITE, packPlusPlus);
+  }
 
   // Read SIGNAL
   while (reg_read8(RX_READ_COUNT) == 0) {
