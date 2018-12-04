@@ -12,15 +12,16 @@ class PathMetricUnitSpec extends FlatSpec with Matchers {
       n = 2,
       K = 3,
       L = 100,
-      O = 6,
+//      O = 6,
       D = 36,
       H = 24,
       genPolynomial = List(7, 6), // generator polynomial
       tailBitingEn = false,
-      tailBitingScheme = 0,
+//      tailBitingScheme = 0,
       protoBitsWidth = 16,
       bitsWidth = 48,
-      softDecision = false
+      softDecision = true,
+      FFTPoint = 64
     )
 
     FixedPathMetricTester(params) should be (true)

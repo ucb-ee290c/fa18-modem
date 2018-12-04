@@ -64,7 +64,7 @@ object FFTParams {
  */
 case class FixedFFTParams(
   dataWidth   : Int, // width of input and output
-  binPoint    : Int, // Binary point of input and output
+  binPoint    : Int, // binary point of input and output
   twiddleWidth: Int, // width of twiddle constants
   numPoints   : Int,
   pipeline    : Boolean = true,
@@ -137,8 +137,8 @@ class FFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) ext
 
   params.fftType match {
     case "direct" => {
-      // instantiate Deserializer to go from serial-input FFT to parallel-input DirectFFT
-      val deser = Module(new Deserializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
+      // instantiate PacketDeserializer to go from serial-input FFT to parallel-input DirectFFT
+      val deser = Module(new PacketDeserializer(PacketSerDesParams(params.protoIQ.cloneType, params.numPoints)))
       val fft   = Module(new DirectFFT(params))
       deser.io.in <> io.in
       fft.io.in   <> deser.io.out
@@ -184,8 +184,8 @@ class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) ex
 
   params.fftType match {
     case "direct" => {
-      // instantiate Serializer to go from parallel-output DirectFFT to serial-output FFT
-      val ser = Module(new Serializer(SerDesParams(params.protoIQ.cloneType, params.numPoints)))
+      // instantiate PacketSerializer to go from parallel-output DirectFFT to serial-output FFT
+      val ser = Module(new PacketSerializer(PacketSerDesParams(params.protoIQ.cloneType, params.numPoints)))
       val fft = Module(new DirectFFT(params))
       fft_in    <> fft.io.in
       ser.io.in <> fft.io.out
@@ -205,15 +205,11 @@ class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) ex
 
 /**
  * Top level Direct FFT block
- *
- * FIXME: Rader FFT WIP, but not currently used
  */
 class DirectFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
+  params.checkNumPointsPow2()
   val io = IO(DIDOIO(params))
-  val fft_stage = {
-    if (params.numPoints != 2 && FFTUtil.is_prime(params.numPoints)) { Module(new RaderFFT(params)) }
-    else                                                             { Module(new DirectStage(params)) }
-  }
+  val fft_stage = Module(new DirectStage(params))
   fft_stage.io.in.bits  := io.in.bits
   fft_stage.io.in.valid := io.in.fire()
   io.in.ready  := io.out.ready
@@ -311,16 +307,16 @@ class DirectStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams
 class SDFFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
   params.checkNumPointsPow2()
   val io = IO(SISOIO(params))
-  val serdes_params = SerDesParams(params.protoIQ.cloneType, params.numPoints)
+  val serdes_params = PacketSerDesParams(params.protoIQ.cloneType, params.numPoints)
 
   if (params.decimType == "dif") {
-    val ser               = Module(new Serializer(serdes_params))
+    val ser               = Module(new PacketSerializer(serdes_params))
     val sdf_fft_deser_out = Module(new SDFFFTDeserOut(params))
     io.in     <> sdf_fft_deser_out.io.in
     ser.io.in <> sdf_fft_deser_out.io.out
     io.out    <> ser.io.out
   } else {
-    val des              = Module(new Deserializer(serdes_params))
+    val des              = Module(new PacketDeserializer(serdes_params))
     val sdf_fft_deser_in = Module(new SDFFFTDeserIn(params))
     io.in      <> des.io.in
     des.io.out <> sdf_fft_deser_in.io.in
@@ -338,20 +334,20 @@ class SDFFFTDeserIn[T <: Data : Real : BinaryRepresentation](val params: FFTPara
   val io = IO(DISOIO(params))
 
   val updated_params = if (params.decimType == "opt") FFTParams(params, "dit") else params
-  val serdes_params  = SerDesParams(params.protoIQ.cloneType, params.numPoints)
-  val inp_ser     = Module(new Serializer(serdes_params))
+  val serdes_params  = PacketSerDesParams(params.protoIQ.cloneType, params.numPoints)
+  val inp_ser     = Module(new PacketSerializer(serdes_params))
   val unscrambler = Module(new FFTUnscrambler(updated_params))
   val sdf_chain   = Module(new SDFChain(updated_params))
 
   val out_if = if (updated_params.decimType == "dit") {
-    // Data flow: Unscrambler -> Serializer -> SDF Chain
+    // Data flow: Unscrambler -> PacketSerializer -> SDF Chain
     unscrambler.io.in <> io.in
     inp_ser.io.in     <> unscrambler.io.out
     sdf_chain.io.out
   } else {
-    // Data flow: Serializer -> SDF Chain -> Deserializer -> Unscrambler -> Serializer
-    val ser = Module(new Serializer(serdes_params))
-    val des = Module(new Deserializer(serdes_params))
+    // Data flow: PacketSerializer -> SDF Chain -> PacketDeserializer -> Unscrambler -> PacketSerializer
+    val ser = Module(new PacketSerializer(serdes_params))
+    val des = Module(new PacketDeserializer(serdes_params))
     inp_ser.io.in <> io.in
     des.io.in     <> sdf_chain.io.out
     des.io.out    <> unscrambler.io.in
@@ -372,20 +368,20 @@ class SDFFFTDeserOut[T <: Data : Real : BinaryRepresentation](val params: FFTPar
   val io = IO(SIDOIO(params))
 
   val updated_params = if (params.decimType == "opt") FFTParams(params, "dif") else params
-  val serdes_params  = SerDesParams(params.protoIQ.cloneType, params.numPoints)
-  val out_des     = Module(new Deserializer(serdes_params))
+  val serdes_params  = PacketSerDesParams(params.protoIQ.cloneType, params.numPoints)
+  val out_des     = Module(new PacketDeserializer(serdes_params))
   val unscrambler = Module(new FFTUnscrambler(updated_params))
   val sdf_chain   = Module(new SDFChain(updated_params))
 
   val inp_if = if (updated_params.decimType == "dif") {
-    // Data flow: SDF Chain -> Deserializer -> Unscrambler
+    // Data flow: SDF Chain -> PacketDeserializer -> Unscrambler
     unscrambler.io.in  <> out_des.io.out
     unscrambler.io.out <> io.out
     sdf_chain.io.in
   } else {
-    // Data flow: Deserializer -> Unscrambler -> Serializer -> SDF Chain -> Deserializer
-    val ser = Module(new Serializer(serdes_params))
-    val des = Module(new Deserializer(serdes_params))
+    // Data flow: PacketDeserializer -> Unscrambler -> PacketSerializer -> SDF Chain -> PacketDeserializer
+    val ser = Module(new PacketSerializer(serdes_params))
+    val des = Module(new PacketDeserializer(serdes_params))
     out_des.io.out <> io.out
     ser.io.out     <> sdf_chain.io.in
     ser.io.in      <> unscrambler.io.out
@@ -596,103 +592,4 @@ object Butterfly {
       }
     }
   }
-}
-
-/**
- * "Stage" for Direct IFFT
- *
- * Used in Rader FFT. Essentially the same as IFFT except different IO's and scaling is optional
- */
-class DirectInverseStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T], val scale : Boolean = true) extends Module {
-  params.checkNumPointsPow2()
-  val io = IO(DirectStageIO(params))
-
-  val fft = Module(new DirectStage(params))
-  // Connect valid, pktStart, and pktEnd signals, but iq will be overridden in the following block of code
-  io.in  <> fft.io.in
-  io.out <> fft.io.out
-
-  io.in.bits.iq.zip(io.out.bits.iq).zipWithIndex.foreach {
-    case ((inp, out), index) => {
-      fft.io.in.bits.iq(index).real := inp.imag
-      fft.io.in.bits.iq(index).imag := inp.real
-
-      if (scale) {
-        val scalar = ConvertableTo[T].fromDouble(1.0 / params.numPoints.toDouble)
-        out.real := fft.io.out.bits.iq(index).imag * scalar
-        out.imag := fft.io.out.bits.iq(index).real * scalar
-      } else {
-        out.real := fft.io.out.bits.iq(index).imag
-        out.imag := fft.io.out.bits.iq(index).real
-      }
-    }
-  }
-}
-
-/**
- * Rader FFT
- */
-class RaderFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
-  require(FFTUtil.is_prime(params.numPoints), "number of points must be prime")
-  val io = IO(DirectStageIO(params))
-
-  val sub_fft_size = if (isPow2(params.numPoints - 1)) params.numPoints - 1 else scala.math.pow(2, log2Ceil(2 * params.numPoints - 3)).toInt
-  val pad_length = sub_fft_size - (params.numPoints - 1)
-  val g = FFTUtil.primitive_root(params.numPoints)
-  val g_inv = FFTUtil.mult_inv(g, params.numPoints)
-  val inv_idx_map = (0 until params.numPoints - 1).map(scala.math.pow(g_inv, _).toInt % params.numPoints)
-  val idx_map = (0 until params.numPoints - 1).map(scala.math.pow(g, _).toInt % params.numPoints)
-
-  val pad_length_quot = pad_length / (params.numPoints - 1)
-  val pad_length_rem = pad_length % (params.numPoints - 1)
-  val twiddles = inv_idx_map.map(x => Complex(cos(2 * Pi / params.numPoints * x), -sin(2 * Pi / params.numPoints * x)) / sub_fft_size).toArray
-  val twiddles_extended = (0 until pad_length_quot).foldRight(twiddles)((_, list) => list ++ twiddles) ++ twiddles.slice(0, pad_length_rem)
-  val twiddles_fft = fourierTr(DenseVector(twiddles_extended)).toScalaVector
-
-  val sub_fft_params = FFTParams(params, sub_fft_size)
-
-  val sub_fft = Module(new DirectStage(sub_fft_params))
-
-  sub_fft.io.in.bits.iq.zipWithIndex.foreach {
-    case (sub_inp, index) => {
-      if (index == 0) {
-        sub_inp := io.in.bits.iq(idx_map(index).U)
-      }
-      else if (index <= pad_length) {
-        sub_inp.real := Ring[T].zero
-        sub_inp.imag := Ring[T].zero
-      }
-      else {
-        sub_inp := io.in.bits.iq(idx_map(index - pad_length).U)
-      }
-    }
-  }
-
-  sub_fft.io.in.bits.pktStart := io.in.bits.pktStart
-  sub_fft.io.in.bits.pktEnd   := io.in.bits.pktEnd
-  sub_fft.io.in.valid         := io.in.valid
-
-  io.out.bits.iq(0.U) := io.in.bits.iq(0.U) + sub_fft.io.out.bits.iq(0.U)
-
-  val sub_ifft = Module(new DirectInverseStage(sub_fft_params, false))
-  sub_ifft.io.in.bits.iq.zip(sub_fft.io.out.bits.iq).zip(twiddles_fft).foreach {
-    case ((sub_ifft_in, sub_fft_out), twiddle) => {
-      val twiddle_wire = Wire(params.protoIQ.cloneType)
-      twiddle_wire.real := Real[T].fromDouble(twiddle.real)
-      twiddle_wire.imag := Real[T].fromDouble(twiddle.imag)
-      sub_ifft_in := sub_fft_out * twiddle_wire
-    }
-  }
-
-  sub_ifft.io.in.bits.pktStart := sub_fft.io.out.bits.pktStart
-  sub_ifft.io.in.bits.pktEnd   := sub_fft.io.out.bits.pktEnd
-  sub_ifft.io.in.valid         := sub_fft.io.out.valid
-
-  (0 until params.numPoints - 1).map(n => {
-    io.out.bits.iq(inv_idx_map(n).U) := io.in.bits.iq(0.U) + sub_ifft.io.out.bits.iq(n.U)
-  })
-
-  io.out.bits.pktStart := sub_ifft.io.out.bits.pktStart
-  io.out.bits.pktEnd   := sub_ifft.io.out.bits.pktEnd
-  io.out.valid         := sub_ifft.io.out.valid
 }

@@ -37,6 +37,7 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
   val modulator = Module( new Modulator(txParams.modulatorParams))
   val ifft = Module( new IFFT(txParams.ifftParams) )
   val cyclicPrefix = Module( new CyclicPrefix(txParams.cyclicPrefixParams) )
+  val preambleAdder = Module( new PreambleAdder(txParams.preambleParams) )
   val fir = Module( new RCFilter(txParams.firParams) )
 
   //encoder.io.in <> io.in
@@ -99,9 +100,12 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
    }
   cyclicPrefix.io.add := true.B
   cyclicPrefix.io.in <> ifft.io.out
-  fir.io.in <> cyclicPrefix.io.out
+
+  preambleAdder.io.in <> cyclicPrefix.io.out
+  fir.io.in <> preambleAdder.io.out
   io.out <> fir.io.out
   io.in.ready := fir.io.in.ready
+
 }
 
 class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V<:Data:Real](
@@ -153,8 +157,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   demod.io.in <> eq.io.out
 
   // Decoder
-  decode.io.in_soft <> demod.io.out
-  decode.io.in_hard := dummyReg
+  decode.io.in <> demod.io.out
 
   io.out <> decode.io.out
 }

@@ -7,10 +7,11 @@ import dsptools.numbers._
 trait TXParams[T<:Data, U<:Data] {
     val iqBundleParams: IQBundleParams[T]
     val cyclicPrefixParams: CyclicPrefixParams[T]
+    val preambleParams: PreambleParams[T]
     val ifftParams: FFTParams[T]
     val firParams: RCFilterParams[T]
     val modulatorParams: ModFFTParams[T,U]
-    val encoderParams: CodingParams[U]
+    val encoderParams: CodingParams[U, U]
     val serParams: BitsSerDesParams[U]
 }
 
@@ -24,13 +25,16 @@ object FinalTxParams {
                 val prefixLength = nfft/4
                 val symbolLength = nfft
             }
-	    val serParams = UIntBitsSerDesParams( dataWidth = 1,bitsWidth = 48,ratio = 48,maxVal = 1)
+
+            val preambleParams = FixedPreambleParams(iqWidth = width)
+
+	        val serParams = UIntBitsSerDesParams(dataWidth = 1, ratio = 48)
 
             val ifftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = nfft, binPoint = width - 3)
             val modulatorParams = FixedModFFTParams(
                 dataWidth=width,
-		bitsWidth=48,
+        		bitsWidth=48,
                 twiddleWidth=width,
                 numPoints=nfft,
                 Ncbps=48,
@@ -44,7 +48,20 @@ object FinalTxParams {
                 sampsPerSymbol = 4,
                 symbolSpan = 2
             )
-            val encoderParams = TxCoding()
+            val encoderParams = TxCoding(
+                k = 1,
+                n = 2,
+                K = 3,
+                L = 35,
+                D = 7,
+                H = 24,
+                genPolynomial = List(7, 5), // generator polynomial
+                tailBitingEn = false,
+                protoBitsWidth = 16,
+                bitsWidth = 6,
+                softDecision = false,
+                FFTPoint = 64
+            )
         }
         txParams
     }
@@ -59,7 +76,8 @@ trait RXParams[T<:Data, U<:Data, V<:Data] {
   val fftParams: FFTParams[T]
   val bitsBundleParams: BitsBundleParams[U]
   val demodParams: DemodulationParams[T,U]
-  val viterbiParams: CodingParams[T]
+  val viterbiParams: CodingParams[U, V]   // for hard coding
+  // val viterbiParams: CodingParams[T, T]   // for soft coding
 }
 
 object FinalRxParams {
@@ -75,14 +93,27 @@ object FinalRxParams {
             }
             val equalizerParams = FixedEqualizerParams(width, binaryPoint=width-3,
                 carrierMask=Seq.fill(1)(false) ++ Seq.fill(26)(true)  ++ Seq.fill(5)(false) ++ Seq.fill(6)(false) ++ Seq.fill(27)(true),
-                nSubcarriers=nfft)
+                nSubcarriers=nfft, preambleSymbol=IEEE80211.ltfFreq)
             val cfoParams = FixedCFOParams(width=1, iqWidth=width, stLength=160,
                                            ltLength=160, preamble=true, stagesPerCycle=1)
             val fftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = nfft, binPoint = width - 3)
             val bitsBundleParams = BitsBundleParams(nBitPerSymbol, SInt(2.W))
             val demodParams = HardDemodParams(width=nfft, dataWidth=width, dataBinaryPoint=width - 3, bitsWidth=nBitPerSymbol, hsmod=1)
-            val viterbiParams = FixedCoding()
+            val viterbiParams = HardCoding(
+              k = 1,
+              n = 2,
+              K = 3,
+              L = 2,
+              D = 5,
+              H = 24,
+              genPolynomial = List(7, 6), // generator polynomial
+              tailBitingEn = false,
+              protoBitsWidth = 16,
+              bitsWidth = 48,
+              softDecision = false,
+              FFTPoint = 64
+            )
         }
         rxParams
     }

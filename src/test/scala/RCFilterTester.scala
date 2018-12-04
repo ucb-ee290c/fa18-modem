@@ -89,8 +89,8 @@ class RCFilterTester[T <: chisel3.Data](c: RCFilter[T], trials: Seq[RCIQ], tolLS
   */
 object FixedRCFilterTester {
   def apply(params: FixedRCFilterParams, trials: Seq[RCIQ]): Boolean = {
-    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RCFilter(params)) {
-    dsptools.Driver.execute(() => new RCFilter(params), TestSetup.dspTesterOptions) {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new RCFilter(params)) {
+    // dsptools.Driver.execute(() => new RCFilter(params), TestSetup.dspTesterOptions) {
       c => new RCFilterTester(c, trials)
     }
   }

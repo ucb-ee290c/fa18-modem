@@ -21,7 +21,7 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
   def getIQOut(c: PacketDetect[T], v: Vector[Complex]): Vector[Complex] = {
     var vout = v
     if (peek(c.io.out.valid)) {
-      //vout = vout :+ peek(c.io.out.bits.iq(0))
+      vout = vout :+ peek(c.io.out.bits.iq(0))
     }
     vout
   }
@@ -99,8 +99,8 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
   */
 object FixedPacketDetectTester {
   def apply(params: FixedPacketDetectParams, trials: Seq[IQ]): Boolean = {
-    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new PacketDetect(params)) {
-    dsptools.Driver.execute(() => new PacketDetect(params), TestSetup.dspTesterOptions) {  
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new PacketDetect(params)) {
+    // dsptools.Driver.execute(() => new PacketDetect(params), TestSetup.dspTesterOptions) {  
       c => new PacketDetectTester(c, trials)
     }
   }

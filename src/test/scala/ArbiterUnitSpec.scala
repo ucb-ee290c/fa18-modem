@@ -10,15 +10,16 @@ class ArbiterUnitSpec extends FlatSpec with Matchers {
     n = 2,
     K = 3,
     L = 3,
-    O = 6,
+//    O = 6,
     D = 4,
     H = 4,
     genPolynomial = List(7, 6), // generator polynomial
     tailBitingEn = false,
-    tailBitingScheme = 0,
+//    tailBitingScheme = 0,
     protoBitsWidth = 16,
     bitsWidth = 48,
-    softDecision = false
+    softDecision = false,
+    FFTPoint = 4
   )
   it should "check Header in || data in" in {
 

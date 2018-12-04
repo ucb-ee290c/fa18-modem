@@ -478,7 +478,7 @@ class DemodulatorbpskTester[T <: chisel3.Data, U <: chisel3.Data](c: Demodulator
     
     //for (i <- 0 until 64) {
        //poke(c.io.in.bits.iq(i), Complex(0.5,0.5))}
-     poke_seq(c.io.in.bits.iq, inp)
+     poke_complex_seq(c.io.in.bits.iq, inp)
      
     
       // wait until input is accepted
@@ -546,7 +546,7 @@ class DemodulatorqamTester[T <: chisel3.Data, U <: chisel3.Data](c: Demodulator[
     
     //for (i <- 0 until 64) {
        //poke(c.io.in.bits.iq(i), Complex(0.5,0.5))}
-     poke_seq(c.io.in.bits.iq, inpqam)
+     poke_complex_seq(c.io.in.bits.iq, inpqam)
      
     
       // wait until input is accepted
@@ -614,7 +614,7 @@ class DemodulatorqamsTester[T <: chisel3.Data, U <: chisel3.Data](c: Demodulator
     
     //for (i <- 0 until 64) {
        //poke(c.io.in.bits.iq(i), Complex(0.5,0.5))}
-     poke_seq(c.io.in.bits.iq, inpqam)
+     poke_complex_seq(c.io.in.bits.iq, inpqam)
      
     
       // wait until input is accepted
@@ -683,7 +683,7 @@ class DemodulatorbpsksTester[T <: chisel3.Data, U <: chisel3.Data](c: Demodulato
     
     //for (i <- 0 until 64) {
        //poke(c.io.in.bits.iq(i), Complex(0.5,0.5))}
-     poke_seq(c.io.in.bits.iq, inp)
+     poke_complex_seq(c.io.in.bits.iq, inp)
      
     
       // wait until input is accepted
@@ -752,7 +752,7 @@ class DemodulatorqpskTester[T <: chisel3.Data, U <: chisel3.Data](c: Demodulator
     
     //for (i <- 0 until 64) {
        //poke(c.io.in.bits.iq(i), Complex(0.5,0.5))}
-     poke_seq(c.io.in.bits.iq, inpqpsk)
+     poke_complex_seq(c.io.in.bits.iq, inpqpsk)
      
     
       // wait until input is accepted
@@ -813,7 +813,7 @@ class DemodulatorqpsksTester[T <: chisel3.Data, U <: chisel3.Data](c: Demodulato
     
     //for (i <- 0 until 64) {
        //poke(c.io.in.bits.iq(i), Complex(0.5,0.5))}
-     poke_seq(c.io.in.bits.iq, inpqpsk)
+     poke_complex_seq(c.io.in.bits.iq, inpqpsk)
      
     
       // wait until input is accepted
