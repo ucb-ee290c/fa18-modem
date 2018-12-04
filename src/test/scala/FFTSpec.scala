@@ -28,13 +28,29 @@ class FFTSpec extends FlatSpec with Matchers {
   )
 
   for (i <- Seq(2, 16, 64)) {
-    it should f"compute $i-point Direct FFT/IFFT" in {
+    it should f"compute $i-point Direct FFT/IFFT (powers of 2)" in {
       val (params, inp, out_fft, out_ifft) = test_setup(base_params, i, "direct")
       FixedFFTTester(params,  inp, out_fft ) should be (true)
       FixedIFFTTester(params, inp, out_ifft) should be (true)
     }
-    it should f"compute $i-point SDF FFT/IFFT" in {
+    it should f"compute $i-point SDF FFT/IFFT (powers of 2)" in {
       val (params, inp, out_fft, out_ifft) = test_setup(base_params, i, "sdf")
+      FixedFFTTester(params,  inp, out_fft ) should be (true)
+      FixedIFFTTester(params, inp, out_ifft) should be (true)
+    }
+  }
+
+  for (i <- Seq(3, 9, 81)) {
+    it should f"compute $i-point Direct FFT/IFFT (powers of 3)" in {
+      val (params, inp, out_fft, out_ifft) = test_setup(base_params, i, "direct")
+      FixedFFTTester(params,  inp, out_fft ) should be (true)
+      FixedIFFTTester(params, inp, out_ifft) should be (true)
+    }
+  }
+
+  for (i <- Seq(6, 15, 36)) {
+    it should f"compute $i-point Direct FFT/IFFT" in {
+      val (params, inp, out_fft, out_ifft) = test_setup(base_params, i, "direct")
       FixedFFTTester(params,  inp, out_fft ) should be (true)
       FixedIFFTTester(params, inp, out_ifft) should be (true)
     }
@@ -42,9 +58,10 @@ class FFTSpec extends FlatSpec with Matchers {
 
   behavior of "FFTUtil"
   it should "check factorize" in {
-    val inputs = List(12, 52, 25)
-    val outputs = List(List(2, 3), List(2, 13), List(5))
-    inputs.zip(outputs).foreach {
+    val inputs = List(12, 30, 25)
+    val output_factors = List(List(2, 3), List(2, 3, 5), List(5))
+    val output_powers  = List(List(2, 1), List(1, 1, 1), List(2))
+    inputs.zip(output_factors.zip(output_powers)).foreach {
       case (inp, out) => {
         assert(FFTUtil.factorize(inp) == out)
       }
@@ -88,6 +105,15 @@ class FFTSpec extends FlatSpec with Matchers {
     inputs.zip(outputs).foreach {
       case (inp, out) => {
         assert(FFTUtil.is_prime(inp) == out)
+      }
+    }
+  }
+  it should "check is power" in {
+    val inputs  = List(2, 3, 4, 5, 6, 7, 8, 9, 10)
+    val outputs = List(true, true, true, true, false, true, true, true, false)
+    inputs.zip(outputs).foreach {
+      case (inp, out) => {
+        assert(FFTUtil.is_power(inp) == out)
       }
     }
   }
