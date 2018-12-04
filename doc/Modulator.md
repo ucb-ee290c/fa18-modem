@@ -7,21 +7,39 @@ representing BPSK, QPSK, or 16-QAM constellation points. Note that the modulatio
 data parts of the message. The resulting 48 complex pairs are then normalized by KMOD.
 
 Parameters:
+
 `val bitsWidth: Int` width of inputs 
+
 `val dataWidth: Int` width of  outputs
+
 IO:
+
 Inputs:
+
 Val mod_ctrl: UInt ` modulation scheme control signal
+
 `val in.bits.bits: UInt`   input
+
 `val in.bits.pktStart: Bool`  package start signal
+
 `val in.bits.pktEnd: Bool`  package end signal
+
 `val in.valid: Bool`  valid signal
+
 `val out.ready: Bool`  ready signal
+
 Outputs:
+
 `val out.bits.iq: DspComplex`  modulated output
+
 `val out.bits.pktStart: Bool`  package start signal
+
 `val out.bits.pktEnd: Bool`  package end signal
+
 `val out.valid: Bool`  valid signal
+
 `val in.ready: Bool`  ready signal 
+
 Tests:
+
 Include tests for bpsk, qpsk and qam16 modulator. Run `testOnly modem.modulatorSpec `
