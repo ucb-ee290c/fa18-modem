@@ -162,7 +162,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   decode.io.in <> demod.io.out
 
   io.out <> decode.io.out
-  
+
 }
 
 trait HasPeripheryModem extends BaseSubsystem {
