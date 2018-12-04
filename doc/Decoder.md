@@ -8,6 +8,17 @@ The decoder receives 48 bits (1 OFDM symbol), then it checks if the OFDM symbol 
 Header information decoding (PLCP decoding) is done via "HeaderExtractor" block. PSDU Data decoding is done via "PathMetric", "BranchMetric", and "Traceback" blocks, which form a sliding-window Viterbi decoder. 
 <br />
 
+### PLCP Header 
+```
+| RATE   | Reserved |  Length  | Parity | Tail  |
+|--------|----------|----------|--------|-------|  
+| 4 bits |   1 bit  |  12 bits |  1 bit | 6bits |
+
+Total length = 24 bits 
+Coded with 1/2 rate + BPSK modulation -> 48 bits 
+
+Length is in octets 
+```
 
 ### De-Puncturing 
 De-puncturing block has two purposes: 1) store received input into a buffer 2) De-puncture the received PSDU 
