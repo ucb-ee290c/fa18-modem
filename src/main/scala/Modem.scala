@@ -114,7 +114,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(IQBundle(rxParams.iqBundleParams)))
     //val out = Decoupled(BitsBundle(bitsBundleParams))
-    val out = Decoupled(Vec(5, UInt(1.W)))
+    val out = Decoupled(Vec(8, UInt(1.W)))
   })
 
   val phaseRotator = Module( new PhaseRotator(rxParams.cfoParams) )
@@ -160,7 +160,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   decode.io.in <> demod.io.out
 
   io.out <> decode.io.out
-  io.in.ready := true.B
+  //io.in.ready := true.B
 
 }
 
