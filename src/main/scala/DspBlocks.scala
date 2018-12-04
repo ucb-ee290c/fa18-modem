@@ -268,12 +268,12 @@ abstract class TXBlock[D, W, EO, EI, B <: Data, T<:Data:Real:BinaryRepresentatio
     val tx = Module (new TX(txParams))
     // Connect input queue
     //tx.io.in.bits := in.bits.data.asTypeOf(Vec(36, UInt(1.W)))
-    tx.io.mod_ctrl := in.bits.data(56,55).asTypeOf(UInt(2.W))
-    tx.io.puncMatrix := in.bits.data(54,51).asTypeOf(Vec(4, UInt(1.W)))
-    tx.io.isHead := in.bits.data(50).asTypeOf(Bool())
-    tx.io.pktEnd := in.bits.data(49).asTypeOf(Bool())
-    tx.io.pktStart := in.bits.data(48).asTypeOf(Bool())
-    tx.io.in.bits := in.bits.data(47,0).asTypeOf(Vec(48, UInt(1.W)))
+    tx.io.in.bits.mod_ctrl := in.bits.data(56,55).asTypeOf(UInt(2.W))
+    tx.io.in.bits.puncMatrix := in.bits.data(54,51).asTypeOf(Vec(4, UInt(1.W)))
+    tx.io.in.bits.isHead := in.bits.data(50).asTypeOf(Bool())
+    tx.io.in.bits.data.pktEnd := in.bits.data(49).asTypeOf(Bool())
+    tx.io.in.bits.data.pktStart := in.bits.data(48).asTypeOf(Bool())
+    tx.io.in.bits.data.bits := in.bits.data(47,0).asTypeOf(Vec(48, UInt(1.W)))
     tx.io.in.valid := in.valid
     in.ready := tx.io.in.ready
     // Connect output queue
@@ -318,10 +318,11 @@ class TXThing[T<:Data:Real:BinaryRepresentation, U<:Data]
   val depth: Int = 8,
 )(implicit p: Parameters) extends LazyModule {
   // instantiate lazy modules
-  val writeQueue = LazyModule(new TLWriteQueue(depth, AddressSet(0x2200, 0xff)))
+  //val writeQueue = LazyModule(new TLWriteQueue(depth, AddressSet(0x2200, 0xff)))
+  val writeQueue = LazyModule(new TLWriteQueue(depth))
   val tx = LazyModule(new TLTXBlock(txParams))
-  val readQueue = LazyModule(new TLReadQueue(depth, AddressSet(0x2300, 0xff)))
-
+  //val readQueue = LazyModule(new TLReadQueue(depth, AddressSet(0x2300, 0xff)))
+  val readQueue = LazyModule(new TLReadQueue(depth))
   // connect streamNodes of queues and cordic
   readQueue.streamNode := tx.streamNode := writeQueue.streamNode
 

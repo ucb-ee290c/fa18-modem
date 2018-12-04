@@ -1,15 +1,15 @@
-#Encoder
+# Encoder
 Kunmo Kim (kunmok@berkeley.edu)
 
 ## Overview 
 Encoder is composed of a convolutional encoder and a puncturing block. 
 The current encoder is fully compatible with 802.11a Tx 
 
-#### Convolutional Coding
+### Convolutional Coding
 Convolutional coding is a type of error correction coding that generates parity symbols via the convoluting multiple signals stored in a bank of shift registers. 
 Convolutional coding by nature creates time-invariant trellis and hence it allows the decoder to use maximum-likelihood sequence estimator/equalizer. 
 
-#### Puncturing 
+### Puncturing 
 Puncturing block punctures selected data from the convolutional code to increase the coding rate at the cost of BER. Puncturing matrix must be chosen carefully so that it minimally affects the BER at given SNR. Puncturing block sets its coding rate to 1/2 when its processing header information. 
 Below is the puncturing matrix from 802.11a specification 
 
@@ -20,7 +20,7 @@ Below is the puncturing matrix from 802.11a specification
 | 3/4 | [1,1,1,1], [0,1,1,1], [1,0,1,1], [0,0,1,1] | 5 |
 | 1/2 | else | 10| 
 
-#### Puncturing Matrix v.s. Coding Rate + Modulation Scheme 
+### Puncturing Matrix v.s. Coding Rate + Modulation Scheme 
 | Puncturing Matrix | Rate (Mbps) | Coding Rate | Modulation Scheme |
 |:-----------:|:-------------------:|:---------------:|:-----------:|
 | [1,1,0,1] | 6  | 1/2 | BPSK |

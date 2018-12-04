@@ -180,7 +180,7 @@ class FineOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val p
     ltAcc.imag := ConvertableTo[T].fromDouble(0)
   }
 
-  io.cordicIn.valid := !io.in.valid && RegNext(io.in.valid) 
+  io.cordicIn.valid := !io.in.valid && RegNext(io.in.valid)
 
   io.out.bits := io.cordicOut.bits.z * ConvertableTo[T].fromDouble(1.0/ltDelay)
   io.out.valid := io.cordicOut.valid
@@ -220,14 +220,14 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     val stdbyOutRReg = Reg(Bool())
 
     io.in.ready := estimatorReady
-    io.out.valid := cordic.io.out.valid
+    io.out.valid := false.B
     io.out.bits.pktStart := nxtState === lt && RegNext(!(nxtState === lt))
 
     io.out.bits.pktEnd := io.in.bits.pktEnd
     stfDropper.io.in.iq := io.in.bits.iq(0)
-    stfDropper.io.keep := (curState === lt || curState === data) // Put this in FSM
+    stfDropper.io.keep := false.B // Put this in FSM
     io.out.bits.iq(0) := stfDropper.io.out.iq
-    io.pErr := coarseOffset + fineOffset 
+    io.pErr := coarseOffset + fineOffset
 
     coe.io.in.bits := io.in.bits.iq(0)
     foe.io.in.bits := io.in.bits.iq(0)
@@ -288,7 +288,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         stdbyOutRReg := foe.io.cordicOut.ready
         foe.io.cordicOut.valid := stdbyOutVReg
 
-
+        io.out.valid := false.B 
+        stfDropper.io.keep := false.B
         nxtState := Mux(io.in.bits.pktStart, st, idle)
       }
       is(st){
@@ -313,6 +314,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
           coe.io.in.valid := true.B
           nxtState := st
         }
+        io.out.valid := false.B 
+        stfDropper.io.keep := false.B
       }
       is(gi){
         cordic.io.in.bits := coe.io.cordicIn.bits
@@ -336,6 +339,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
           foe.io.in.valid := false.B
           nxtState := gi
         }
+        io.out.valid := io.in.valid
+        stfDropper.io.keep := true.B
       }
       is(lt){
         cordic.io.in.bits := foe.io.cordicIn.bits
@@ -359,6 +364,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
           foe.io.in.valid := true.B
           nxtState := lt
         }
+        io.out.valid := io.in.valid
+        stfDropper.io.keep := true.B
       }
       is(data){
         cordic.io.in.bits := foe.io.cordicIn.bits
@@ -376,6 +383,8 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
         coe.io.cordicOut.valid := stdbyOutVReg
         coe.io.in.valid := false.B
         foe.io.in.valid := false.B
+        io.out.valid := io.in.valid
+        stfDropper.io.keep := true.B
         nxtState := Mux(io.in.bits.pktEnd, idle, data)
       }
     }
@@ -433,7 +442,7 @@ class COEWrapper[T<:chisel3.Data:Real:ConvertableTo:BinaryRepresentation](val pa
   val cordic = Module (new IterativeCordic[T](params))
   val coe = Module (new CoarseOffsetEstimator[T](params, stLength))
 
-  
+
   cordic.io.in.bits := coe.io.cordicIn.bits
   cordic.io.out.ready := coe.io.cordicOut.ready
   cordic.io.in.valid := coe.io.cordicIn.valid
@@ -471,7 +480,7 @@ class COEWrapper[T<:chisel3.Data:Real:ConvertableTo:BinaryRepresentation](val pa
   //val cordic = Module (new IterativeCordic[T](params))
   //val coe = Module (new FineOffsetEstimator[T](params, ltLength))
 
-  
+
   //cordic.io.in.bits := coe.io.cordicIn.bits
   //cordic.io.out.ready := coe.io.cordicOut.ready
   //cordic.io.in.valid := coe.io.cordicIn.valid

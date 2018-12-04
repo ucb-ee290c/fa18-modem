@@ -8,7 +8,7 @@ import dsptools.numbers._
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // Description: This module calculates branch metric for every n-bit reception
-class BranchMetric[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) extends Module {
+class BranchMetric[T <: Data: Real: Ring, U <: Data: Real](params: CodingParams[T, U]) extends Module {
   require(params.m >= 1)
   require(params.k >= 1)
   require(params.n >= 2)
@@ -31,7 +31,9 @@ class BranchMetric[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U])
             io.out(currentStates)(currentInputs)(r) := Mux(io.in(r) === ConvertableTo[T].fromInt(2 * trellisObj.output_table(currentStates)(currentInputs)(r) - 1), ConvertableTo[U].fromInt(0), ConvertableTo[U].fromInt(1))
           }
         } else {    // Soft-Input decoding. Using L1 Norm to calculate Euclidean distance
+          // either one works fine
           io.out(currentStates)(currentInputs)(r) := ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r))*io.in(r)*(-1)
+//          io.out(currentStates)(currentInputs)(r) := Mux(io.in(r) >= ConvertableTo[T].fromInt(0), io.in(r) - ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r)), -1*(io.in(r) - ConvertableTo[T].fromInt(trellisObj.output_table(currentStates)(currentInputs)(r))))
         }
       }
       io.out_dec(currentStates)(currentInputs)  := io.out(currentStates)(currentInputs).reduce(_ + _)
