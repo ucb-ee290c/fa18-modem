@@ -8,8 +8,19 @@ The decoder receives 48 bits (1 OFDM symbol), then it checks if the OFDM symbol 
 Header information decoding (PLCP decoding) is done via "HeaderExtractor" block. PSDU Data decoding is done via "PathMetric", "BranchMetric", and "Traceback" blocks, which form a sliding-window Viterbi decoder. 
 <br />
 
+### PLCP Header 
+```
+| RATE   | Reserved |  Length  | Parity | Tail  |
+|--------|----------|----------|--------|-------|  
+| 4 bits |   1 bit  |  12 bits |  1 bit | 6bits |
 
-#### De-Puncturing 
+Total length = 24 bits 
+Coded with 1/2 rate + BPSK modulation -> 48 bits 
+
+Length is in octets 
+```
+
+### De-Puncturing 
 De-puncturing block has two purposes: 1) store received input into a buffer 2) De-puncture the received PSDU 
 <br /> Puncturing matrix is contained in a PLCP frame. 'HeaderExtractor' extracts the header information and passes the coding rate information to the de-puncturing block. HeaderExtractor must decode PLCP within 64 clock cycles.
 Once the de-puncturing receives the coding rate information, it updates its coding rate then updates the proper modulation scheme to the demodulator block. The modulation scheme is chosen based on the puncturing matrix as shown in the table below. <br />
@@ -27,17 +38,17 @@ Once it starts receiving PSDU, De-Puncturing block performs de-puncturing via fi
 | [0,0,1,1] | 54 | 3/4 | QAM-64 |
 
    
-#### Arbiter 
+### Arbiter 
 Arbiter block simply watches over incoming signals from demodulator, and identifies if it contains PLCP or PSDU. If it is identified as PLCP, Arbiter block informs De-Puncturing block to send data to HeaderExtractor. Otherwise, De-Puncturing re-order the input bits with dummy bits, and then passes data to path metric.  
 
-#### HeaderExtractor
+### HeaderExtractor
 HeaderExtractor is a simple Viterbi decoder that is specifically designed to decode PLCP and extract header information. This block computes branch metric and path metric blocks and then stores survival path into SRAM. Storing survival path into SRAM takes 24 clock cycles and decoding takes another 24 clock cycles (PLCP header is 48 bits coded with 1/2 coding rate and BPSK modulation). HeaderExtractor is designed to decode data within 48 clock cycles since the next PSDU OFDM symbol will be available 62 clock cycles after PCLP header is received. 
 
-#### Path Metric + Branch Metric 
+### Path Metric + Branch Metric 
 Path metric block and branch metric block calculate the accumulated path metric over trellis. Inside of branch metric module, it instantiates an object called "Trellis". The "Trellis" object maps output values and next states as a function of input and current states, which eases the branch metric calculation. 
 The accumulated path metric and calculated survival path information will be tossed to "Traceback" module, which performs sliding-window Viterbi Decoding. 
 
-#### Traceback 
+### Traceback 
 Traceback module performs sliding-window Viterbi decoding. Sliding window viterbi decoder uses the fact that the survival paths merge after 5*K sequence, and hence it can reduce required the memory size. The module receives data from inSP port every clock cycle and stores it into SRAM. The first decode must wait for D+L cycles to account for survival path memory length. After D+L cycles, traceback loads survival path from SRAM and starts decoding. Once the first decoding is performed, then it starts decoding every D clock cycles. To perform simultaneous writing and decoding, the module requires (L-2)/D + 2 read ports for SRAM.   
 
 ## Parameters
