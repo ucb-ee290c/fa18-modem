@@ -52,9 +52,9 @@ case class FixedCoding(             // case class for soft-input
   val nStates = math.pow(2.0, m.asInstanceOf[Double]).asInstanceOf[Int]
   val numInputs   = math.pow(2.0, k.asInstanceOf[Double]).asInstanceOf[Int]
   val pmBits = 5
-  val BMoutdec  = FixedPoint((protoBitsWidth+log2Ceil(n)+2).W, (protoBitsWidth-3).BP)
-  val BMout     = FixedPoint(protoBitsWidth.W, (protoBitsWidth-3).BP)
-  val pmBitType = FixedPoint((protoBitsWidth+log2Ceil(n)+7).W, (protoBitsWidth-3).BP)
+  val BMoutdec  = FixedPoint((protoBitsWidth+log2Ceil(n)+2).W, (protoBitsWidth-4).BP)
+  val BMout     = FixedPoint(protoBitsWidth.W, (protoBitsWidth-4).BP)
+  val pmBitType = FixedPoint((protoBitsWidth+log2Ceil(n)+7).W, (protoBitsWidth-4).BP)
 }
 
 case class HardCoding(             // case class for hard-decoding
