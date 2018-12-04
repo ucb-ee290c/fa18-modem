@@ -49,16 +49,14 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
   serilizer.io.in.bits.pktStart := io.in.bits.data.pktStart
   serilizer.io.in.bits.pktEnd := io.in.bits.data.pktEnd
   serilizer.io.in.valid := io.in.valid
-  serilizer.io.out.ready := io.out.ready
+  serilizer.io.out.ready := encoder.io.in.ready
   encoder.io.in.bits  := serilizer.io.out.bits.bits(0)
   encoder.io.pktStartIn  := serilizer.io.out.bits.pktStart
   encoder.io.pktEndIn  := serilizer.io.out.bits.pktEnd
   encoder.io.in.valid := serilizer.io.out.valid
-  encoder.io.out.ready := serilizer.io.in.ready
   encoder.io.mac.isHead := isHeadBuf
   encoder.io.mac.puncMatrix := puncMatrixBuf
   modulator.io.in <> encoder.io.out
-  modulator.io.out.ready := encoder.io.in.ready
 
   modulator.io.mod_ctrl := mod_ctrlBuf
   //ifft.io.in <> modulator.io.in
