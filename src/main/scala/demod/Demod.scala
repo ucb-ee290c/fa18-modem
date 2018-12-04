@@ -45,8 +45,11 @@ class Deinterleaver1bpsk[T <: Data,U <: Data ](params: DemodulationParams[T,U]) 
    io.in.ready := state === sInit
    io.out.valid := state === sDone
 
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
+    Mux(io.out.valid,reg_pktend,false.B)
+
 
    //io.out.bits := rin
    val s = floor( (1+1)/2 )
@@ -93,8 +96,8 @@ class Deinterleaver1qpsk[T <: Data,U <: Data ](params: DemodulationParams[T,U]) 
    io.in.ready := state === sInit
    io.out.valid := state === sDone
 
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
    //io.out.bits := rin
    //val s = floor( (params.Nbpsc+1)/2 )
@@ -144,8 +147,8 @@ class Deinterleaver1qam16[T <: Data,U <: Data ](params: DemodulationParams[T,U])
    io.in.ready := state === sInit
    io.out.valid := state === sDone
 
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
    //io.out.bits := rin
    val s = floor( (4+1)/2 )
@@ -198,8 +201,8 @@ class Deinterleaver1sbpsk[T <: Data,U <: Data](params: DemodulationParams[T,U]) 
    io.in.ready := state === sInit
    io.out.valid := state === sDone
 
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
    //io.out.bits := rin
    val s = floor( (1+1)/2 )
@@ -249,8 +252,8 @@ class Deinterleaver1sqpsk[T <: Data,U <: Data](params: DemodulationParams[T,U]) 
    io.in.ready := state === sInit
    io.out.valid := state === sDone
 
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
    //io.out.bits := rin
    val s = floor( (2+1)/2 )
@@ -301,8 +304,8 @@ class Deinterleaver1sqam16[T <: Data,U <: Data](params: DemodulationParams[T,U])
    io.in.ready := state === sInit
    io.out.valid := state === sDone
 
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
    //io.out.bits := rin
    val s = floor( (4+1)/2 )
@@ -353,8 +356,8 @@ class QPSKDemapper1[T <: Data :Real:BinaryRepresentation,U <: Data](val params: 
    //mapping.io.in := rin.asUInt
    io.in.ready := state === sInit
    io.out.valid := state === sDone
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
    val z2d = ConvertableTo[T].fromDouble(0.633)
    val z0 = Ring[T].zero
    for (i <- 0 until 48) {
@@ -409,8 +412,8 @@ class QPSKDemapper1s[T <: Data :Real:BinaryRepresentation,U <: Data](val params:
    //mapping.io.in := rin.asUInt
    io.in.ready := state === sInit
    io.out.valid := state === sDone
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
    val zd = ConvertableTo[T].fromDouble(0.707)
    //channel estimation
    val h = ConvertableTo[T].fromDouble(1.00)
@@ -456,8 +459,8 @@ class QAM16Demapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params
    io.out.valid := state === sDone
    val z2d = ConvertableTo[T].fromDouble(0.633)
    val z0 = Ring[T].zero
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
    for (i <- 0 until 48) {
         when(rin(i).real > z0&& rin(i).real <= z2d && rin(i).imag > z0 && rin(i).imag <=z2d){
@@ -602,8 +605,8 @@ class QAM16Demapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val param
    val z2d = ConvertableTo[T].fromDouble(0.633)
    val zd = ConvertableTo[T].fromDouble(0.316)
    val z0 = Ring[T].zero
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
    for (i <- 0 until 48) {
            io.out.bits.iq(4*i).real := Mux(rin(i).real < -z2d , z2d*(rin(i).real + zd),Mux(rin(i).real > z2d, z2d*(rin(i).real - zd), rin(i).real*zd))
@@ -654,8 +657,8 @@ class BPSKDemapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params:
    //mapping.io.in := rin.asUInt
    io.in.ready := state === sInit
    io.out.valid := state === sDone
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
    val z2d = ConvertableTo[T].fromDouble(0.633)
    val z0 = Ring[T].zero
    for (i <- 0 until 48) {
@@ -697,8 +700,8 @@ class BPSKDemapper1s[T <: Data :Real:BinaryRepresentation, U <: Data](val params
    //mapping.io.in := rin.asUInt
    io.in.ready := state === sInit
    io.out.valid := state === sDone
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
    val zd = ConvertableTo[T].fromDouble(1.0)
    val z0 = Ring[T].zero
    for (i <- 0 until 48) {
@@ -1415,8 +1418,8 @@ class Serilizerm1qpsk[T <: Data, U <: Data](params: DemodulationParams[T,U]) ext
   }
   io.in.ready := state === sInit
   io.out.valid :=  (state === sWork && iter >= 1.U) || state === sDone
-  io.out.bits.pktStart := reg_pktstart
-  io.out.bits.pktEnd := reg_pktend
+  io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+  io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
   io.out.bits.bits := ser
 
@@ -1477,8 +1480,8 @@ class Serilizerm1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) ex
   }
   io.in.ready := state === sInit
   io.out.valid :=  (state === sWork && iter >= 1.U) || state === sDone
-  io.out.bits.pktStart := reg_pktstart
-  io.out.bits.pktEnd := reg_pktend
+  io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+  io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
   io.out.bits.bits := ser
 
@@ -1540,8 +1543,8 @@ class Serilizerms1qpsk[T <: Data, U <: Data](params: DemodulationParams[T,U]) ex
   }
   io.in.ready := state === sInit
   io.out.valid :=  (state === sWork && iter >= 1.U) || state === sDone
-  io.out.bits.pktStart := reg_pktstart
-  io.out.bits.pktEnd := reg_pktend
+  io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+  io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
   io.out.bits.iq := ser
 
@@ -1601,8 +1604,8 @@ class Serilizerms1qam16[T <: Data, U <: Data](params: DemodulationParams[T,U]) e
   }
   io.in.ready := state === sInit
   io.out.valid :=  (state === sWork && iter >= 1.U) || state === sDone
-  io.out.bits.pktStart := reg_pktstart
-  io.out.bits.pktEnd := reg_pktend
+  io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+  io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
 
   io.out.bits.iq := ser
 
