@@ -25,14 +25,14 @@ import freechips.rocketchip.subsystem.BaseSubsystem
 class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U]) extends Module {
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(new Bundle{
-      val data = BitsBundle(48, UInt(1.W))
+      val data = BitsBundle(txParams.serParams.bitsWidth, UInt(1.W))
       val mod_ctrl = UInt(2.W)
       val isHead = Bool()
       val puncMatrix  = Vec(4, UInt(1.W))
     }))
     val out = Decoupled(IQBundle(txParams.iqBundleParams))
   })
-  val serilizer = Module( new BitsSerializer(txParams.serParams) )
+  val serializer = Module( new BitsSerializer(txParams.serParams) )
   val encoder = Module( new Encoding(txParams.encoderParams) )
   val modulator = Module( new Modulator(txParams.modulatorParams))
   val ifft = Module( new IFFT(txParams.ifftParams) )
@@ -40,20 +40,20 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
   val preambleAdder = Module( new PreambleAdder(txParams.preambleParams) )
   val fir = Module( new RCFilter(txParams.firParams) )
 
-  val puncMatrixBuf = RegNext(next = io.in.bits.puncMatrix, enable = io.in.fire())
-  val isHeadBuf = RegNext(next = io.in.bits.isHead, enable = io.in.fire())
-  val mod_ctrlBuf = RegNext(next = io.in.bits.mod_ctrl, enable = io.in.fire())
+  val puncMatrixBuf = RegEnable(next = io.in.bits.puncMatrix, enable = io.in.fire())
+  val isHeadBuf = RegEnable(next = io.in.bits.isHead, enable = io.in.fire())
+  val mod_ctrlBuf = RegEnable(next = io.in.bits.mod_ctrl, enable = io.in.fire())
 
   //encoder.io.in <> io.in
-  serilizer.io.in.bits.bits:= io.in.bits.data.bits
-  serilizer.io.in.bits.pktStart := io.in.bits.data.pktStart
-  serilizer.io.in.bits.pktEnd := io.in.bits.data.pktEnd
-  serilizer.io.in.valid := io.in.valid
-  serilizer.io.out.ready := encoder.io.in.ready
-  encoder.io.in.bits  := serilizer.io.out.bits.bits(0)
-  encoder.io.pktStartIn  := serilizer.io.out.bits.pktStart
-  encoder.io.pktEndIn  := serilizer.io.out.bits.pktEnd
-  encoder.io.in.valid := serilizer.io.out.valid
+  serializer.io.in.bits.bits:= io.in.bits.data.bits
+  serializer.io.in.bits.pktStart := io.in.bits.data.pktStart
+  serializer.io.in.bits.pktEnd := io.in.bits.data.pktEnd
+  serializer.io.in.valid := io.in.valid
+  serializer.io.out.ready := encoder.io.in.ready
+  encoder.io.in.bits  := serializer.io.out.bits.bits(0)
+  encoder.io.pktStartIn  := serializer.io.out.bits.pktStart
+  encoder.io.pktEndIn  := serializer.io.out.bits.pktEnd
+  encoder.io.in.valid := serializer.io.out.valid
   encoder.io.mac.isHead := isHeadBuf
   encoder.io.mac.puncMatrix := puncMatrixBuf
   modulator.io.in <> encoder.io.out
@@ -116,7 +116,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   val io = IO(new Bundle{
     val in = Flipped(Decoupled(IQBundle(rxParams.iqBundleParams)))
     //val out = Decoupled(BitsBundle(bitsBundleParams))
-    val out = Decoupled(Vec(5, UInt(1.W)))
+    val out = Decoupled(Vec(rxParams.viterbiParams.D, UInt(1.W)))
   })
 
   val phaseRotator = Module( new PhaseRotator(rxParams.cfoParams) )
@@ -129,7 +129,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   val demod = Module( new Demodulator(rxParams.demodParams) )
   val decode = Module( new ViterbiDecoder(rxParams.viterbiParams) )
 
-  val dummyReg = Reg(Vec(48, SInt(2.W)))
+  val dummyReg = Reg(Vec(rxParams.viterbiParams.D, SInt(2.W)))
 
   // Phase Rotation Block
   phaseRotator.io.in <> io.in
@@ -162,7 +162,7 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   decode.io.in <> demod.io.out
 
   io.out <> decode.io.out
-  //io.in.ready := true.B
+  io.in.ready := true.B
 
 }
 
