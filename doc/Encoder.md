@@ -1,4 +1,4 @@
-#Encoder
+# Encoder
 Kunmo Kim (kunmok@berkeley.edu)
 
 ## Overview 
