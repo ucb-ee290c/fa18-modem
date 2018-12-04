@@ -13,6 +13,8 @@ import chisel3.experimental.FixedPoint
 import chisel3.util.Decoupled
 import dsptools.numbers._
 
+import scala.math.pow
+
 
 /**
  * Raised-Cosine parameters
@@ -73,6 +75,52 @@ object TreeReduce {
 }
 
 /**
+ * Zero-pad incoming data when oversampled to produce proper impulse response
+ */
+class ComplexZeroPad[T<:Data:ConvertableTo](val params: RCFilterParams[T]) extends Module {
+  val io = IO(new Bundle{
+    val in = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
+    val out = Decoupled(PacketBundle(1, params.protoIQ))
+  })
+  if (params.sampsPerSymbol == 1) {
+    io.in <> io.out
+  }
+  else {
+    val pktEndReg = RegEnable(next=io.in.bits.pktEnd, enable=io.in.fire())
+    // We have to create a zero literal the hacky way because DspComplex is a Bundle and Bundles are not literals. Or something.
+    val zero = Wire(params.protoIQ)
+    zero.real := ConvertableTo[T].fromDouble(0.0)
+    zero.imag := ConvertableTo[T].fromDouble(0.0)
+    require(params.sampsPerSymbol < pow(2, 8))  // Hopefully we're not oversapling by more than 256...
+    val padCount = RegInit(0.U(8.W))
+    padCount := Mux(io.out.fire(),
+                    Mux(padCount === (params.sampsPerSymbol - 1).U, 0.U, padCount + 1.U),
+                    padCount)
+    printf("padCount %d\n", padCount)
+    when(padCount === 0.U) {
+      io.out.bits.iq := io.in.bits.iq
+      io.out.bits.pktStart := io.in.bits.pktStart
+      io.out.bits.pktEnd := false.B
+      io.in.ready := io.out.ready
+      io.out.valid := io.in.valid
+    }.otherwise {
+      io.out.bits.iq(0) := zero
+      io.out.bits.pktStart := false.B
+      io.out.bits.pktEnd := Mux(padCount === (params.sampsPerSymbol - 1).U, pktEndReg, false.B)
+      io.in.ready := false.B
+      io.out.valid := true.B
+    }
+  }
+}
+object ComplexZeroPad {
+  def apply[T<:Data:ConvertableTo](params: RCFilterParams[T], in: DecoupledIO[PacketBundle[T]]): DecoupledIO[PacketBundle[T]] = {
+    val zp = Module(new ComplexZeroPad(params))
+    zp.io.in <> in
+    zp.io.out
+  }
+}
+
+/**
  * Raised-Cosine filter
  *
  * Input:
@@ -84,6 +132,8 @@ object TreeReduce {
  */
 class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) extends Module {
   val io = IO(RCFilterIO(params))
+  // Zero-pad inputs
+  val zp = ComplexZeroPad(params, io.in)
   // Flush state variables
   val sIdle :: sMain :: sFlush :: Nil = Enum(3)
   val state = RegInit(sFlush)
@@ -94,7 +144,7 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
   val taps: Seq[T] = doubleTaps map {case x => ConvertableTo[T].fromDouble(x)}
   // Push incoming samples through buffer
   val x0 = Wire(params.protoIQ)
-  x0 := io.in.bits.iq(0)
+  x0 := zp.bits.iq(0)
   val doShift = Wire(Bool())
   doShift := false.B
   val xn = Seq.fill(taps.length)(Reg(params.protoIQ))
@@ -116,16 +166,16 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
     is(sIdle) {
       flushCount := 0.U
       doShift := true.B
-      x0 := Mux(io.in.fire(), io.in.bits.iq(0), zero)
-      state := Mux(io.in.fire(),
-                   Mux(io.in.bits.pktEnd, sFlush, sMain),
+      x0 := Mux(zp.fire(), zp.bits.iq(0), zero)
+      state := Mux(zp.fire(),
+                   Mux(zp.bits.pktEnd, sFlush, sMain),
                    sIdle)
     }
     is(sMain) {
       flushCount := 0.U
-      doShift := io.in.fire()
-      x0 := io.in.bits.iq(0)
-      state := Mux(io.in.fire() && io.in.bits.pktEnd, sFlush, sMain)
+      doShift := zp.fire()
+      x0 := zp.bits.iq(0)
+      state := Mux(zp.fire() && zp.bits.pktEnd, sFlush, sMain)
     }
     is(sFlush) {
       flushCount := flushCount + io.out.ready
@@ -137,6 +187,6 @@ class RCFilter[T <: Data : Real : ConvertableTo](val params: RCFilterParams[T]) 
   // Decoupled logic
   io.out.bits.iq.real := outReal
   io.out.bits.iq.imag := outImag
-  io.out.valid := ((state === sMain) && io.in.fire()) || (state === sFlush)
-  io.in.ready := ((state === sMain) && io.out.ready) || (state === sIdle)
+  io.out.valid := ((state === sMain) && zp.fire()) || (state === sFlush)
+  zp.ready := ((state === sMain) && io.out.ready) || (state === sIdle)
 }
