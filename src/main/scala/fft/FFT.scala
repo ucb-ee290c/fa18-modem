@@ -31,11 +31,17 @@ trait FFTParams[T <: Data] extends PacketBundleParams[T] {
   def checkNumPointsPow2() {
     require(isPow2(numPoints), "number of points must be a power of 2")
   }
+  def checkNumPointsPow() {
+    require(FFTUtil.is_power(numPoints), "number of points must be a power of some number")
+  }
   def checkFftType() {
     require(allowedFftTypes.contains(fftType), s"""FFT type must be one of the following: ${allowedFftTypes.mkString(", ")}""")
   }
   def checkDecimType() {
     require(allowedDecimTypes.contains(decimType), s"""Decimation type must be one of the following: ${allowedDecimTypes.mkString(", ")}""")
+  }
+  def getPowerInfo(): (Int, Int) = {
+    (FFTUtil.factorize(numPoints)._1.head, FFTUtil.factorize(numPoints)._2.head)
   }
 }
 object FFTParams {
@@ -207,22 +213,34 @@ class IFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) ex
  * Top level Direct FFT block
  */
 class DirectFFT[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
-  params.checkNumPointsPow2()
   val io = IO(DIDOIO(params))
-  val fft_stage = Module(new DirectStage(params))
-  fft_stage.io.in.bits  := io.in.bits
-  fft_stage.io.in.valid := io.in.fire()
-  io.in.ready  := io.out.ready
-  io.out.bits  := fft_stage.io.out.bits
-  io.out.valid := fft_stage.io.out.valid
+  val fft_stage = if (FFTUtil.is_power(params.numPoints)) {
+    Module(new CooleyTukeyStage(params))
+  } else {
+    Module(new PFAStage(params))
+  }
+  fft_stage.io.in := io.in.bits.iq
+  io.in.ready     := io.out.ready
+  io.out.bits.iq  := fft_stage.io.out
+
+  val delay = FFTUtil.factorize(params.numPoints)._2.reduce(_ + _) - 1
+  if (params.pipeline && delay > 0) {
+    io.out.bits.pktStart := ShiftRegister(io.in.bits.pktStart, delay)
+    io.out.bits.pktEnd   := ShiftRegister(io.in.bits.pktEnd  , delay)
+    io.out.valid         := ShiftRegister(io.in.valid        , delay, false.B, true.B)
+  } else {
+    io.out.bits.pktStart := io.in.bits.pktStart
+    io.out.bits.pktEnd   := io.in.bits.pktEnd
+    io.out.valid         := io.in.valid
+  }
 }
 
 /**
  * Bundle type as IO for direct FFT stage
  */
 class DirectStageIO[T <: Data : Ring](params: FFTParams[T]) extends Bundle {
-  val in = Flipped(Valid(PacketBundle(params)))
-  val out = Valid(PacketBundle(params))
+  val in  = Input(PacketBundle(params).iq)
+  val out = Output(PacketBundle(params).iq)
 
   override def cloneType: this.type = DirectStageIO(params).asInstanceOf[this.type]
 }
@@ -235,63 +253,107 @@ object DirectStageIO {
  *
  * Recursively instantiates smaller stages/DFTs based on the Cooley-Tukey algorithm decimation-in-time
  */
-class DirectStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
-  params.checkNumPointsPow2()
+class CooleyTukeyStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
+  params.checkNumPointsPow()
   val io = IO(DirectStageIO(params))
 
-  val numPointsDiv2 = params.numPoints / 2
+  val (base, numStages) = params.getPowerInfo()
+  val numPointsDivBase = params.numPoints / base
   // generate twiddle constants
-  val twiddles_seq = Seq.fill(numPointsDiv2)(Wire(params.protoTwiddle.cloneType))
-  (0 until numPointsDiv2).map(n => {
-    twiddles_seq(n).real := Real[T].fromDouble( cos(2 * Pi / params.numPoints * n))
-    twiddles_seq(n).imag := Real[T].fromDouble(-sin(2 * Pi / params.numPoints * n))
+  val numTwiddles = (base - 1) * (numPointsDivBase - 1) + 1
+  val twiddlesSeq = (0 until numTwiddles).map(n => {
+    val twiddle_wire = Wire(params.protoTwiddle.cloneType)
+    twiddle_wire.real := Real[T].fromDouble( cos(2 * Pi / params.numPoints * n))
+    twiddle_wire.imag := Real[T].fromDouble(-sin(2 * Pi / params.numPoints * n))
+    twiddle_wire
   })
 
-  val butterfly_inputs = Wire(Vec(params.numPoints, params.protoIQ.cloneType))
-  if (params.numPoints == 2) {
-    butterfly_inputs     := io.in.bits.iq
-    io.out.bits.pktStart := io.in.bits.pktStart
-    io.out.bits.pktEnd   := io.in.bits.pktEnd
-    io.out.valid         := io.in.valid
+  if (params.numPoints == base) {
+    io.out.zip(Butterfly[T](io.in.seq, params.protoTwiddle)).foreach {
+      case (out_wire, out_val) => out_wire := out_val 
+    }
   } else {
     // Create sub-FFTs
-    val new_params = FFTParams(params, numPointsDiv2)
-    val sub_stg_outputs = (0 until 2).map {
+    val new_params = FFTParams(params, numPointsDivBase)
+    val sub_stg_outputs = (0 until base).map {
       case i => {
-        val stage = Module(new DirectStage(new_params))
-        stage.io.in.bits.iq       := io.in.bits.iq.zipWithIndex.filter(_._2 % 2 == i).map(_._1)
-        stage.io.in.bits.pktStart := io.in.bits.pktStart
-        stage.io.in.bits.pktEnd   := io.in.bits.pktEnd
-        stage.io.in.valid         := io.in.valid
-
-        if (i == 0) {
-          if (params.pipeline) {
-            // Register the outputs of sub-fft stages
-            io.out.bits.pktStart := RegNext(stage.io.out.bits.pktStart)
-            io.out.bits.pktEnd   := RegNext(stage.io.out.bits.pktEnd)
-            io.out.valid         := RegNext(stage.io.out.valid, init=false.B)
-          } else {
-            io.out.bits.pktStart := stage.io.out.bits.pktStart
-            io.out.bits.pktEnd   := stage.io.out.bits.pktEnd
-            io.out.valid         := stage.io.out.valid
-          }
-        }
+        val stage = Module(new CooleyTukeyStage(new_params))
+        stage.io.in       := io.in.zipWithIndex.filter(_._2 % base == i).map(_._1)
 
         if (params.pipeline) {
           // Register the outputs of sub-fft stages
-          RegNext(stage.io.out.bits.iq)
+          RegNext(stage.io.out)
         } else {
-          stage.io.out.bits.iq
+          stage.io.out
         }
       }
     }
-    butterfly_inputs := sub_stg_outputs(0) ++ sub_stg_outputs(1)
-  }
 
-  (0 until numPointsDiv2).map(n => {
-    val butterfly_outputs = Butterfly[T](Seq(butterfly_inputs(n), butterfly_inputs(n + numPointsDiv2) * twiddles_seq(n)))
-    io.out.bits.iq(n)                 := butterfly_outputs(0)
-    io.out.bits.iq(n + numPointsDiv2) := butterfly_outputs(1)
+    (0 until numPointsDivBase).map(n => {
+      val butterfly_inputs = Seq(sub_stg_outputs.head(n)) ++ sub_stg_outputs.zipWithIndex.tail.map {
+        case (stg_output, idx) => stg_output(n) * twiddlesSeq(idx * n)
+      }
+
+      val butterfly_outputs = Butterfly[T](butterfly_inputs, params.protoTwiddle)
+      butterfly_outputs.zipWithIndex.foreach {
+        case (out_val, idx) => io.out(n + numPointsDivBase * idx) := out_val
+      }
+    })
+  }
+}
+
+class PFAStage[T <: Data : Real : BinaryRepresentation](val params: FFTParams[T]) extends Module {
+  require(!FFTUtil.is_power(params.numPoints), "number of points must not be a power of some number")
+  val io = IO(DirectStageIO(params))
+
+  val factorized = FFTUtil.factorize(params.numPoints)
+
+  val N1 = scala.math.pow(factorized._1.head, factorized._2.head).toInt
+  val N2 = params.numPoints / N1
+
+  val invN1 = FFTUtil.mult_inv(N1 % N2, N2)
+  val invN2 = FFTUtil.mult_inv(N2 % N1, N1)
+
+  val first_stage_params = FFTParams(params, N1)
+  val rest_stage_params  = FFTParams(params, N2)
+
+  val first_stage_outputs = (0 until N2).map(n2 => {
+    val stage = Module(new CooleyTukeyStage(first_stage_params))
+    stage.io.in.zipWithIndex.map {
+      case (stage_in, n1) => {
+        // Good's mapping
+        val inp_idx = (N1 * n2 + N2 * n1) % params.numPoints
+        stage_in := io.in(inp_idx)
+      }
+    }
+    stage.io.out
+  })
+
+  val rest_stage_outputs = (0 until N1).map(k1 => {
+    val stage = if (FFTUtil.is_power(N2)) {
+      Module(new CooleyTukeyStage(rest_stage_params))
+    } else {
+      Module(new PFAStage(rest_stage_params))
+    }
+    stage.io.in.zipWithIndex.map {
+      case (rest_stage_in, idx) => {
+        if (params.pipeline) {
+          // Register the outputs of sub-FFT stages
+          rest_stage_in := RegNext(first_stage_outputs(idx)(k1))
+        } else {
+          rest_stage_in := first_stage_outputs(idx)(k1)
+        }
+      }
+    }
+
+    stage.io.out.zipWithIndex.map {
+      case (stage_out, k2) => {
+        // CRT mapping
+        val out_idx = (N1 * invN1 * k2 + N2 * invN2 * k1) % params.numPoints
+        io.out(out_idx) := stage_out
+      }
+    }
+    stage.io.out
   })
 }
 
@@ -571,22 +633,16 @@ object Butterfly {
   def apply[T <: Data : Real](in: Seq[DspComplex[T]], genTwiddle: DspComplex[T]): Seq[DspComplex[T]] = {
     in.length match {
       case 2 => apply(in)
-      case 3 => {
-        val w = Complex(cos(2 * Pi / 3), -sin(2 * Pi / 3))
-        val w_wire = Wire(genTwiddle.cloneType)
-        w_wire := DspComplex.wire(Real[T].fromDouble(w.real), Real[T].fromDouble(w.imag))
-        val product = (in(1) - in(2)) * w_wire
-        Seq(in.reduce(_ + _), in(0) + product, in(0) - product)
-      }
       case _ => {
-        val twiddles_seq = Seq.fill(in.length)(Wire(genTwiddle.cloneType))
-        (0 until in.length).map(n => {
-          twiddles_seq(n).real := Real[T].fromDouble( cos(2 * Pi / in.length * n))
-          twiddles_seq(n).imag := Real[T].fromDouble(-sin(2 * Pi / in.length * n))
+        val twiddlesSeq = (0 until in.length).map(n => {
+          val twiddle_wire = Wire(genTwiddle.cloneType)
+          twiddle_wire.real := Real[T].fromDouble( cos(2 * Pi / in.length * n))
+          twiddle_wire.imag := Real[T].fromDouble(-sin(2 * Pi / in.length * n))
+          twiddle_wire
         })
         Seq.tabulate(in.length)(k => {
-          in.zipWithIndex.map {
-            case (inp, n) => inp * twiddles_seq((k * n) % in.length)
+          in.head + in.zipWithIndex.tail.map {
+            case (inp, n) => inp * twiddlesSeq((k * n) % in.length)
           }.reduce(_ + _)
         })
       }
