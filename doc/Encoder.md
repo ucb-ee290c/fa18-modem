@@ -1,4 +1,4 @@
-#Encoder
+# Encoder
 Kunmo Kim (kunmok@berkeley.edu)
 
 ## Overview 
@@ -6,7 +6,7 @@ Encoder is composed of a convolutional encoder and a puncturing block.
 The current encoder is fully compatible with 802.11a Tx 
 
 #### Convolutional Coding
-Convolutional coding is a type of error correction coding that generates parity symbols via convoluting multiple signals stored in a bank of shift registers. 
+Convolutional coding is a type of error correction coding that generates parity symbols via the convoluting multiple signals stored in a bank of shift registers. 
 Convolutional coding by nature creates time-invariant trellis and hence it allows the decoder to use maximum-likelihood sequence estimator/equalizer. 
 
 #### Puncturing 

@@ -1,4 +1,4 @@
-#Decoder
+# Decoder
 Kunmo Kim (kunmok@berkeley.edu)
 
 ## Overview 
