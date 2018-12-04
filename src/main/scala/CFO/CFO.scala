@@ -180,7 +180,7 @@ class FineOffsetEstimator[T<:Data:ConvertableTo:BinaryRepresentation:Ring](val p
     ltAcc.imag := ConvertableTo[T].fromDouble(0)
   }
 
-  io.cordicIn.valid := !io.in.valid && RegNext(io.in.valid) 
+  io.cordicIn.valid := !io.in.valid && RegNext(io.in.valid)
 
   io.out.bits := io.cordicOut.bits.z * ConvertableTo[T].fromDouble(1.0/ltDelay)
   io.out.valid := io.cordicOut.valid
@@ -220,14 +220,14 @@ class CFOEstimation[T<:Data:Real:BinaryRepresentation:ConvertableTo](val params:
     val stdbyOutRReg = Reg(Bool())
 
     io.in.ready := estimatorReady
-    io.out.valid := cordic.io.out.valid
+    io.out.valid := io.in.valid && (curState === lt || curState === data)
     io.out.bits.pktStart := nxtState === lt && RegNext(!(nxtState === lt))
 
     io.out.bits.pktEnd := io.in.bits.pktEnd
     stfDropper.io.in.iq := io.in.bits.iq(0)
     stfDropper.io.keep := (curState === lt || curState === data) // Put this in FSM
     io.out.bits.iq(0) := stfDropper.io.out.iq
-    io.pErr := coarseOffset + fineOffset 
+    io.pErr := coarseOffset + fineOffset
 
     coe.io.in.bits := io.in.bits.iq(0)
     foe.io.in.bits := io.in.bits.iq(0)
@@ -433,7 +433,7 @@ class COEWrapper[T<:chisel3.Data:Real:ConvertableTo:BinaryRepresentation](val pa
   val cordic = Module (new IterativeCordic[T](params))
   val coe = Module (new CoarseOffsetEstimator[T](params, stLength))
 
-  
+
   cordic.io.in.bits := coe.io.cordicIn.bits
   cordic.io.out.ready := coe.io.cordicOut.ready
   cordic.io.in.valid := coe.io.cordicIn.valid
@@ -471,7 +471,7 @@ class COEWrapper[T<:chisel3.Data:Real:ConvertableTo:BinaryRepresentation](val pa
   //val cordic = Module (new IterativeCordic[T](params))
   //val coe = Module (new FineOffsetEstimator[T](params, ltLength))
 
-  
+
   //cordic.io.in.bits := coe.io.cordicIn.bits
   //cordic.io.out.ready := coe.io.cordicOut.ready
   //cordic.io.in.valid := coe.io.cordicIn.valid
