@@ -5,6 +5,7 @@ at the OFDM symbol level with a block size of (48, 96, or 192) bits. Each block 
 sub-carrier level. Sub-blocks are of size (1, 2, or 4) bits. The Mapper  first converts each sub-block into a complex number 
 representing BPSK, QPSK, or 16-QAM constellation points. Note that the modulation type may be different for the header and 
 data parts of the message. The resulting 48 complex pairs are then normalized by KMOD.
+
 Parameters:
 `val bitsWidth: Int` width of inputs 
 `val dataWidth: Int` width of  outputs
