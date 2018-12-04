@@ -24,12 +24,12 @@ import freechips.rocketchip.subsystem.BaseSubsystem
 
 class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U]) extends Module {
   val io = IO(new Bundle{
-    val in = Flipped(Decoupled(Vec(48, UInt(1.W))))
-    val pktStart = Input(Bool())
-    val pktEnd = Input(Bool())
-    val mod_ctrl = Input(UInt(2.W))
-    val isHead = Input(Bool())
-    val puncMatrix  = Input(Vec(4, UInt(1.W)))
+    val in = Flipped(Decoupled(new Bundle{
+      val data = BitsBundle(48, UInt(1.W))
+      val mod_ctrl = UInt(2.W)
+      val isHead = Bool()
+      val puncMatrix  = Vec(4, UInt(1.W))
+    }))
     val out = Decoupled(IQBundle(txParams.iqBundleParams))
   })
   val serilizer = Module( new BitsSerializer(txParams.serParams) )
@@ -41,9 +41,9 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
   val fir = Module( new RCFilter(txParams.firParams) )
 
   //encoder.io.in <> io.in
-  serilizer.io.in.bits.bits:= io.in.bits
-  serilizer.io.in.bits.pktStart := io.pktStart
-  serilizer.io.in.bits.pktEnd := io.pktEnd
+  serilizer.io.in.bits.bits:= io.in.bits.data.bits
+  serilizer.io.in.bits.pktStart := io.in.bits.data.pktStart
+  serilizer.io.in.bits.pktEnd := io.in.bits.data.pktEnd
   serilizer.io.in.valid := io.in.valid
   serilizer.io.out.ready := io.out.ready
   encoder.io.in.bits  := serilizer.io.out.bits.bits(0)
@@ -51,11 +51,11 @@ class TX[T<:Data:Real:BinaryRepresentation, U<:Data](val txParams: TXParams[T, U
   encoder.io.pktEndIn  := serilizer.io.out.bits.pktEnd
   encoder.io.in.valid := serilizer.io.out.valid
   encoder.io.out.ready := serilizer.io.in.ready
-  encoder.io.mac.isHead := io.isHead
-  encoder.io.mac.puncMatrix := io.puncMatrix
+  encoder.io.mac.isHead := io.in.bits.isHead
+  encoder.io.mac.puncMatrix := io.in.bits.puncMatrix
   modulator.io.in <> encoder.io.out
   modulator.io.out.ready := encoder.io.in.ready
-  
+
   modulator.io.mod_ctrl := io.mod_ctrl
   //ifft.io.in <> modulator.io.in
   val z0 = Ring[T].zero
