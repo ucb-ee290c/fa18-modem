@@ -98,10 +98,12 @@ class PacketDeserializer[T <: Data : Real : BinaryRepresentation](val params: Pa
       when (io.in.fire()) { state_next := sComp }
     }
     is (sComp) {
-      cntr_next      := cntr + 1.U
-      deser.pktStart := deser.pktStart || io.in.bits.pktStart
-      deser.pktEnd   := deser.pktEnd   || io.in.bits.pktEnd
-      when (cntr === (params.ratio - 2).U) { state_next := sDone }
+      when (io.in.fire()) {
+        cntr_next      := cntr + 1.U
+        deser.pktStart := deser.pktStart || io.in.bits.pktStart
+        deser.pktEnd   := deser.pktEnd   || io.in.bits.pktEnd
+        when (cntr === (params.ratio - 2).U) { state_next := sDone }
+      }
     }
     is (sDone) {
       when (io.in.fire())       { state_next := sComp }
