@@ -20,7 +20,7 @@ class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Comple
     poke(c.io.in.bits.pktEnd  , (pktEnd && (index == inp.length - 1)))
     wait_for_assert(c.io.in.ready, maxCyclesWait)
     step(1)
-    poke(c.io.in.valid, 0)
+    // poke(c.io.in.valid, 0)
     // if (index != inp.length - 1) { step(3) }
   }
   // poke(c.io.in.valid, 0)
