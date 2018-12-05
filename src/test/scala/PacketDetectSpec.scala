@@ -55,12 +55,12 @@ class PacketDetectSpec extends FlatSpec with Matchers {
     powerThreshWindow = 4,
     correlationThresh = true
   )
-  it should "detect power and correlation" in {
-    val trials = Seq(IQ(vecs.tvNoPkt, None))
-      // IQ(vecs.tvPwrOnly, None),
-      // IQ(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
-    FixedPacketDetectTester(corrParams, trials) should be (true)
-  }
+  // it should "detect power and correlation" in {
+  //   val trials = Seq(IQ(vecs.tvNoPkt, None))
+  //     // IQ(vecs.tvPwrOnly, None),
+  //     // IQ(vecs.tvPwrCorr, Option(vecs.tvPwrCorrOut)))
+  //   FixedPacketDetectTester(corrParams, trials) should be (true)
+  // }
 
 //  behavior of "RealPacketDetect"
 //
