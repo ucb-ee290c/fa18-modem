@@ -357,8 +357,8 @@ class SDFStageRadix2[T <: Data : Real : BinaryRepresentation](val params: FFTPar
 
   out := Mux(load_input, shift_out, butterfly_outputs(0))
 
-  io.out.pktStart := ShiftRegister(io.in.pktStart, delay, en=io.en)
-  io.out.pktEnd   := ShiftRegister(io.in.pktEnd  , delay, en=io.en)
+  io.out.pktStart := ShiftRegister(io.in.pktStart, delay, resetData=false.B, en=io.en)
+  io.out.pktEnd   := ShiftRegister(io.in.pktEnd  , delay, resetData=false.B, en=io.en)
 }
 
 /**
@@ -424,6 +424,6 @@ class SDFStageRadix4[T <: Data : Real : BinaryRepresentation](val params: FFTPar
 
   out := Mux(store_output, butterfly_outputs(0), shift_outs(out_counter(cntr_msb, cntr_msb - 1) - 1.U))
 
-  io.out.pktStart := ShiftRegister(io.in.pktStart, latency, en=io.en)
-  io.out.pktEnd   := ShiftRegister(io.in.pktEnd  , latency, en=io.en)
+  io.out.pktStart := ShiftRegister(io.in.pktStart, latency, resetData=false.B, en=io.en)
+  io.out.pktEnd   := ShiftRegister(io.in.pktEnd  , latency, resetData=false.B, en=io.en)
 }
