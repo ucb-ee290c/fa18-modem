@@ -24,7 +24,8 @@ class FFTSpec extends FlatSpec with Matchers {
     dataWidth = 10,
     twiddleWidth = 10,
     numPoints = 2,
-    binPoint = 2
+    binPoint = 2,
+    sdfRadix = 2
   )
 
   for (i <- Seq(2, 16, 64)) {
@@ -33,8 +34,17 @@ class FFTSpec extends FlatSpec with Matchers {
       FixedFFTTester(params,  inp, out_fft ) should be (true)
       FixedIFFTTester(params, inp, out_ifft) should be (true)
     }
-    it should f"compute $i-point SDF FFT/IFFT (powers of 2)" in {
+    it should f"compute $i-point radix-2 SDF FFT/IFFT" in {
       val (params, inp, out_fft, out_ifft) = test_setup(base_params, i, "sdf")
+      FixedFFTTester(params,  inp, out_fft ) should be (true)
+      FixedIFFTTester(params, inp, out_ifft) should be (true)
+    }
+  }
+
+  for (i <- Seq(4, 16, 64)) {
+    it should f"compute $i-point radix-4 SDF FFT/IFFT" in {
+      val (radix_2_params, inp, out_fft, out_ifft) = test_setup(base_params, i, "sdf")
+      val params = radix_2_params.copy(sdfRadix = 4)
       FixedFFTTester(params,  inp, out_fft ) should be (true)
       FixedIFFTTester(params, inp, out_ifft) should be (true)
     }
