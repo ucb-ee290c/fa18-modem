@@ -85,13 +85,17 @@ class CyclicPrefixSpec extends FlatSpec with Matchers {
   * Run each trial in @trials
   */
 class CyclicPrefixTester[T <: chisel3.Data](c: CyclicPrefix[T], trials: Seq[CPTrial], tolLSBs: Int = 2) extends DspTester(c) {
-  def expectIQ(c: CyclicPrefix[T], v: Complex, pktStart: Boolean, pktEnd: Boolean, n: Int): Boolean = {
+  def expectIQ(c: CyclicPrefix[T], v: Option[Complex], pktStart: Boolean, pktEnd: Boolean, n: Int): Boolean = {
     var valid = false
-    if (peek(c.io.out.valid)) {
-      expect(c.io.out.bits.iq(0), v, s"iq at $n")
-      expect(c.io.out.bits.pktStart, pktStart)
-      expect(c.io.out.bits.pktEnd, pktEnd)
-      valid = true
+    if (v.isEmpty) {
+      expect(c.io.out.valid, false)
+    } else {
+      if (peek(c.io.out.valid)) {
+        expect(c.io.out.bits.iq(0), v.get, s"iq at $n")
+        expect(c.io.out.bits.pktStart, pktStart)
+        expect(c.io.out.bits.pktEnd, pktEnd)
+        valid = true
+      }
     }
     valid
   }
@@ -104,10 +108,9 @@ class CyclicPrefixTester[T <: chisel3.Data](c: CyclicPrefix[T], trials: Seq[CPTr
 
   for (trial <- trials) {
     var nout = 0
-    poke(c.io.in.valid, 1)
     poke(c.io.add, trial.add)
-    poke(c.io.in.bits.pktStart, true)
     for (i <- trial.iqin.indices) {
+      poke(c.io.in.valid, 1)
       poke(c.io.in.bits.iq(0), trial.iqin(i))
       poke(c.io.in.bits.pktStart, i == 0)
       poke(c.io.in.bits.pktEnd, i == trial.iqin.length - 1)
@@ -118,12 +121,26 @@ class CyclicPrefixTester[T <: chisel3.Data](c: CyclicPrefix[T], trials: Seq[CPTr
         if (cyclesWaiting >= maxCyclesWait) {
           expect(false, "waited for input too long")
         }
-        if (expectIQ(c, trial.iqout(nout), nout == 0, nout == (trial.iqout.length - 1), nout)) {
+        if (expectIQ(c, Some(trial.iqout(nout)), nout == 0, nout == (trial.iqout.length - 1), nout)) {
           nout += 1
         }
         step(1)
       }
-      if (expectIQ(c, trial.iqout(nout), nout == 0, nout == (trial.iqout.length - 1), nout)) {
+      if (expectIQ(c, Some(trial.iqout(nout)), nout == 0, nout == (trial.iqout.length - 1), nout)) {
+        nout += 1
+      }
+      step(1)
+      // Simulated delayed data
+      var expectedIQ: Option[Complex] = None
+      if (nout < trial.iqout.length) {
+        expectedIQ = Some(trial.iqout(nout))
+      }
+      poke(c.io.in.valid, 0)
+      if (expectIQ(c, expectedIQ, nout == 0, nout == (trial.iqout.length - 1), nout)) {
+        nout += 1
+      }
+      step(1)
+      if (expectIQ(c, expectedIQ, nout == 0, nout == (trial.iqout.length - 1), nout)) {
         nout += 1
       }
       step(1)
@@ -136,7 +153,11 @@ class CyclicPrefixTester[T <: chisel3.Data](c: CyclicPrefix[T], trials: Seq[CPTr
       if (cyclesWaiting >= maxCyclesWait) {
         expect(false, "waited for input too long")
       }
-      if (expectIQ(c, trial.iqout(nout), nout == 0, nout == trial.iqout.length - 1, nout)) {
+      var expectedIQ: Option[Complex] = None
+      if (nout < trial.iqout.length) {
+        expectedIQ = Some(trial.iqout(nout))
+      }
+      if (expectIQ(c, expectedIQ, nout == 0, nout == trial.iqout.length - 1, nout)) {
         nout += 1
       }
       step(1)

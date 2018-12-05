@@ -71,7 +71,7 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
         iqOut = expectIQ(c, iqOut, trial)
         step(1)
       }
-      peekDebug(c)
+      // peekDebug(c)
       iqOut = expectIQ(c, iqOut, trial)
       step(1)
       // Simulate delayed data
