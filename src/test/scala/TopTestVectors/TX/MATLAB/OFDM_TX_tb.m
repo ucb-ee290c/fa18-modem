@@ -1,5 +1,7 @@
 close all
 
+OFDM_TX_wr_dat_in
+
 %NLOP = 1;
 NFFT = 64;      % Number of FFT points
 NC   = 48;      % Number of subcarriers
@@ -19,34 +21,35 @@ NLOP = para(2);
 MOD  = para(3);
 fclose(datin_fid);
 %Read data out of RTL ====================================================
-datout_fid = fopen('RTL_OFDM_TX_datout_Re.txt', 'r');
-Datout_Re_rtl = fscanf(datout_fid, '%d ');
-fclose(datout_fid);
-datout_fid = fopen('RTL_OFDM_TX_datout_Im.txt', 'r');
-Datout_Im_rtl = fscanf(datout_fid, '%d ');
-fclose(datout_fid);
-Datout_rtl = (Datout_Re_rtl./2^15) + 1i*(Datout_Im_rtl./2^15);
-
-datout_fid = fopen('RTL_OFDM_TX_Pilots_Insert_Re.txt', 'r');
-Pilots_Insert_Re_rtl = fscanf(datout_fid, '%d ');
-fclose(datout_fid);
-datout_fid = fopen('RTL_OFDM_TX_Pilots_Insert_Im.txt', 'r');
-Pilots_Insert_Im_rtl = fscanf(datout_fid, '%d ');
-fclose(datout_fid);
-Pilots_Insert_rtl = (Pilots_Insert_Re_rtl./2^15) + 1i*(Pilots_Insert_Im_rtl./2^15);
-
-datout_fid = fopen('RTL_OFDM_TX_IFFT_Mod_Re.txt', 'r');
-IFFT_Mod_Re_rtl = fscanf(datout_fid, '%d ');
-fclose(datout_fid);
-datout_fid = fopen('RTL_OFDM_TX_IFFT_Mod_Im.txt', 'r');
-IFFT_Mod_Im_rtl = fscanf(datout_fid, '%d ');
-fclose(datout_fid);
-IFFT_Mod_rtl = (IFFT_Mod_Re_rtl./2^15) + 1i*(IFFT_Mod_Im_rtl./2^15);
+% datout_fid = fopen('RTL_OFDM_TX_datout_Re.txt', 'r');
+% Datout_Re_rtl = fscanf(datout_fid, '%d ');
+% fclose(datout_fid);
+% datout_fid = fopen('RTL_OFDM_TX_datout_Im.txt', 'r');
+% Datout_Im_rtl = fscanf(datout_fid, '%d ');
+% fclose(datout_fid);
+% Datout_rtl = (Datout_Re_rtl./2^15) + 1i*(Datout_Im_rtl./2^15);
+% 
+% datout_fid = fopen('RTL_OFDM_TX_Pilots_Insert_Re.txt', 'r');
+% Pilots_Insert_Re_rtl = fscanf(datout_fid, '%d ');
+% fclose(datout_fid);
+% datout_fid = fopen('RTL_OFDM_TX_Pilots_Insert_Im.txt', 'r');
+% Pilots_Insert_Im_rtl = fscanf(datout_fid, '%d ');
+% fclose(datout_fid);
+% Pilots_Insert_rtl = (Pilots_Insert_Re_rtl./2^15) + 1i*(Pilots_Insert_Im_rtl./2^15);
+% 
+% datout_fid = fopen('RTL_OFDM_TX_IFFT_Mod_Re.txt', 'r');
+% IFFT_Mod_Re_rtl = fscanf(datout_fid, '%d ');
+% fclose(datout_fid);
+% datout_fid = fopen('RTL_OFDM_TX_IFFT_Mod_Im.txt', 'r');
+% IFFT_Mod_Im_rtl = fscanf(datout_fid, '%d ');
+% fclose(datout_fid);
+% IFFT_Mod_rtl = (IFFT_Mod_Re_rtl./2^15) + 1i*(IFFT_Mod_Im_rtl./2^15);
 
 % Simulate with data in ===================================================
 %Len = length(bit_symbols);
 NDS = Len / NC;
 NS   = NDS*NLOP;
+coded_bits = wifi_encode(bit_symbols);
 bit_symbols = reshape(bit_symbols,NC,NS);
 %QPSK =====================================================================
 % QPSK = 1- 2.*mod(bit_symbols,2) + 1i *(1- 2.*floor(bit_symbols/2));
@@ -115,27 +118,31 @@ for ii = 0:NLOP -1,
     end
 end
 Datout_sim = reshape(tx_out, 1, (NFFT+CP)*(PRE + NDS)*NLOP);
-
+real_out = real(Datout_sim)
+imag_out = imag(Datout_sim)
+% outid = fopen('OFDM_TX_sim_out_iq.txt','w');
+csvwrite('OFDM_TX_sim_out_i.txt', real_out)
+csvwrite('OFDM_TX_sim_out_q.txt', imag_out)
 % Plotting ================================================================
-figure(1);
-plot(1:length(Pilots_Insert_sim), real(Pilots_Insert_sim),'o-b');
-hold on
-plot(1:length(Pilots_Insert_rtl), real(Pilots_Insert_rtl),'x-r');
-ylim([-3 3]);
-title('comparison of Pilots\_Insert output');
-legend('Pilots\_Insert\_sim','Pilots\_Insert\_rtl');
-
-figure(2);
-plot(1:length(IFFT_Mod_sim), imag(IFFT_Mod_sim),'o-b');
-hold on
-plot(1:length(IFFT_Mod_rtl), imag(IFFT_Mod_rtl),'x-r');
-title('comparison of IFFT\_Mod output');
-legend('IFFT\_Mod\_sim','IFFT\_Mod\_rtl');
-
-figure(3);
-plot(1:length(Datout_sim), real(Datout_sim),'o-b');
-hold on
-plot(1:length(Datout_rtl), real(Datout_rtl),'x-r');
-title('comparison of Data output of transmitter');
-legend('Datout\_sim','Datout\_rtl');
+% figure(1);
+% plot(1:length(Pilots_Insert_sim), real(Pilots_Insert_sim),'o-b');
+% hold on
+% plot(1:length(Pilots_Insert_rtl), real(Pilots_Insert_rtl),'x-r');
+% ylim([-3 3]);
+% title('comparison of Pilots\_Insert output');
+% legend('Pilots\_Insert\_sim','Pilots\_Insert\_rtl');
+% 
+% figure(2);
+% plot(1:length(IFFT_Mod_sim), imag(IFFT_Mod_sim),'o-b');
+% hold on
+% plot(1:length(IFFT_Mod_rtl), imag(IFFT_Mod_rtl),'x-r');
+% title('comparison of IFFT\_Mod output');
+% legend('IFFT\_Mod\_sim','IFFT\_Mod\_rtl');
+% 
+% figure(3);
+% plot(1:length(Datout_sim), real(Datout_sim),'o-b');
+% hold on
+% plot(1:length(Datout_rtl), real(Datout_rtl),'x-r');
+% title('comparison of Data output of transmitter');
+% legend('Datout\_sim','Datout\_rtl');
 
