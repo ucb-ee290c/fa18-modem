@@ -10,8 +10,10 @@ import breeze.math.Complex
 class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Complex], pktStart: Boolean = true, pktEnd: Boolean = true, tolLSBs: Int = 5) extends DspTester(c) with HasTesterUtil[FFT[T]] {
   val maxCyclesWait = scala.math.max(50, c.params.numPoints * 3)
 
+  // poke(c.io.out.ready, 0)
+  // poke(c.io.in.valid, 0)
+  // step(1)
   poke(c.io.out.ready, 1)
-  poke(c.io.in.valid, 1)
 
   inp.zipWithIndex.foreach { case (value, index) =>
     poke(c.io.in.valid, 1)
@@ -20,6 +22,9 @@ class FFTTester[T <: chisel3.Data](c: FFT[T], inp: Seq[Complex], out: Seq[Comple
     poke(c.io.in.bits.pktEnd  , (pktEnd && (index == inp.length - 1)))
     wait_for_assert(c.io.in.ready, maxCyclesWait)
     step(1)
+    poke(c.io.in.bits.pktStart, 0)
+    poke(c.io.in.bits.pktEnd, 0)
+    // poke(c.io.in.bits.iq(0), Complex(0, 0))
     // poke(c.io.in.valid, 0)
     // if (index != inp.length - 1) { step(3) }
   }
