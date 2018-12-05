@@ -25,7 +25,7 @@ object TestSetup {
     dspTesterOptions = dspTesterOptions.copy(
       isVerbose = false
     )
-    //testerOptions = testerOptionsFirrtl
-    testerOptions = testerOptionsVerilog
+    testerOptions = testerOptionsFirrtl
+    //testerOptions = testerOptionsVerilog
   }
 }
