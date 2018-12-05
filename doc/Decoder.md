@@ -10,15 +10,39 @@ Header information decoding (PLCP decoding) is done via "HeaderExtractor" block.
 
 ### PLCP Header 
 ```
+|-----------------------------------------------|
 | RATE   | Reserved |  Length  | Parity | Tail  |
 |--------|----------|----------|--------|-------|  
 | 4 bits |   1 bit  |  12 bits |  1 bit | 6bits |
+|-----------------------------------------------|
 
 Total length = 24 bits 
 Coded with 1/2 rate + BPSK modulation -> 48 bits 
 
 Length is in octets 
 ```
+### Decoder Architecture 
+
+```
+                     |---------------------------------------|
+                     |                Arbiter                | 
+                     |---------------------------------------|
+                         ^   |                     |
+                         |   v                     v
+|-----------|       |-------------| ----> |------------------|      |-----------| 
+|Demodulator| <-->  | De-Puncture |       | Header Extractor | <--- |Trellis Obj| 
+|-----------|       |-------------| <---- |------------------|      |-----------| 
+                            |                     |  ^ 
+                            v                     v  | 
+|-----------|       |-------------|       |------------------|
+|Trellis Obj| --->  |Branch Metric|       |       SRAM       |
+|-----------|       |-------------|       |------------------|
+                            |                     |  ^ 
+                            v                     v  |
+                    |-------------| ----> |------------------|      |-----------| 
+                    | Path Metric |       |     Traceback    | ---> |    MAC    | 
+                    |-------------| <---- |------------------|      |-----------|                     
+``` 
 
 ### De-Puncturing 
 De-puncturing block has two purposes: 1) store received input into a buffer 2) De-puncture the received PSDU 
@@ -39,13 +63,14 @@ Once it starts receiving PSDU, De-Puncturing block performs de-puncturing via fi
 
    
 ### Arbiter 
-Arbiter block simply watches over incoming signals from demodulator, and identifies if it contains PLCP or PSDU. If it is identified as PLCP, Arbiter block informs De-Puncturing block to send data to HeaderExtractor. Otherwise, De-Puncturing re-order the input bits with dummy bits, and then passes data to path metric.  
+Arbiter block simply watches over incoming signals from demodulator, and identifies if it contains PLCP or PSDU. If it is identified as PLCP, Arbiter block informs De-Puncturing block to send data to HeaderExtractor. Otherwise, De-Puncturing replaces the punctured bit with dummy bit (0), and then passes de-punctured data to path metric.  
 
 ### HeaderExtractor
-HeaderExtractor is a simple Viterbi decoder that is specifically designed to decode PLCP and extract header information. This block computes branch metric and path metric blocks and then stores survival path into SRAM. Storing survival path into SRAM takes 24 clock cycles and decoding takes another 24 clock cycles (PLCP header is 48 bits coded with 1/2 coding rate and BPSK modulation). HeaderExtractor is designed to decode data within 48 clock cycles since the next PSDU OFDM symbol will be available 62 clock cycles after PCLP header is received. 
+HeaderExtractor is a simple Viterbi decoder that is specifically designed to decode PLCP and extract header information (coding rate and PSDU length). This block computes branch and path metric of 48 bits of encoded PLCP frame, then stores survival path into SRAM. Storing survival path into SRAM takes 24 clock cycles and decoding takes another 24 clock cycles (PLCP header is 48 bits coded with 1/2 coding rate and BPSK modulation). HeaderExtractor is designed to decode data within 62 clock cycles since the next PSDU OFDM symbol will be available 62 clock cycles after PCLP header is received. 
 
 ### Path Metric + Branch Metric 
-Path metric block and branch metric block calculate the accumulated path metric over trellis. Inside of branch metric module, it instantiates an object called "Trellis". The "Trellis" object maps output values and next states as a function of input and current states, which eases the branch metric calculation. 
+Branch metric is a measure of the distance between what was transmitted and what was received. Branch metric can take either hard-coded (SInt type) value or soft-coded (FixedPoint type) value, each are called hard-decision and soft-decision, respectively. In the hard-decision case, the branch metric simply finds the minimum hamming distance between received bits and expected bits. In the soft-decision case, the module finds the minimum euclidean distance between received bits and expected bits. Inside of branch metric module, it instantiates an object called "Trellis". The "Trellis" object maps output values and next states as a function of input and current states, which eases the branch metric calculation.<br/>
+Path metric is a value associated with a state in the trellis. This value is added to the branch metric at each trellis transition, and then accumulates over the trellis. This accumulated path metric is what traceback uses for decoding. Since the traceback module only cares about the minimum accumulated path metric at the end of trellis, the bit width of the path metric can be limited to a reasonably small number. In the current implementation, path metric bit width is set to 5-bit wide. In addition, path metric block checks if the accumulated minimum path metric is higher than 16. If so, then it will subtract 16 from all the elements in path metric registers. <br/>
 The accumulated path metric and calculated survival path information will be tossed to "Traceback" module, which performs sliding-window Viterbi Decoding. 
 
 ### Traceback 
@@ -81,4 +106,17 @@ Traceback module performs sliding-window Viterbi decoding. Sliding window viterb
 ## Outputs
 * Decoupled(Vec(params.D, UInt(params.k.W))) 
   + D bits are decoded every D clock cycles 
-  + Output is hard-coded 
+  + Output is hard-coded
+
+## Tests 
+* `sbt "testOnly modem.ViterbiDecoderUnitSpec"` for soft-input Viterbi decoder
+    + Parameters used for above test are found in `test/scala/ViterbiDecoderUnitSpec`
+    + peek-poke test scripts are in `test/scala/ViterbiDecoderUnitTester` 
+* `sbt "testOnly modem.ViterbiDecoderUnitSpec_Hard"` for hard-input Viterbi decoder
+    + Parameters used for above test are found in `test/scala/ViterbiDecoderUnitSpec_Hard`
+    + peek-poke test scripts are in `test/scala/ViterbiDecoderUnitTester_Hard` 
+    
+
+ 
+## TODO
+* Combine 'HeaderExtractor' module with Traceback 
