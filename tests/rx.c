@@ -67,11 +67,11 @@ void run_modem(uint64_t data) {
   uint64_t packMinusMinus = pack_modem_rx(FPM1, FPM1);
 
   // Write data
-  int i;
+  int i, write_count;
   // Write STF
   for (i=0; i < 80; ++i) {
-    while(reg_read8(RX_WRITE_COUNT) > 6) {
-      printf("Waiting for modem queue to empty...\n");
+    while((write_count = reg_read8(RX_WRITE_COUNT)) > 6) {
+      printf("Waiting for modem queue (%d) to empty...\n", write_count);
     }
     reg_write64(RX_WRITE, packPlusPlus);
     reg_write64(RX_WRITE, packMinusMinus);
@@ -79,8 +79,8 @@ void run_modem(uint64_t data) {
 
   // Write LTF
   for (i=0; i < 80; ++i) {
-    while(reg_read8(RX_WRITE_COUNT) > 6) {
-      printf("Waiting for modem queue to empty...\n");
+    while((write_count = reg_read8(RX_WRITE_COUNT)) > 6) {
+      printf("Waiting for modem queue (%d) to empty...\n", write_count);
     }
     reg_write64(RX_WRITE, packPlusMinus);
     reg_write64(RX_WRITE, packMinusPlus);
@@ -89,8 +89,8 @@ void run_modem(uint64_t data) {
 
   // Write SIGNAL
   for (i=0; i < 80; ++i) {
-    while(reg_read8(RX_WRITE_COUNT) > 6) {
-      printf("Waiting for modem queue to empty...\n");
+    while((write_count = reg_read8(RX_WRITE_COUNT)) > 6) {
+      printf("Waiting for modem queue (%d) to empty...\n", write_count);
     }
     reg_write64(RX_WRITE, packPlusPlus);
     reg_write64(RX_WRITE, packMinusPlus);
@@ -99,8 +99,8 @@ void run_modem(uint64_t data) {
 
   // Write SERVICE
   for (i=0; i < 80; ++i) {
-    while(reg_read8(RX_WRITE_COUNT) > 6) {
-      printf("Waiting for modem queue to empty...\n");
+    while((write_count = reg_read8(RX_WRITE_COUNT)) > 6) {
+      printf("Waiting for modem queue (%d) to empty...\n", write_count);
     }
     reg_write64(RX_WRITE, packMinusMinus);
     reg_write64(RX_WRITE, packMinusPlus);
@@ -109,8 +109,8 @@ void run_modem(uint64_t data) {
 
   // Write DATA
   for (i=0; i < 80; ++i) {
-    while(reg_read8(RX_WRITE_COUNT) > 6) {
-      printf("Waiting for modem queue to empty...\n");
+    while((write_count = reg_read8(RX_WRITE_COUNT)) > 6) {
+      printf("Waiting for modem queue (%d) to empty...\n", write_count);
     }
     reg_write64(RX_WRITE, packPlusMinus);
     reg_write64(RX_WRITE, packPlusPlus);
@@ -118,8 +118,8 @@ void run_modem(uint64_t data) {
 
   // Write zeros to end packet
   for (i=0; i < 80; ++i) {
-    while(reg_read8(RX_WRITE_COUNT) > 0) {
-      printf("Waiting for modem queue to empty...\n");
+    while((write_count = reg_read8(RX_WRITE_COUNT)) > 0) {
+      printf("Waiting for modem queue (%d) to empty...\n", write_count);
     }
     reg_write64(RX_WRITE, 0LL);
     reg_write64(RX_WRITE, 0LL);
