@@ -402,8 +402,8 @@ class Interleaverds1b[T <: Data:Real:BinaryRepresentation, U <: Data](params: Mo
 
   io.in.ready := state === sInit
   io.out.valid := state === sDone
-  io.out.bits.pktStart := reg_pktstart
-  io.out.bits.pktEnd := reg_pktend
+  io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+  io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
   //io.out.bits.bits := pout
   //io.cnt := iter
   io.sat := state
@@ -484,8 +484,8 @@ class Interleaverds2b[T <: Data, U <: Data](params: ModFFTParams[T,U]) extends M
   io.in.ready := state === sInit || state === sWork
   io.out.valid := state === sDone
   //io.out.bits.bits := pout
-  io.out.bits.pktStart := reg_pktstart
-  io.out.bits.pktEnd := reg_pktend
+  io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+  io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
   io.cnt := iter
   io.sat := state
   val perm1 = Wire(Vec(params.Ncbps,Bool()))
@@ -565,8 +565,8 @@ class Interleaverds2bqpsk[T <: Data,U <: Data](params: ModFFTParams[T,U]) extend
   io.in.ready := state === sInit || state === sWork
   io.out.valid := state === sDone
   //io.out.bits.bits := pout
-  io.out.bits.pktStart := reg_pktstart
-  io.out.bits.pktEnd := reg_pktend
+  io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+  io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
   io.cnt := iter
   io.sat := state
   val perm1 = Wire(Vec(NNcbps,Bool()))
@@ -645,8 +645,8 @@ class Interleaverds2bqam[T <: Data, U <: Data](params: ModFFTParams[T,U]) extend
   io.in.ready := state === sInit || state === sWork
   io.out.valid := state === sDone
   //io.out.bits.bits := pout
-  io.out.bits.pktStart := reg_pktstart
-  io.out.bits.pktEnd := reg_pktend
+  io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+  io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
   io.cnt := iter
   io.sat := state
   val perm1 = Wire(Vec(NNcbps,Bool()))
@@ -947,8 +947,8 @@ class BPSKCPMapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params:
    //mapping.io.in := rin.asUInt
    io.in.ready := state === sInit
    io.out.valid := state === sDone
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
    //io.par := rin.asUInt
     for (i <- 0 until 48){
       when (rin(i)){
@@ -1208,8 +1208,8 @@ class QPSKCPMapper1[T <: Data :Real:BinaryRepresentation, U <: Data](val params:
    //mapping.io.in := rin.asUInt
    io.in.ready := state === sInit
    io.out.valid := state === sDone
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
    //io.par := rin.asUInt
     for (i <- 0 until 48){
       when(!rin(2*i+1) && !rin(2*i)){
@@ -1272,8 +1272,8 @@ class QAM16CPMapper1[T <: Data :Real:BinaryRepresentation,U <: Data](val params:
    //mapping.io.in := rin.asUInt
    io.in.ready := state === sInit
    io.out.valid := state === sDone
-   io.out.bits.pktStart := reg_pktstart
-   io.out.bits.pktEnd := reg_pktend
+   io.out.bits.pktStart :=  Mux(io.out.valid,reg_pktstart,false.B)
+   io.out.bits.pktEnd:=  Mux(io.out.valid,reg_pktend,false.B)
    val zd = ConvertableTo[T].fromDouble(0.316)
    val z3d = ConvertableTo[T].fromDouble(0.949)
    //io.par := rin.asUInt
