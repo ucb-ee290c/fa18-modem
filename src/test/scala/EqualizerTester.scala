@@ -52,12 +52,12 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide]) e
   val maxCyclesWait = 2 * c.nLTFCarriers
 
   poke(c.io.out.ready, 1)
-  poke(c.io.in.valid, 1)
 
   for (trial <- trials) {
     var iqOut = Vector[Vector[Complex]]()
     var nIQWritten = 0
     for (iq <- trial.iqin) {
+      poke(c.io.in.valid, 1)
       pokeIQ(c, iq, nIQWritten == 0, nIQWritten == trial.iqin.length - 1)
       nIQWritten = nIQWritten + 1
       // wait until input is accepted
@@ -73,6 +73,12 @@ class EqualizerTester[T <: chisel3.Data](c: Equalizer[T], trials: Seq[IQWide]) e
         }
         step(1)
       }
+      iqOut = peekIQ(c, iqOut)
+      step(1)
+      // Simulate delayed data
+      poke(c.io.in.valid, 0)
+      iqOut = peekIQ(c, iqOut)
+      step(1)
       iqOut = peekIQ(c, iqOut)
       step(1)
     }
@@ -159,8 +165,8 @@ class ChannelInverterTester[T <: chisel3.Data](c: ChannelInverter[T], trials: Se
   */
 object FixedEqualizerTester {
   def apply(params: FixedEqualizerParams, trials: Seq[IQWide]): Boolean = {
-    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Equalizer(params)) {
-    dsptools.Driver.execute(() => new Equalizer(params), TestSetup.dspTesterOptions) {
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new Equalizer(params)) {
+    // dsptools.Driver.execute(() => new Equalizer(params), TestSetup.dspTesterOptions) {
       c => new EqualizerTester(c, trials)
     }
   }
