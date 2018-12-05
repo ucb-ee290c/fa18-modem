@@ -25,7 +25,7 @@ The Log-Likelihood Ratio(LLR) of decision bi,q is defined as LLR(bi,q) = log(P[b
 
 Therefore, LLR(bi,q) = (|Gch(i)|^2/4){min|y[i]-α|^2 - min|y[i]-β|^2}
 
-α ε S_(I,k)^1, β ε S_(I,k)^0, S_(I,k)^0 is compised the symbols with a '0' in position (I,k) and S_(I,k)^1 is the complementary
+α refers to the symbols with a '0' in position (I,k) and β is the complementary
 
 
 
