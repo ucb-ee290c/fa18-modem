@@ -2,8 +2,8 @@
 Kunmo Kim (kunmok@berkeley.edu)
 
 ## Overview 
-802.11a decoder deploys ,aximum likelihood sequence estimator based on the Viterbi algorithm. 
-The decoder receives 48 bits (1 OFDM symbol), then it checks if the OFDM symbol contains PLCP header information. If it does, then the Header extractor (a simple Viterbi decoder) extracts the coding rate and length. Coding rate information is used to update the puncturing matrix for the de-puncturing module, and length information is used to expect the arrival time of the last bit of PSDU. 
+802.11a decoder deploys maximum likelihood sequence estimator based on the Viterbi algorithm. 
+The decoder receives 48 bits (1 OFDM symbol), then it checks if the current OFDM symbol is corresponding to the PLCP header information. If it does, then the Header extractor (a simple Viterbi decoder) extracts the coding rate and length. Coding rate information is used to update the puncturing matrix for the de-puncturing module, and length information is used to expect the arrival time of the last bit of PSDU. 
 <br />
 Header information decoding (PLCP decoding) is done via "HeaderExtractor" block. PSDU Data decoding is done via "PathMetric", "BranchMetric", and "Traceback" blocks, which form a sliding-window Viterbi decoder. 
 <br />
@@ -24,7 +24,7 @@ Length is in octets
 De-puncturing block has two purposes: 1) store received input into a buffer 2) De-puncture the received PSDU 
 <br /> Puncturing matrix is contained in a PLCP frame. 'HeaderExtractor' extracts the header information and passes the coding rate information to the de-puncturing block. HeaderExtractor must decode PLCP within 64 clock cycles.
 Once the de-puncturing receives the coding rate information, it updates its coding rate then updates the proper modulation scheme to the demodulator block. The modulation scheme is chosen based on the puncturing matrix as shown in the table below. <br />
-Once it starts receiving PSDU, De-Puncturing block performs de-puncturing via filling up dummy bits (0), and then passes the 2-bit to path-metric at each clock cycle. 
+Once it starts receiving PSDU, De-Puncturing block performs de-puncturing via filling up dummy bits (0), and then passes n bits to path-metric at every clock cycle. 
 
 | Puncturing Matrix | Rate (Mbps) | Coding Rate | Modulation Scheme |
 |:-----------:|:-------------------:|:---------------:|:-----------:|
@@ -39,10 +39,10 @@ Once it starts receiving PSDU, De-Puncturing block performs de-puncturing via fi
 
    
 ### Arbiter 
-Arbiter block simply watches over incoming signals from demodulator, and identifies if it contains PLCP or PSDU. If it is identified as PLCP, Arbiter block informs De-Puncturing block to send data to HeaderExtractor. Otherwise, De-Puncturing re-order the input bits with dummy bits, and then passes data to path metric.  
+Arbiter block simply watches over incoming signals from demodulator, and identifies if it contains PLCP or PSDU. If it is identified as PLCP, Arbiter block informs De-Puncturing block to send data to HeaderExtractor. Otherwise, De-Puncturing re-order the input bits via de-puncturing, and then passes data to path metric.  
 
 ### HeaderExtractor
-HeaderExtractor is a simple Viterbi decoder that is specifically designed to decode PLCP and extract header information. This block computes branch metric and path metric blocks and then stores survival path into SRAM. Storing survival path into SRAM takes 24 clock cycles and decoding takes another 24 clock cycles (PLCP header is 48 bits coded with 1/2 coding rate and BPSK modulation). HeaderExtractor is designed to decode data within 48 clock cycles since the next PSDU OFDM symbol will be available 62 clock cycles after PCLP header is received. 
+HeaderExtractor is a simple Viterbi decoder that is specifically designed to decode PLCP and extract header information. This block computes branch metric and path metric blocks and then stores survival path into SRAM. Storing survival path into SRAM takes 24 clock cycles and decoding takes another 24 clock cycles (PLCP header is 48 bits coded with 1/2 coding rate and BPSK modulation). HeaderExtractor is designed to decode data within 48 clock cycles since the next PSDU OFDM symbol will be available 62 clock cycles after the PCLP header is received. 
 
 ### Path Metric + Branch Metric 
 Path metric block and branch metric block calculate the accumulated path metric over trellis. Inside of branch metric module, it instantiates an object called "Trellis". The "Trellis" object maps output values and next states as a function of input and current states, which eases the branch metric calculation. 
