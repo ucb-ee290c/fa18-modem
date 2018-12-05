@@ -7,6 +7,32 @@ import org.scalatest.{FlatSpec, Matchers}
 import breeze.math.{Complex}
 import breeze.signal.{fourierTr, iFourierTr}
 import breeze.linalg.{randomDouble}
+import 
+
+case class testVecs(){
+  val ssv = SSVConverter
+  val txInfo = ssv.toIntSeq("./src/test/scala/TX/OFDM_TX_bit_symbols_Len.txt")
+  val modType = txInfo(2)
+
+  if (modType == 0){
+    // QPSK
+    val bits = ssv.toInSeq("./src/test/scala/TX/OFDM_TX_bit_symbols.txt")
+  } else if (modType == 1){
+    // BPSK
+    val bits = ssv.toInSeq("./src/test/scala/TX/OFDM_TX_bit_symbols.txt")
+  } else if (modType == 2){
+    // 16QAM
+    val bits = ssv.toInSeq("./src/test/scala/TX/OFDM_TX_bit_symbols.txt")
+  } else if (modType == 3){
+    // 64QAM
+    val bits = ssv.toInSeq("./src/test/scala/TX/OFDM_TX_bit_symbols.txt")
+  }
+  
+  val groupedTXBits = bits.grouped(48)
+  
+
+class FixedTXSpec
+
 
 class FixedRXSpec extends FlatSpec with Matchers {
   behavior of "FixedRX"
