@@ -848,6 +848,7 @@ object ModFFTParams {
     val Ncbps = old_params.Ncbps
     val Nbpsc = old_params.Nbpsc
     val decimType    = newDecimType
+    val sdfRadix = old_params.sdfRadix
     //val length = old_params.length
   }
 }
@@ -868,7 +869,8 @@ case class FixedModFFTParams(
   binPoints: Int,
   decimType: String = "opt",
   fftType: String = "direct",
-  pipeline: Boolean = false
+  pipeline: Boolean = false,
+  sdfRadix: Int = 2
 ) extends ModFFTParams[FixedPoint, UInt] {
   val protoIQ = DspComplex(FixedPoint(dataWidth.W, (binPoints).BP))
   val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP))
@@ -1066,7 +1068,7 @@ object QPSKModFFTIO {
     new QPSKModFFTIO(params)
 }
 
-class QPSKModFFT[T <: Data :Real:BinaryRepresentation, U <:Data](val params: ModFFTParams[T,U]) extends Module {
+class QPSKModFFT[T <: Data :Real:BinaryRepresentation : ChiselConvertableFrom, U <:Data](val params: ModFFTParams[T,U]) extends Module {
     val io = IO(QPSKModFFTIO(params))
     val qpskmod =  Module( new QPSKCPModulator(params))
     val ifft_cal = Module( new IFFT(params))
