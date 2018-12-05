@@ -32,11 +32,11 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
 
   def peekDebug(c: PacketDetect[T]): Unit = {
     peek(c.io.debug.powerHigh)
-    peek(c.io.debug.powerLow)
-    peek(c.io.debug.corrComp)
-    peek(c.io.debug.corrNum)
-    peek(c.io.debug.corrDenom)
-    // peek(c.io.debug.iq)
+    // peek(c.io.debug.powerLow)
+    // peek(c.io.debug.corrComp)
+    // peek(c.io.debug.corrNum)
+    // peek(c.io.debug.corrDenom)
+    peek(c.io.debug.iq)
   }
 
   def expectIQ(c: PacketDetect[T], v: Vector[Complex], trial: IQ): Vector[Complex] = {
@@ -57,7 +57,9 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
 
   for (trial <- trials) {
     var iqOut = Vector[Complex]()
+    println("TRIAL BEGIN")
     for (iq <- trial.iqin) {
+      poke(c.io.in.valid, 1)
       poke(c.io.in.bits.iq, iq)
       // wait until input is accepted
       var cyclesWaiting = 0
@@ -72,6 +74,12 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
       // peekDebug(c)
       iqOut = expectIQ(c, iqOut, trial)
       step(1)
+      // Simulate delayed data
+      poke(c.io.in.valid, 0)
+      iqOut = expectIQ(c, iqOut, trial)
+      step(1)
+      iqOut = expectIQ(c, iqOut, trial)
+      step(1)
     }
     // wait for remaining output after pushing in IQ data
     poke(c.io.in.valid, 1)
@@ -80,6 +88,10 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
     while (cyclesWaiting < maxCyclesWait) {
       cyclesWaiting += 1
       // peekDebug(c)
+      poke(c.io.in.valid, 1)
+      iqOut = expectIQ(c, iqOut, trial)
+      step(1)
+      poke(c.io.in.valid, 0)
       iqOut = expectIQ(c, iqOut, trial)
       step(1)
     }
