@@ -52,13 +52,19 @@ object FFTUtil {
     }).getOrElse(0) // TODO: Raise error if not found?
   }
 
-  def is_prime(i :Int) : Boolean = {
+  def is_prime(i: Int) : Boolean = {
     if (i <= 1) false
     else if (i == 2) true
     else !(2 to (i - 1)).exists(x => i % x == 0)
   }
 
-  def is_power(i :Int) : Boolean = {
+  def is_power(i: Int) : Boolean = {
     factorize(i)._1.length == 1
+  }
+
+  def is_power_of(i: Int, base: Int) : Boolean = {
+    if (i == base) true
+    else if (i % base != 0) false
+    else is_power_of(i / base, base)
   }
 }

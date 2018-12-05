@@ -19,7 +19,7 @@ CTA stages are implemented with a decimation-in-time algorithm.
 Pipeline registers can be added between stages to improve the throughput of the block.
 
 ### In-place Structure -- SDF
-An in-place alternative to the direct form is often desired because by streaming data and reusing the hardware, computations are more efficient from a harware-utilization perspective at the cost of increased latency. For an in-place computation, the architecture used in this FFT is the radix-2 single-path delay feedback (SDF) architecture.
+An in-place alternative to the direct form is often desired because by streaming data and reusing the hardware, computations are more efficient from a harware-utilization perspective at the cost of increased latency. For an in-place computation, the architecture used in this FFT is the radix-2 and radix-4 single-path delay feedback (SDF) architecture.
 
 As per the classic SDF implementation, this FFT is composed of log N stages, where each stage contains a butterfly unit, delay line, and a twiddle factor multiplication. The delay line is used to buffer both the stage input and the butterfly output, as the butterfly requires two inputs spaced apart by some delay and outputs two samples spaced apart by the same delay. Thus, this implementation also has an FSM to generate the necessary control signals to switch between these two functionalities of the delay line, as well as to provide the correct twiddle factor. An unscrambler is instantiated to reorder the samples of this FFT.
 

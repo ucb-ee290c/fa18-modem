@@ -17,12 +17,14 @@ trait FFTParams[T <: Data] extends PacketBundleParams[T] {
   val protoTwiddle : DspComplex[T] // twiddle data type
   val fftType      : String        // type of FFT to use
   val decimType    : String        // if SDF FFT is being used, whether to use DIT, DIF, or whatever is more "optimal"
+  val sdfRadix     : Int           // if SDF FFT is being used, the radix
   val pipeline     : Boolean       // if direct FFT is being used, whether to pipeline the FFT stages
   lazy val width = numPoints       // overrides the `width` parameter of PacketBundleParams
 
   // Allowed values for some parameters
-  final val allowedFftTypes   = Seq("direct", "sdf")
-  final val allowedDecimTypes = Seq("dit", "dif", "opt")
+  final val allowedFftTypes      = Seq("direct", "sdf")
+  final val allowedDecimTypes    = Seq("dit", "dif", "opt")
+  final val allowedSDFRadices    = Seq(2, 4)
 
   // Common require functions used in FFT blocks
   def checkNumPointsPow2() {
@@ -37,6 +39,12 @@ trait FFTParams[T <: Data] extends PacketBundleParams[T] {
   def checkDecimType() {
     require(allowedDecimTypes.contains(decimType), s"""Decimation type must be one of the following: ${allowedDecimTypes.mkString(", ")}""")
   }
+  def checkSDFRadix() {
+    require(allowedSDFRadices.contains(sdfRadix), s"""Radix must be one of the following: ${allowedSDFRadices.mkString(", ")}""")
+  }
+  def checkNumPointsPowOfSDFRadix() {
+    require(FFTUtil.is_power_of(numPoints, sdfRadix), "number of points must be a power of the SDF radix")
+  }
   def getPowerInfo(): (Int, Int) = {
     (FFTUtil.factorize(numPoints)._1.head, FFTUtil.factorize(numPoints)._2.head)
   }
@@ -50,6 +58,7 @@ object FFTParams {
     val pipeline     = old_params.pipeline
     val fftType      = old_params.fftType
     val decimType    = old_params.decimType
+    val sdfRadix     = old_params.sdfRadix
   }
   // Override decimation type
   def apply[T <: Data](old_params: FFTParams[T], newDecimType: String): FFTParams[T] = new FFTParams[T] {
@@ -59,6 +68,7 @@ object FFTParams {
     val pipeline     = old_params.pipeline
     val fftType      = old_params.fftType
     val decimType    = newDecimType
+    val sdfRadix     = old_params.sdfRadix
   }
 }
 
@@ -72,7 +82,8 @@ case class FixedFFTParams(
   numPoints   : Int,
   pipeline    : Boolean = true,
   fftType     : String = "sdf",
-  decimType   : String = "opt"
+  decimType   : String = "opt",
+  sdfRadix    : Int = 2
 ) extends FFTParams[FixedPoint] {
   val protoIQ      = DspComplex(FixedPoint(dataWidth.W, binPoint.BP))
   val protoTwiddle = DspComplex(FixedPoint(twiddleWidth.W, (twiddleWidth-2).BP)) // to allow for 1, -1, j, and -j to be expressed.
