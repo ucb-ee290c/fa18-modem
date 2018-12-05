@@ -161,12 +161,14 @@ class SDFChainRadix2[T <: Data : Real : BinaryRepresentation](val params: FFTPar
   val cntr      = RegInit(0.U(log2Up(params.numPoints).W))
   val cntr_next = Wire(cntr.cloneType)
 
+  val stage_en = RegNext(io.in.fire())
+
   // Instantiate and connect control signals of stages
   val sdf_stages = delayLog2s.zip(delays).zip(cumulative_delays).map {
     case ((delayLog2, delay), cumulative_delay) => {
       val stage = Module(new SDFStageRadix2(params, delay=delay))
       stage.io.cntr         := (cntr - cumulative_delay.U)(delayLog2, 0)
-      stage.io.en           := state === sDone || io.in.fire()
+      stage.io.en           := state === sDone || stage_en
       stage
     }
   }
@@ -180,7 +182,6 @@ class SDFChainRadix2[T <: Data : Real : BinaryRepresentation](val params: FFTPar
   val latencyCounter = RegInit(0.U(log2Up(cumulative_delays.last + 1).W))
 
   // Output interface connections
-  // TODO: Do we need a Queue?
   io.out.bits  := sdf_stages.last.io.out
   io.out.valid := state === sDone
   io.in.ready  := io.out.ready && latencyCounter === 0.U
@@ -249,12 +250,14 @@ class SDFChainRadix4[T <: Data : Real : BinaryRepresentation](val params: FFTPar
   val cntr      = RegInit(0.U(log2Up(params.numPoints).W))
   val cntr_next = Wire(cntr.cloneType)
 
+  val stage_en = RegNext(io.in.fire())
+
   // Instantiate and connect control signals of stages
   val sdf_stages = delays.zip(cumulative_latencies).map {
     case (delay, cumulative_latency) => {
       val stage = Module(new SDFStageRadix4(params, delay=delay))
       stage.io.cntr         := (cntr - cumulative_latency.U)
-      stage.io.en           := state === sDone || io.in.fire()
+      stage.io.en           := state === sDone || stage_en
       stage
     }
   }
@@ -267,7 +270,6 @@ class SDFChainRadix4[T <: Data : Real : BinaryRepresentation](val params: FFTPar
 
   val latencyCounter = RegInit(0.U(log2Up(cumulative_latencies.last + 1).W))
   // Output interface connections
-  // TODO: Do we need a Queue?
   io.out.bits  := sdf_stages.last.io.out
   io.out.valid := state === sDone
   io.in.ready  := io.out.ready && latencyCounter === 0.U
