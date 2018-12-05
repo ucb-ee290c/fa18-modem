@@ -7,73 +7,78 @@ import chisel3.util._
 import dsptools.numbers._
 
 /**
- * Base class for Serializer/Deserializer parameters
+ * Base classes for serializer and deserializer parameters
  *
- * These are type generic
+ * These are type generic.
+ * Note that there are 2 versions of these parameters.
+ * One for the serializer/deserialization of PacketBundles, and another for BitsBundles.
+ * TODO: With a better class hierarchy between PacketBundles and BitsBundles (as opposed to them being separate identities),
+ * there would not be a need for two copies of these parameter classes, as well as the serializer and deserializer modules themselves.
  */
-trait SerDesParams[T <: Data] extends PacketBundleParams[T] {
-  val ratio: Int
-  lazy val width = ratio
+trait PacketSerDesParams[T <: Data] extends PacketBundleParams[T] {
+  val ratio: Int         // serialization/deserialization ratio
+  lazy val width = ratio // overrides the `width` parameter of PacketBundleParams
 }
-object SerDesParams {
-  def apply[T <: Data](proto: DspComplex[T], serdesRatio: Int): SerDesParams[T] = new SerDesParams[T] {
+object PacketSerDesParams {
+  def apply[T <: Data](proto: DspComplex[T], serdesRatio: Int): PacketSerDesParams[T] = new PacketSerDesParams[T] {
     val protoIQ = proto
-    val ratio = serdesRatio
+    val ratio   = serdesRatio
   }
 }
 
 trait BitsSerDesParams[T <: Data] extends BitsBundleParams[T] {
-  val ratio: Int
-  val bitsWidth: Int
-  lazy val width = ratio
+  val ratio: Int             // serialization/deserialization ratio
+  lazy val bitsWidth = ratio // overrides the `width` parameter of BitsBundleParams
 }
 object BitsSerDesParams {
-  def apply[T <: Data](proto: T, serdesRatio: Int, bitsWidth1: Int): BitsSerDesParams[T] = new BitsSerDesParams[T] {
+  def apply[T <: Data](proto: T, serdesRatio: Int): BitsSerDesParams[T] = new BitsSerDesParams[T] {
     val protoBits = proto
-    val bitsWidth = bitsWidth1
-    val ratio = serdesRatio
+    val ratio     = serdesRatio
   }
 }
 
+/**
+ * Type specific case classes for the parameter base classes
+ */
+
+// FixedPoint for serialization/deserialization of PacketBundles
+case class FixedPacketSerDesParams(
+  ratio    : Int,
+  dataWidth: Int, // width of input and output
+  binPoint : Int  // binary point of input and output
+) extends PacketSerDesParams[FixedPoint] {
+  val protoIQ = DspComplex(FixedPoint(dataWidth.W, binPoint.BP))
+}
+
+// UInt for serialization/deserialization of BitsBundles
 case class UIntBitsSerDesParams(
-  ratio: Int,
-  // width of Input and Output
-  bitsWidth: Int,
-  dataWidth: Int,
-  maxVal: Int
+  ratio    : Int,
+  dataWidth: Int // width of input and output
 ) extends BitsSerDesParams[UInt] {
   val protoBits = UInt(dataWidth.W)
 }
 
-
 /**
- * Serializer/Deserializer parameters object for fixed-point Serializer/Deserializer
+ * Bundle type as IO for PacketDeserializer modules
  */
-case class FixedSerDesParams(
-  ratio: Int,
-  // width of Input and Output
-  dataWidth: Int,
-  maxVal: Int
-) extends SerDesParams[FixedPoint] {
-  val protoIQ = DspComplex(FixedPoint(dataWidth.W, (dataWidth - 2 - log2Ceil(maxVal)).BP))
-}
-
-/**
- * Bundle type as IO for Deserializer modules
- */
-class DeserializerIO[T <: Data : Ring](params: SerDesParams[T]) extends Bundle {
+class PacketDeserializerIO[T <: Data : Ring](params: PacketSerDesParams[T]) extends Bundle {
   val in  = Flipped(Decoupled(PacketBundle(1, params.protoIQ)))
   val out = Decoupled(PacketBundle(params))
 
-  override def cloneType: this.type = DeserializerIO(params).asInstanceOf[this.type]
+  override def cloneType: this.type = PacketDeserializerIO(params).asInstanceOf[this.type]
 }
-object DeserializerIO {
-  def apply[T <: Data : Ring](params: SerDesParams[T]): DeserializerIO[T] =
-    new DeserializerIO(params)
+object PacketDeserializerIO {
+  def apply[T <: Data : Ring](params: PacketSerDesParams[T]): PacketDeserializerIO[T] =
+    new PacketDeserializerIO(params)
 }
 
-class Deserializer[T <: Data : Real : BinaryRepresentation](val params: SerDesParams[T]) extends Module {
-  val io = IO(DeserializerIO(params))
+/**
+ * Deserializer module.
+ *
+ * There's only one defined for deserializing PacketBundles because none is needed for BitsBundles.
+ */
+class PacketDeserializer[T <: Data : Real : BinaryRepresentation](val params: PacketSerDesParams[T]) extends Module {
+  val io = IO(PacketDeserializerIO(params))
 
   val sIdle :: sComp :: sDone :: Nil = Enum(3)
   val state = RegInit(sIdle)
@@ -129,15 +134,15 @@ class Deserializer[T <: Data : Real : BinaryRepresentation](val params: SerDesPa
 /**
  * Bundle type as IO for Serializer modules
  */
-class SerializerIO[T <: Data : Ring](params: SerDesParams[T]) extends Bundle {
+class PacketSerializerIO[T <: Data : Ring](params: PacketSerDesParams[T]) extends Bundle {
   val in  = Flipped(Decoupled(PacketBundle(params)))
   val out = Decoupled(PacketBundle(1, params.protoIQ))
 
-  override def cloneType: this.type = SerializerIO(params).asInstanceOf[this.type]
+  override def cloneType: this.type = PacketSerializerIO(params).asInstanceOf[this.type]
 }
-object SerializerIO {
-  def apply[T <: Data : Ring](params: SerDesParams[T]): SerializerIO[T] =
-    new SerializerIO(params)
+object PacketSerializerIO {
+  def apply[T <: Data : Ring](params: PacketSerDesParams[T]): PacketSerializerIO[T] =
+    new PacketSerializerIO(params)
 }
 
 class BitsSerializerIO[T <: Data](params: BitsSerDesParams[T]) extends Bundle {
@@ -151,9 +156,13 @@ object BitsSerializerIO {
     new BitsSerializerIO(params)
 }
 
-
-class Serializer[T <: Data : Real : BinaryRepresentation](val params: SerDesParams[T]) extends Module {
-  val io = IO(SerializerIO(params))
+/**
+ * Serializer modules
+ *
+ * Two are defined, one for PacketBundle and another for BitsBundle.
+ */
+class PacketSerializer[T <: Data : Real : BinaryRepresentation](val params: PacketSerDesParams[T]) extends Module {
+  val io = IO(PacketSerializerIO(params))
 
   val sIdle :: sComp :: Nil = Enum(2)
   val state = RegInit(sIdle)
@@ -234,15 +243,11 @@ class BitsSerializer[T <: Data](val params: BitsSerDesParams[T]) extends Module 
 
   cntr := cntr_next
 
-  //io.out.bits.iq(0) := in_flopped.iq(cntr)
   io.out.bits.bits(0) := in_flopped.bits(cntr)
 
   io.out.bits.pktStart := in_flopped.pktStart && (cntr === 0.U)
   io.out.bits.pktEnd := in_flopped.pktEnd && serLast
   io.out.valid := state === sComp
-  // Serializer can receive more data if...
-  // 1. idle
-  // 2. done with current in_flopped
   io.in.ready := state === sIdle || (io.out.fire() && serLast)
 }
 

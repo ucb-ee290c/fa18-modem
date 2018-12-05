@@ -18,10 +18,34 @@ case class IQ(
   * Run each trial in @trials
   */
 class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ], tolLSBs: Int = 2) extends DspTester(c) {
-  def getIQOut(c: PacketDetect[T], v: Vector[Complex]): Vector[Complex] = {
+  def getIQOut(c: PacketDetect[T], v: Vector[Complex], start: Boolean, end: Boolean): Vector[Complex] = {
     var vout = v
     if (peek(c.io.out.valid)) {
-      //vout = vout :+ peek(c.io.out.bits.iq(0))
+      vout = vout :+ peek(c.io.out.bits.iq(0))
+      expect(c.io.out.bits.pktStart, start)
+      expect(c.io.out.bits.pktEnd, end)
+    } else {
+      peek(c.io.out.bits.pktEnd)
+    }
+    vout
+  }
+
+  def peekDebug(c: PacketDetect[T]): Unit = {
+    peek(c.io.debug.powerHigh)
+    peek(c.io.debug.powerLow)
+    peek(c.io.debug.corrComp)
+    peek(c.io.debug.corrNum)
+    peek(c.io.debug.corrDenom)
+    // peek(c.io.debug.iq)
+  }
+
+  def expectIQ(c: PacketDetect[T], v: Vector[Complex], trial: IQ): Vector[Complex] = {
+    var vout = v
+    val doExpect = !trial.iqout.isEmpty
+    if (doExpect) {
+      vout = getIQOut(c, v, v.length == 0, v.length == trial.iqout.get.length - 1)
+    } else {
+      vout = getIQOut(c, v, false, false)
     }
     vout
   }
@@ -42,16 +66,11 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
         if (cyclesWaiting >= maxCyclesWait) {
           expect(false, "waited for input too long")
         }
-        iqOut = getIQOut(c, iqOut)
+        iqOut = expectIQ(c, iqOut, trial)
         step(1)
       }
-      iqOut = getIQOut(c, iqOut)
-      peek(c.io.debug.powerHigh)
-      peek(c.io.debug.powerLow)
-      peek(c.io.debug.corrComp)
-      peek(c.io.debug.corrNum)
-      peek(c.io.debug.corrDenom)
-//      peek(c.io.debug.iq)
+      // peekDebug(c)
+      iqOut = expectIQ(c, iqOut, trial)
       step(1)
     }
     // wait for remaining output after pushing in IQ data
@@ -60,22 +79,12 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
     var cyclesWaiting = 0
     while (cyclesWaiting < maxCyclesWait) {
       cyclesWaiting += 1
-      peek(c.io.debug.powerHigh)
-      peek(c.io.debug.powerLow)
-      peek(c.io.debug.corrComp)
-      peek(c.io.debug.corrNum)
-      peek(c.io.debug.corrDenom)
-      //      peek(c.io.debug.iq)
-      iqOut = getIQOut(c, iqOut)
+      // peekDebug(c)
+      iqOut = expectIQ(c, iqOut, trial)
       step(1)
     }
-    peek(c.io.debug.powerHigh)
-    peek(c.io.debug.powerLow)
-    peek(c.io.debug.corrComp)
-    peek(c.io.debug.corrNum)
-    peek(c.io.debug.corrDenom)
-    //    peek(c.io.debug.iq)
-    iqOut = getIQOut(c, iqOut)
+    // peekDebug(c)
+    iqOut = expectIQ(c, iqOut, trial)
     // set desired tolerance
     // in this case, it's pretty loose (2 bits)
     // can you get tolerance of 1 bit? 0? what makes the most sense?
@@ -99,8 +108,8 @@ class PacketDetectTester[T <: chisel3.Data](c: PacketDetect[T], trials: Seq[IQ],
   */
 object FixedPacketDetectTester {
   def apply(params: FixedPacketDetectParams, trials: Seq[IQ]): Boolean = {
-    // chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new PacketDetect(params)) {
-    dsptools.Driver.execute(() => new PacketDetect(params), TestSetup.dspTesterOptions) {  
+    chisel3.iotesters.Driver.execute(Array("-tbn", "firrtl", "-fiwv"), () => new PacketDetect(params)) {
+    // dsptools.Driver.execute(() => new PacketDetect(params), TestSetup.dspTesterOptions) {
       c => new PacketDetectTester(c, trials)
     }
   }

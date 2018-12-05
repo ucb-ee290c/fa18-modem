@@ -1,19 +1,32 @@
 package modem
 
 import chisel3._
+import dsptools.numbers.Real
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
 // Description: Trellis obj contains next-state table and output tables for all the possible data transitions
 // This object is used in brach-metric calculation
-class Trellis[T <: Data](params: CodingParams[T]){
-  require(params.m > 1)
-  require(params.k > 0)
-  require(params.n > 0)
+class Trellis[T <: Data, U <: Data](params: CodingParams[T, U]){
+  /*********************************
+  Following is for G=(7, 5)
+  State | In  | Out | Next State
+  0     | 0   | 00  | 0
+  0     | 1   | 11  | 2
+
+  2     | 0   | 10  | 1
+  2     | 1   | 01  | 3
+
+  1     | 0   | 11  | 0
+  1     | 1   | 00  | 2
+
+  3     | 0   | 01  | 1
+  3     | 1   | 10  | 3
+  *********************************/
 
   val numInputs   = math.pow(2.0, params.k.asInstanceOf[Double]).asInstanceOf[Int]
-  val output_table = Array.ofDim[Int](params.nStates, numInputs, params.n)       // array storing outputs
-  val nextstate_table = Array.ofDim[Int](params.nStates, numInputs, params.m)    // array storing next states
-  val nextstate_dec = Array.ofDim[Int](params.nStates, numInputs)       // array storing next states in decimal
+  val output_table = Array.ofDim[Int](params.nStates, numInputs, params.n)        // array storing outputs
+  val nextstate_table = Array.ofDim[Int](params.nStates, numInputs, params.m)     // array storing next states
+  val nextstate_dec = Array.ofDim[Int](params.nStates, numInputs)                 // array storing next states in decimal
   val outbits = Array.fill(params.n){0}
   val shiftReg = Array.fill(params.m){0}
   val generatorArray = Array.fill(params.K){0}
@@ -35,38 +48,10 @@ class Trellis[T <: Data](params: CodingParams[T]){
         } else {
           outbits(r) = ((outbits(r) + (currentInputs * generatorArray(0))) % 2) * 2 - 1
         }
-        output_table(currentStates)(currentInputs)(r) = outbits(r)
-        nextstate_table(currentStates)(currentInputs)(r) = shiftReg(r)
+        output_table(currentStates)(currentInputs)(r) = outbits(r)        // output value corresponding to current state & input
+        nextstate_table(currentStates)(currentInputs)(r) = shiftReg(r)    // next state corresponding to current state & input
       }
       nextstate_dec(currentStates)(currentInputs) = CodingUtils.bitarray2dec(nextstate_table(currentStates)(currentInputs))
     }
   }
-  /*
-Following is for G=(7, 5)
-State | In  | Out | Next State
-0     | 0   | 00  | 0
-0     | 1   | 11  | 2
-
-2     | 0   | 10  | 1
-2     | 1   | 01  | 3
-
-1     | 0   | 11  | 0
-1     | 1   | 00  | 2
-
-3     | 0   | 01  | 1
-3     | 1   | 10  | 3
-*/
-//  val currentstate_dec = Array.ofDim[Int](params.nStates, numInputs)    // array storing current states
-//  for (currentInputs <- 0 until numInputs){
-//    for (currentStates <- 0 until params.nStates){
-//      for (nextStates <- 0 until params.nStates){
-//        if (nextstate_dec(currentStates)(currentInputs) == nextStates) {
-//          currentstate_dec(nextStates)(currentStates) = nextStates
-//        }
-//      }
-//    }
-//  }
-
-
-
 }
