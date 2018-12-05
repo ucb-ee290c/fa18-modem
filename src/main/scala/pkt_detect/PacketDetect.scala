@@ -140,23 +140,19 @@ object PowerMeter {
 class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetectParams[T]) extends Module {
   val io = IO(PacketDetectIO(params))
 
-  val windowSize = params.correlationStride + params.correlationWindow
+  val windowSize = params.correlationStride + params.correlationWindow + 1 // Give ourselves an extra cycle to handle pktStart & pktEnd processing
   val complexZero = Wire(params.protoIQ)
   complexZero.real := Real[T].zero
   complexZero.imag := Real[T].zero
 
   // State machine states
-  val sFlushing :: sNoPkt :: sNoPktValid :: sPkt :: sPktValid :: Nil = Enum(5)
+  val sFlushing :: sPkt :: sNoPkt :: Nil = Enum(3)
   val state = RegInit(sFlushing)
   val nextState = Wire(sFlushing.cloneType)
+  state := nextState
   val flushCounter = RegInit(0.U(8.W))
-  val isValid = state === sNoPktValid || state === sPktValid
-  val isPkt = state === sPkt || state === sPktValid
-  val isNextValid = nextState === sNoPktValid || nextState === sPktValid
-  val isNextPkt = nextState === sPkt || nextState === sPktValid
 
   // Store inputs for processing
-  val iqBuf = RegNext(io.in.bits.iq)
   val dataVec = Reg(Vec(windowSize, params.protoIQ))
   when(state === sFlushing) {
     dataVec(0) := complexZero
@@ -164,8 +160,8 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
       dataVec(i) := dataVec(i - 1)
     }
   }
-  .elsewhen(state === sPktValid || state === sNoPktValid) {
-    dataVec(0) := iqBuf
+  .elsewhen(io.in.fire()) {
+    dataVec(0) := io.in.bits.iq
     for (i <- 1 until windowSize) {
       dataVec(i) := dataVec(i - 1)
     }
@@ -177,7 +173,8 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   }
 
   // Power Threshold
-  val powerMeter = PowerMeter(VecInit(dataVec.drop(dataVec.length - params.powerThreshWindow)), params)
+  // Leave one sample at the end for pktEnd, pktStart delay
+  val powerMeter = PowerMeter(VecInit(dataVec.slice(windowSize - params.powerThreshWindow - 1, windowSize - 1)), params)
   val powerHigh = powerMeter.io.powerHigh
   val powerLow = powerMeter.io.powerLow
 
@@ -198,48 +195,36 @@ class PacketDetect[T <: Data : Real : BinaryRepresentation](params: PacketDetect
   }
 
   // State Update
-  when (flushCounter < windowSize.U) {
-    nextState := sFlushing // Do an initial flush of the registers
+  when (state === sFlushing) {
+    nextState := Mux(flushCounter < windowSize.U, sFlushing, sNoPkt) // Do an initial flush of the registers
     flushCounter := flushCounter + 1.U
   }.otherwise {
     flushCounter := flushCounter
-    when(io.in.valid) {
+    when(io.in.fire()) {
       when(powerHigh && corrComp) {
-        nextState := sPktValid
+        nextState := sPkt
       }.elsewhen(powerLow) {
-        nextState := sNoPktValid
-      }.elsewhen(isPkt) {
-        nextState := sPktValid
+        nextState := sNoPkt
       }.otherwise {
-        nextState := sNoPktValid
+        nextState := state
       }
     }.otherwise {
-      when(powerHigh && corrComp) {
-        nextState := sPkt
-      }.elsewhen(powerLow) {
-        nextState := sNoPkt
-      }.elsewhen(isPkt) {
-        nextState := sPkt
-      }.otherwise {
-        nextState := sNoPkt
-      }
+      nextState := state
     }
   }
-  state := nextState
+  printf("state %d\n", state.asUInt)
+  printf("nextState %d\n", nextState.asUInt)
 
   // Output Logic
-  io.in.ready := state =!= sFlushing
+  // Ready for more data when not in a packet and thus not pushing data out or when next block is ready
+  io.in.ready := (state =!= sFlushing) && ((state === sNoPkt) || io.out.ready)
   // pktStart goes high on transition from nopkt to pkt
-  val pktStartReg = RegNext(!isPkt && isNextPkt)
-  // val pktEndReg  = RegNext(isPkt && !isNextPkt)
-  // We need to delay these signals to let pktEnd have the visibility into nextState it needs
-  val validReg = RegNext(isNextPkt && isNextValid)
-  val iqReg = RegNext(dataVec(dataVec.length - 1))
+  val pktStartReg = RegEnable(state === sNoPkt && nextState === sPkt, io.in.fire())
   // Assign outputs
   io.out.bits.pktStart := pktStartReg
-  io.out.bits.pktEnd  := isPkt && !isNextPkt
-  io.out.bits.iq(0) := iqReg
-  io.out.valid := validReg
+  io.out.bits.pktEnd  := (state === sPkt) && (nextState === sNoPkt)
+  io.out.bits.iq(0) := dataVec(windowSize - 1)
+  io.out.valid := (state === sPkt) && io.in.valid
 
   // debug output
   io.debug.corrComp := corrComp
