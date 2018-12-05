@@ -166,7 +166,7 @@ class SDFChainRadix2[T <: Data : Real : BinaryRepresentation](val params: FFTPar
     case ((delayLog2, delay), cumulative_delay) => {
       val stage = Module(new SDFStageRadix2(params, delay=delay))
       stage.io.cntr         := (cntr - cumulative_delay.U)(delayLog2, 0)
-      stage.io.en           := Mux(state === sDone, true.B, io.in.fire())
+      stage.io.en           := state === sDone || io.in.fire()
       stage
     }
   }
@@ -254,7 +254,7 @@ class SDFChainRadix4[T <: Data : Real : BinaryRepresentation](val params: FFTPar
     case (delay, cumulative_latency) => {
       val stage = Module(new SDFStageRadix4(params, delay=delay))
       stage.io.cntr         := (cntr - cumulative_latency.U)
-      stage.io.en           := io.in.fire()
+      stage.io.en           := state === sDone || io.in.fire()
       stage
     }
   }
@@ -265,11 +265,12 @@ class SDFChainRadix4[T <: Data : Real : BinaryRepresentation](val params: FFTPar
     stg_io.out
   })
 
+  val latencyCounter = RegInit(0.U(log2Up(cumulative_latencies.last + 1).W))
   // Output interface connections
   // TODO: Do we need a Queue?
   io.out.bits  := sdf_stages.last.io.out
-  io.out.valid := ShiftRegister(io.in.fire(), cumulative_latencies.last + 1, resetData=false.B, en=true.B)
-  io.in.ready  := io.out.ready
+  io.out.valid := state === sDone
+  io.in.ready  := io.out.ready && latencyCounter === 0.U
 
   // Controller FSM
   cntr_next  := cntr
@@ -282,12 +283,19 @@ class SDFChainRadix4[T <: Data : Real : BinaryRepresentation](val params: FFTPar
     is (sComp) {
       when (io.in.fire()) {
         cntr_next := cntr + 1.U
-        when (cntr === (params.numPoints - 2).U) { state_next := sDone }
+        when (cntr === (params.numPoints - 2).U) {
+          state_next := sDone
+          latencyCounter := cumulative_latencies.last.U
+        }
       }
     }
     is (sDone) {
+      when (io.out.fire()) {
+        latencyCounter := latencyCounter - 1.U
+      }
+      cntr_next := cntr + 1.U
       when      (io.in.fire())  { state_next := sComp }
-      .elsewhen (io.out.fire()) { state_next := sIdle }
+      .elsewhen (latencyCounter === 0.U) { state_next := sIdle }
     }
   }
 
