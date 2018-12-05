@@ -16,3 +16,5 @@ simulator-*
 *.DS_Store
 *.swp
 *.vim
+*~
+.nfs*
