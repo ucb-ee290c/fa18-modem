@@ -124,6 +124,8 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   val cfoEstimator = Module( new CFOCorrection(rxParams.cfoParams) )
   val cyclicPrefix = Module( new CyclicPrefix(rxParams.cyclicPrefixParams) )
   val fft = Module( new FFT(rxParams.fftParams) )
+  //val deserializer = Module( new PacketDeserializer(PacketSerDesParams(rxParams.fftParams.protoIQ.cloneType, rxParams.fftParams.numPoints)) )
+  //rxParams.fftParams))
   val eq = Module( new Equalizer(rxParams.equalizerParams) )
   // val cfoPilot = Module( new CFOPilot(cfoParams) )
   val demod = Module( new Demodulator(rxParams.demodParams) )
@@ -147,9 +149,11 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
 
   // FFT
   fft.io.in <> cyclicPrefix.io.out
+  //deserializer.io.in <> cyclicPrefix.io.out
 
   // EQ
   eq.io.in <> fft.io.out
+  //eq.io.in <>  deserializer.io.out
 
   // CFO Pilot Estimation
   // cfoPilot.io.in := fft.io.out
@@ -162,7 +166,6 @@ class RX[T<:Data:Real:BinaryRepresentation, U<:Data:Real:BinaryRepresentation, V
   decode.io.in <> demod.io.out
 
   io.out <> decode.io.out
-  io.in.ready := true.B
 
 }
 
