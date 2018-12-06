@@ -28,7 +28,7 @@ object FinalTxParams {
 
             val preambleParams = FixedPreambleParams(iqWidth = width)
 
-	        val serParams = UIntBitsSerDesParams(dataWidth = 1, ratio = 48)
+	        val serParams = UIntBitsSerDesParams(dataWidth = 1, ratio = 24)
 
             val ifftParams = FixedFFTParams(dataWidth = width, twiddleWidth = width,
                                            numPoints = nfft, binPoint = width - 3)

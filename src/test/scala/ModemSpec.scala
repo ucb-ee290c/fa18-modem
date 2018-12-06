@@ -4,32 +4,46 @@ import chisel3._
 import chisel3.experimental.FixedPoint
 import dsptools.numbers._
 import org.scalatest.{FlatSpec, Matchers}
-import breeze.math.{Complex}
+import breeze.math.{Complex, pow}
 import breeze.signal.{fourierTr, iFourierTr}
 import breeze.linalg.{randomDouble}
-import 
+import
 
-case class testVecs(){
+case class testTXVecs(){
   val ssv = SSVConverter
+  val csv = CSVConverter
   val txInfo = ssv.toIntSeq("./src/test/scala/TX/OFDM_TX_bit_symbols_Len.txt")
   val modType = txInfo(2)
+  // val signalVec = BigInt("d30080",16).toString(2).split("").map{_.toInt}
+  // val serviceVec = BigInt("f0f0f0",16).toString(2).split("").map{_.toInt}
+  val signalVec = BigInt("d30080",16).toInt
+  val serviceVec = BigInt("f0f0f0",16).toInt
+  val bits = ssv.toInSeq("./src/test/scala/TX/OFDM_TX_bit_symbols.txt")
 
   if (modType == 0){
     // QPSK
-    val bits = ssv.toInSeq("./src/test/scala/TX/OFDM_TX_bit_symbols.txt")
+    val mod_ctrl = 1
   } else if (modType == 1){
     // BPSK
-    val bits = ssv.toInSeq("./src/test/scala/TX/OFDM_TX_bit_symbols.txt")
+    val mod_ctrl = 0
   } else if (modType == 2){
     // 16QAM
-    val bits = ssv.toInSeq("./src/test/scala/TX/OFDM_TX_bit_symbols.txt")
+    val mod_ctrl = 2
   } else if (modType == 3){
     // 64QAM
-    val bits = ssv.toInSeq("./src/test/scala/TX/OFDM_TX_bit_symbols.txt")
+    // val mod_ctrl = 3
   }
-  
-  val groupedTXBits = bits.grouped(48)
-  
+
+  val expectIQ = csv.toComplex("./src/test/scala/TX/OFDM_TX_sim_out_i.txt", "./src/test/scala/TX/OFDM_TX_sim_out_q.txt")
+  val txbits = signalVec :+ serviceVec :+ bits
+
+  val isHeadVec = 1 +: Seq.fill(txbits.length/24 - 1)(0)
+  val puncMatrix = BigInt("d",16).toString(2).split("").map{_.toInt}
+
+  val groupedTXBits = txbits.grouped(24)
+  val groupedTXInts = groupedTXBits.map{x => x.reverse.zipWithIndex.map{case(x,idx) => pow(2,idx) * x}.reduce{_+_}}
+}
+
 
 class FixedTXSpec
 
