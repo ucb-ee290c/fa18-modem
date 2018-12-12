@@ -2,8 +2,9 @@ package modem
 
 import chisel3._
 import chisel3.util._
+//import cordic.CordicParams
 import dsptools.numbers._
-import modem.{BranchMetric, CodingParams, Trellis}
+// import modem.{BranchMetric, CodingParams, Trellis}
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
 

@@ -2,7 +2,6 @@ package modem
 
 import chisel3._
 import chisel3.util._
-import chisel3.experimental.FixedPoint
 import dsptools.numbers._
 //import freechips.rocketchip.diplomacy.LazyModule
 //import freechips.rocketchip.subsystem.BaseSubsystem
