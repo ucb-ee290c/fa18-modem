@@ -57,20 +57,23 @@ class ConvCoding[T <: Data, U <: Data](params: CodingParams[T, U]) extends Modul
   4) when either io.in.valid or io.in.ready goes to 0, stop receiving data
   5) if tail-biting is enabled, store last 'm' bits from previous input data back to the shift registers
   */
-  when(io.in.fire() === true.B){
-    shiftReg(0) := io.in.bits         // receive input from FIFO. I probably need to use MUX
-    (1 to params.m).reverse.map(i => {shiftReg(i) := shiftReg(i-1) })  // start bit shifting
+  when(io.in.fire() === true.B) {
+    shiftReg(0) := io.in.bits // receive input from FIFO. I probably need to use MUX
+    (1 to params.m).reverse.map(i => {
+      shiftReg(i) := shiftReg(i - 1)
+    }) // start bit shifting
 
     // if tail-biting is selected, store last 'm' bits into termReg
-    when(params.tailBitingEn.asBool() === true.B){
-      (0 until params.m).map(i => { termReg(i) := shiftReg(params.m - (i+1)) })
-      termReg(params.m) := io.in.bits
-    }
-  }.elsewhen(io.in.fire() === false.B) {    // io.in.valid === false.B indicate end of input sequence
-    when(params.tailBitingEn.asBool() === true.B){
-      (0 to params.m).map(i => { shiftReg(i) := termReg(i) })
-    }
+    //    when(params.tailBitingEn.asBool() === true.B){
+    //      (0 until params.m).map(i => { termReg(i) := shiftReg(params.m - (i+1)) })
+    //      termReg(params.m) := io.in.bits
+    //    }
   }
+//  }.elsewhen(io.in.fire() === false.B) {    // io.in.valid === false.B indicate end of input sequence
+//    when(params.tailBitingEn.asBool() === true.B){
+//      (0 to params.m).map(i => { shiftReg(i) := termReg(i) })
+//    }
+//  }
 
   // connect wires to the output of each memory element
   (0 to params.m).map(i => { regWires(i) := shiftReg(i) })
