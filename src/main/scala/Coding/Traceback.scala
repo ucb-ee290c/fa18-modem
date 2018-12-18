@@ -275,30 +275,5 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
     outValidReg := true.B
   }
 
-  io.out.valid      := outValid
+  io.out.valid  := outValid
 }
-
-//printf(p" last PM Reg = ${lastPMReg} ********** ########## \n ")
-//printf(p" last SP Reg0 = ${lastSPReg(0)}  ********** ########## \n")
-//printf(p" last SP Reg1 = ${lastSPReg(1)}  ********** ########## \n")
-//printf(p" last SP Reg2 = ${lastSPReg(2)}  ********** ########## \n")
-//printf(p" last SP Reg3 = ${lastSPReg(3)}  ********** ########## \n")
-//
-//printf(p"tbCount = ${tbCount} ^&^&^&^&^&^&^&^ \n")
-//printf(p"lastValDecodeWire = ${lastValDecodeWire} ^&^&^&^&^&^&^&^ \n")
-//printf(p"read !!!! ${lastDecodeWire} \n")
-//
-//printf(p" wrAddrPrev = ${wrAddrPrev} !!! \n")
-//printf(p" wrAddr     = ${wrAddr} !!! \n")
-//printf(p" lastValDecodeWire = ${lastValDecodeWire} !!! \n")
-//printf(p"lastBit    = ${lastBit}    ****** \n ")
-//printf(p"cntLenReg  = ${cntLenReg}  ****** \n ")
-//printf(p"cntLenReg2 = ${cntLenReg2}  ****** \n ")
-//printf(p"dataLen    = ${dataLen}    ****** \n ")
-//printf(p"wrAddr = ${wrAddr} ************** \n")
-//printf(p"lastDecode = ${lastDecode} ****** \n")
-//printf(p"mem.read(lastValDecodeWire) = ${lastDecodeWire} ****()()()*** \n ")
-//printf(p"mem.read(7) = ${mem.read(7.U)} ****()()()*** \n ")
-//printf(p"mem.read(8) = ${mem.read(8.U)} ****()()()*** \n ")
-//printf(p"mem.read(9) = ${mem.read(9.U)} ****()()()*** \n ")
-//printf(p"io.inSP = ${io.inSP} ****()()()*** \n ")
