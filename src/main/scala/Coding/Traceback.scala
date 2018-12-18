@@ -7,7 +7,6 @@ import dsptools.numbers._
 //import freechips.rocketchip.subsystem.BaseSubsystem
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
-// more comments are available on traceback_backup1.scala file
 // assuming continous Viterbi Decoding
 class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) extends Module {
   require(params.D >= 4)
@@ -16,10 +15,10 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
     // ignore very first PM & SP
     val inPM    = Input(Vec(params.nStates, params.pmBitType.cloneType)) // storing Path Metric
     val inSP    = Input(Vec(params.nStates, UInt(params.m.W))) // storing Survival Path
-    val enable  = Input(Bool())
+    val enable  = Input(Bool())     // write enable
     val out     = Decoupled(Vec(params.D, UInt(params.k.W)))
     val headInfo = Flipped(Valid(DecodeHeadBundle()))
-
+    val restOut = Decoupled(Vec(params.L + params.D, UInt(params.k.W)))
   })
   val L   = params.L
   val D   = params.D
@@ -31,13 +30,17 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   val addrWidth   = log2Ceil(addrSize) + 1
   val wrAddrPrev  = RegInit(0.U(addrWidth.W))
   val mem         = SyncReadMem(addrSize, Vec(params.nStates, UInt(m.W)))
+  val enReg       = RegNext(io.enable)
+  val lastPMReg   = Reg(UInt(params.nStates.W))
+  val lastSPReg   = Reg(Vec(params.nStates, UInt(params.m.W)))
 
   // Bits are decoded every D cycles, with the exception of the first decode.
   // The first decode must wait for D + L cycles to account for the survivor path memory length.
   // Since the traceback algorithm takes ~ D + L cycles of latency but a new decoding window starts every D cycles,
   // multiple tracebacks will be occurring simultaneously.
   // Thus, multiple memory read ports are required, specified by the following constant:
-  val numReadPorts = ((L - 2) / D) + 2
+  def roundUp(d: Double) = math.ceil(d).toInt
+  val numReadPorts = roundUp(L/D.toDouble) + 1
 
   // The address for each read port is calculated through two registers:
   // rdAddrOffsetPorts(i):
@@ -62,12 +65,13 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   val counterD  = Reg(UInt(log2Up(params.D).W))                          // Counts every D cycles
   val dataLen   = RegEnable(io.headInfo.bits.dataLen, io.headInfo.valid) // Records data length
   val cntLenReg = Reg(dataLen.cloneType)                                 // Counts the number of bits decoded
+  val cntLenReg2 = Reg(dataLen.cloneType)                                // Counter for lastBitDecode
 
   // Default assignment
   io.out.bits.foreach(_ := 0.U(params.k.W))
 
   // FSM states
-  val sIdle :: sWaitFirst :: sDecodeFirst :: sWaitRest :: sDecodeRest :: Nil = Enum(5)
+  val sIdle :: sWaitFirst :: sDecodeFirst :: sWaitRest :: sDecodeRest :: sDecodeLast :: Nil = Enum(6)
   val state     = RegInit(sIdle)
   val nextState = Wire(state.cloneType)
 
@@ -81,14 +85,23 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   val wrAddr = Wire(wrAddrPrev.cloneType)
   wrAddrPrev := wrAddr
   wrAddr     := wrAddrPrev
+
+  // storing address for the last block decoding. This is essential since the normal decoding process will be stopped after io.enable is lowered
+  val lastValDecodeReg  = RegInit(0.U(addrWidth.W))
+  val lastValDecodeWire = Wire(lastValDecodeReg.cloneType)
+  lastValDecodeReg  := lastValDecodeWire
+  lastValDecodeWire := lastValDecodeReg
+
   // Update write address (with wrapping) and write to memory
   when (io.enable) {
+    lastSPReg := io.inSP
     mem.write(wrAddr, io.inSP)
     wrAddr := Mux(wrAddrPrev < (addrSize - 1).U, wrAddrPrev + 1.U, 0.U)
+    lastValDecodeWire := wrAddr - 1.U
   }
 
   // Update traceback counters
-  tracebackCounterPorts.foreach(cntr => { cntr := cntr - 1.U })
+  tracebackCounterPorts.foreach(cntr => { cntr := cntr - 1.U })   // decrease by 1 for each element in a vector
   when (nextStateDecode && nextState =/= state) {
     tracebackCounterPorts(selReadPortWire) := (D + L - 2).U
   }
@@ -96,30 +109,48 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   // Update counterD
   when (nextStateWait && nextState =/= state) {
     counterD := 0.U
-  } .elsewhen (state === sWaitRest && io.enable) {
+  } //.elsewhen (state === sWaitRest && io.enable) {
+    .elsewhen (state === sWaitRest) {
     counterD := counterD + 1.U
   }
 
+  // we need another set of register that stores last L+D decoded outputs.
+  // Once io.enable (writeEnable) is lowered, check if cntLenReg is still lower than dataLen.
+  // If so, then it means we still have more data to be decoded left in the memory. we need to decode this !
+  // this process should be working in parallel with above state machine
+  // maximum last bit = L + D
+  // minimum last bit = L + 1
+  val lastDecode  = RegInit(VecInit(Seq.fill(L+D)(0.U(params.k.W))))  // register storing the last L+D decoded values
+  val lastBit     = ((dataLen - (L + D + 1).U) % D.U) + L.U + 1.U     // size of the last block to be decoded
+  val tbCount     = RegInit(0.U(log2Ceil(L+D).W))
+  val restOutVal  = RegInit(false.B)
+
   // FSM logic
-  when (io.enable) {
-    switch (state) {
-      is (sIdle) {
+  switch (state) {
+    is (sIdle) {
+      when(io.enable){
         nextState := sWaitFirst
-        wrAddr := 0.U
+      }.otherwise{
+        nextState := sIdle
       }
-      is (sWaitFirst) {
-        when (wrAddr % (D + L).U === (D + L - 2).U) {
-          nextState        := sDecodeFirst
-          rdAddrOffsetBase := 0.U
-          selReadPortWire  := 0.U
-          cntLenReg        := D.U
-          rdAddrOffsetPorts(selReadPortWire) := 0.U
-        }
+      wrAddr := 0.U
+    }
+    is (sWaitFirst) {
+      when (wrAddr % (D + L).U === (D + L - 2).U) {
+        nextState        := sDecodeFirst
+        rdAddrOffsetBase := 0.U
+        selReadPortWire  := 0.U
+        cntLenReg        := D.U
+        cntLenReg2       := 0.U
+        rdAddrOffsetPorts(selReadPortWire) := 0.U
+        lastDecode.foreach(_ := 0.U(params.k.W))
       }
-      is (sDecodeFirst) {
-        nextState := sWaitRest
-      }
-      is (sWaitRest) {
+    }
+    is (sDecodeFirst) {
+      nextState := sWaitRest
+    }
+    is (sWaitRest) {
+      when(io.enable){
         when (counterD === (D - 2).U) {
           nextState            := sDecodeRest
           rdAddrOffsetBaseNext := Mux(rdAddrOffsetBase < (addrSize - D).U, rdAddrOffsetBase + D.U, rdAddrOffsetBase - (addrSize - D).U)
@@ -127,9 +158,18 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
           selReadPortWire      := Mux(selReadPortReg === (numReadPorts - 1).U, 0.U, selReadPortReg + 1.U)
           rdAddrOffsetPorts(selReadPortWire) := rdAddrOffsetBaseNext
         }
+      }.otherwise {
+        nextState := sDecodeLast
+        tbCount := lastBit - 3.U
       }
-      is (sDecodeRest) {
-        nextState := Mux(cntLenReg >= dataLen, sIdle, sWaitRest)
+    }
+    is (sDecodeRest) {
+      nextState := Mux(cntLenReg + cntLenReg2 >= dataLen, sIdle, sWaitRest)
+    }
+    is (sDecodeLast) {
+      nextState := Mux(cntLenReg + cntLenReg2 >= dataLen, sIdle, sDecodeLast)
+      when(cntLenReg + cntLenReg2 >= dataLen){
+        restOutVal := true.B
       }
     }
   }
@@ -165,9 +205,27 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
       tmpSPWire(i) := mem_rv(i)(tmpSPReg(i)) // Load from memory
     }
     when (tracebackCounterPorts(i) < D.U) {
-      decodeReg(i)(tracebackCounterPorts(i)) := tmpSPWire(i)(m - 1)
+      decodeReg(i)(tracebackCounterPorts(i)) := tmpSPWire(i)(m - 1)   // tmpSPWire is 1D array. using 2D array accessing style means bit-level access. m-1 means MSB in this case.
     }
   }
+
+  // decoding last block
+  lastPMReg := newPMMinIndex
+  val lastDecodeWire = Wire(Vec(params.nStates, UInt(m.W)))
+  val indexTrackReg  = Reg(UInt(m.W))
+  when(enReg =/= io.enable){
+    lastDecode((lastBit-1.U)) := lastPMReg >> (m-1)
+    lastDecode((lastBit-2.U)) := lastSPReg(newPMMinIndex) >> (m-1)
+    indexTrackReg             := lastSPReg(newPMMinIndex)
+    cntLenReg2                := cntLenReg2 + 2.U
+  }.elsewhen(state === sDecodeLast && nextState === sDecodeLast){
+    lastDecode(tbCount)       := lastDecodeWire(indexTrackReg) >> (m-1)
+    indexTrackReg             := lastDecodeWire(indexTrackReg)
+    tbCount                   := tbCount - 1.U
+    lastValDecodeWire         := Mux(lastValDecodeReg > 0.U, lastValDecodeReg - 1.U, lastValDecodeReg + addrSize - 1.U)
+    cntLenReg2                := cntLenReg2 + 1.U
+  }
+  lastDecodeWire := mem.read(lastValDecodeWire)
 
   val delay = D + L - 1
 
@@ -180,6 +238,35 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   } .otherwise {
     outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, true.B)
   }
-
-  io.out.valid := outValid
+  when (io.restOut.fire()){
+    restOutVal := false.B
+  }
+  io.restOut.valid  := restOutVal
+  io.restOut.bits   := lastDecode
+  io.out.valid      := outValid
 }
+
+//printf(p" last PM Reg = ${lastPMReg} ********** ########## \n ")
+//printf(p" last SP Reg0 = ${lastSPReg(0)}  ********** ########## \n")
+//printf(p" last SP Reg1 = ${lastSPReg(1)}  ********** ########## \n")
+//printf(p" last SP Reg2 = ${lastSPReg(2)}  ********** ########## \n")
+//printf(p" last SP Reg3 = ${lastSPReg(3)}  ********** ########## \n")
+//
+//printf(p"tbCount = ${tbCount} ^&^&^&^&^&^&^&^ \n")
+//printf(p"lastValDecodeWire = ${lastValDecodeWire} ^&^&^&^&^&^&^&^ \n")
+//printf(p"read !!!! ${lastDecodeWire} \n")
+//
+//printf(p" wrAddrPrev = ${wrAddrPrev} !!! \n")
+//printf(p" wrAddr     = ${wrAddr} !!! \n")
+//printf(p" lastValDecodeWire = ${lastValDecodeWire} !!! \n")
+//printf(p"lastBit    = ${lastBit}    ****** \n ")
+//printf(p"cntLenReg  = ${cntLenReg}  ****** \n ")
+//printf(p"cntLenReg2 = ${cntLenReg2}  ****** \n ")
+//printf(p"dataLen    = ${dataLen}    ****** \n ")
+//printf(p"wrAddr = ${wrAddr} ************** \n")
+//printf(p"lastDecode = ${lastDecode} ****** \n")
+//printf(p"mem.read(lastValDecodeWire) = ${lastDecodeWire} ****()()()*** \n ")
+//printf(p"mem.read(7) = ${mem.read(7.U)} ****()()()*** \n ")
+//printf(p"mem.read(8) = ${mem.read(8.U)} ****()()()*** \n ")
+//printf(p"mem.read(9) = ${mem.read(9.U)} ****()()()*** \n ")
+//printf(p"io.inSP = ${io.inSP} ****()()()*** \n ")

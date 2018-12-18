@@ -32,7 +32,7 @@ class PathMetric[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) e
   val numRows             = math.pow(2.0, (params.m-1).asInstanceOf[Double]).asInstanceOf[Int]
   val tmpSP               = Wire(Vec(N, Vec(params.numInputs, UInt(params.m.W))))
 
-  val enReg               = RegInit(false.B)
+  val writeEnReg               = RegInit(false.B)
 
   for (currentInput <- 0 until params.numInputs){
     for (currentStates <- 0 until params.nStates){
@@ -93,8 +93,8 @@ class PathMetric[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) e
     }
   }
 
-  enReg         := io.inEnable
-  io.outEnable  := enReg
+  writeEnReg         := io.inEnable
+  io.outEnable  := writeEnReg           // skip the first PM and SP since its not useful
   io.outPM      := pmRegs
   io.outSP      := survivalPath
 }
