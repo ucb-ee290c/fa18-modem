@@ -4,7 +4,6 @@ import dsptools.DspTester
 
 class ViterbiDecoderUnitTester_Hard[T <: chisel3.Data, U <: chisel3.Data](c: ViterbiDecoder[T, U]) extends DspTester(c) {
   poke(c.io.out.ready, 1)
-  poke(c.io.restOut.ready, 1)
   poke(c.io.in.valid, 0)
   poke(c.io.in.bits.pktStart, 0)
   poke(c.io.in.bits.pktEnd, 0)
@@ -489,7 +488,6 @@ class ViterbiDecoderUnitTester_Hard[T <: chisel3.Data, U <: chisel3.Data](c: Vit
 
   step(1)
   expect(c.io.out.valid, 0)
-  expect(c.io.restOut.valid, 0)
 
   step(1)
   expect(c.io.out.valid, 1)
@@ -498,14 +496,16 @@ class ViterbiDecoderUnitTester_Hard[T <: chisel3.Data, U <: chisel3.Data](c: Vit
   expect(c.io.out.bits(2), 1)
   expect(c.io.out.bits(3), 0)
   expect(c.io.out.bits(4), 1)
-  expect(c.io.restOut.valid, 1)
-  expect(c.io.restOut.bits(0), 1) // bit 21 = 1
-  expect(c.io.restOut.bits(1), 1) // bit 22 = 1
-  expect(c.io.restOut.bits(2), 0) // bit 23 = 0
-  expect(c.io.restOut.bits(3), 0) // bit 24 = 0
-  expect(c.io.restOut.bits(4), 0)
-  expect(c.io.restOut.bits(5), 0)
-  expect(c.io.restOut.bits(6), 0)
+
+  step(2)
+  expect(c.io.out.valid, 1)
+  expect(c.io.out.bits(0), 1) // bit 21 = 1
+  expect(c.io.out.bits(1), 1) // bit 22 = 1
+  expect(c.io.out.bits(2), 0) // bit 23 = 0
+  expect(c.io.out.bits(3), 0) // bit 24 = 0
+  expect(c.io.out.bits(4), 0)
+
+  step(1)
 
 }
 

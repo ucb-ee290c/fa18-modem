@@ -18,11 +18,12 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
     val enable  = Input(Bool())     // write enable
     val out     = Decoupled(Vec(params.D, UInt(params.k.W)))
     val headInfo = Flipped(Valid(DecodeHeadBundle()))
-    val restOut = Decoupled(Vec(params.L + params.D, UInt(params.k.W)))
+
   })
   val L   = params.L
   val D   = params.D
   val m   = params.m
+  val delay = D + L - 1
 
   // Memory Configuration
   val outValid    = RegInit(false.B)
@@ -71,7 +72,7 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   io.out.bits.foreach(_ := 0.U(params.k.W))
 
   // FSM states
-  val sIdle :: sWaitFirst :: sDecodeFirst :: sWaitRest :: sDecodeRest :: sDecodeLast :: Nil = Enum(6)
+  val sIdle :: sWaitFirst :: sDecodeFirst :: sWaitRest :: sDecodeRest :: sDecodeLast :: sAbyss :: Nil = Enum(7)
   val state     = RegInit(sIdle)
   val nextState = Wire(state.cloneType)
 
@@ -114,6 +115,9 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
     counterD := counterD + 1.U
   }
 
+  // record decoded data
+  val decodeReg  = Reg(Vec(numReadPorts, Vec(D, UInt(params.k.W))))
+
   // we need another set of register that stores last L+D decoded outputs.
   // Once io.enable (writeEnable) is lowered, check if cntLenReg is still lower than dataLen.
   // If so, then it means we still have more data to be decoded left in the memory. we need to decode this !
@@ -124,7 +128,8 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   val lastBit     = ((dataLen - (L + D + 1).U) % D.U) + L.U + 1.U     // size of the last block to be decoded
   val tbCount     = RegInit(0.U(log2Ceil(L+D).W))
   val restOutVal  = RegInit(false.B)
-
+  val outValidReg = RegInit(false.B)
+  val abyssTrack  = RegInit(0.U(log2Ceil(L+D+D).W))
   // FSM logic
   switch (state) {
     is (sIdle) {
@@ -134,6 +139,9 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
         nextState := sIdle
       }
       wrAddr := 0.U
+      outValidReg := false.B
+      restOutVal  := false.B
+      abyssTrack  := 0.U
     }
     is (sWaitFirst) {
       when (wrAddr % (D + L).U === (D + L - 2).U) {
@@ -164,13 +172,42 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
       }
     }
     is (sDecodeRest) {
-      nextState := Mux(cntLenReg + cntLenReg2 >= dataLen, sIdle, sWaitRest)
+      nextState := Mux(cntLenReg >= dataLen, sIdle, sWaitRest)
     }
     is (sDecodeLast) {
-      nextState := Mux(cntLenReg + cntLenReg2 >= dataLen, sIdle, sDecodeLast)
-      when(cntLenReg + cntLenReg2 >= dataLen){
+      when(cntLenReg2 >= lastBit){
         restOutVal := true.B
       }
+      nextState := Mux(restOutVal === true.B && outValidReg === true.B , sAbyss, sDecodeLast)
+    }
+    is (sAbyss){  // can't come up with a better name :( - this state is added to process the last block decoding !
+      when(lastBit > D.U){
+        when(lastBit - abyssTrack > D.U){
+          for (i <- 0 until D){
+            decodeReg(selReadPortReg)(i) := lastDecode(abyssTrack + i.U)
+          }
+        }.otherwise{
+          for (i <- 0 until D){
+            when(i.U < lastBit - abyssTrack){
+              decodeReg(selReadPortReg)(i) := lastDecode(abyssTrack + i.U)
+            }.otherwise{
+              decodeReg(selReadPortReg)(i) := 0.U
+            }
+          }
+        }
+        abyssTrack := abyssTrack + D.U
+        nextState := Mux( abyssTrack >= lastBit , sIdle, sAbyss)
+      }.otherwise{
+        for (i <- 0 until D){
+          when(i.U <= D.U - lastBit){
+            decodeReg(selReadPortReg)(i) := lastDecode(i)
+          }.otherwise{
+            decodeReg(selReadPortReg)(i) := 0.U
+          }
+        }
+        nextState := sIdle
+      }
+      outValid := true.B
     }
   }
 
@@ -196,8 +233,6 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   tmpSPReg  := tmpSPWire
   tmpSPWire := tmpSPReg
 
-  val decodeReg  = Reg(Vec(numReadPorts, Vec(D, UInt(params.k.W))))
-
   for (i <- 0 until numReadPorts) {
     when (tracebackCounterPorts(i) === (D + L - 2).U) {
       tmpSPWire(i) := io.inSP(newPMMinIndex) // Load from input
@@ -213,21 +248,21 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   lastPMReg := newPMMinIndex
   val lastDecodeWire = Wire(Vec(params.nStates, UInt(m.W)))
   val indexTrackReg  = Reg(UInt(m.W))
-  when(enReg =/= io.enable){
-    lastDecode((lastBit-1.U)) := lastPMReg >> (m-1)
-    lastDecode((lastBit-2.U)) := lastSPReg(newPMMinIndex) >> (m-1)
-    indexTrackReg             := lastSPReg(newPMMinIndex)
-    cntLenReg2                := cntLenReg2 + 2.U
-  }.elsewhen(state === sDecodeLast && nextState === sDecodeLast){
-    lastDecode(tbCount)       := lastDecodeWire(indexTrackReg) >> (m-1)
-    indexTrackReg             := lastDecodeWire(indexTrackReg)
-    tbCount                   := tbCount - 1.U
-    lastValDecodeWire         := Mux(lastValDecodeReg > 0.U, lastValDecodeReg - 1.U, lastValDecodeReg + addrSize - 1.U)
-    cntLenReg2                := cntLenReg2 + 1.U
+  when(restOutVal === false.B){
+    when(enReg =/= io.enable && state >= sWaitRest){    // when io.enable is switching from high to low
+      lastDecode((lastBit-1.U)) := lastPMReg >> (m-1)
+      lastDecode((lastBit-2.U)) := lastSPReg(newPMMinIndex) >> (m-1)
+      indexTrackReg             := lastSPReg(newPMMinIndex)
+      cntLenReg2                := cntLenReg2 + 2.U
+    }.elsewhen(state === sDecodeLast && nextState === sDecodeLast){
+      lastDecode(tbCount)       := lastDecodeWire(indexTrackReg) >> (m-1)
+      indexTrackReg             := lastDecodeWire(indexTrackReg)
+      tbCount                   := tbCount - 1.U
+      lastValDecodeWire         := Mux(lastValDecodeReg > 0.U, lastValDecodeReg - 1.U, lastValDecodeReg + addrSize - 1.U)
+      cntLenReg2                := cntLenReg2 + 1.U
+    }
   }
   lastDecodeWire := mem.read(lastValDecodeWire)
-
-  val delay = D + L - 1
 
   // delay read port selection to be in sync with output
   val selReadPortReg_delayed = ShiftRegister(selReadPortReg, delay, true.B)
@@ -235,14 +270,13 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
 
   when (io.out.fire()) {
     outValid := false.B
-  } .otherwise {
+  } .elsewhen(state < sAbyss) {
     outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, true.B)
   }
-  when (io.restOut.fire()){
-    restOutVal := false.B
+  when( (dataLen - cntLenReg < D.U) && outValid === true.B ){
+    outValidReg := true.B
   }
-  io.restOut.valid  := restOutVal
-  io.restOut.bits   := lastDecode
+
   io.out.valid      := outValid
 }
 

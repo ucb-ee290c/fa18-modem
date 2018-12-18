@@ -16,7 +16,6 @@ class ViterbiDecoder[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U
   val io = IO(new Bundle {
     val in            = Flipped(Decoupled(BitsBundle(params)))
     val out           = Decoupled(Vec(params.D, UInt(params.k.W)))
-    val restOut       = Decoupled(Vec(params.L + params.D, UInt(params.k.W)))
     val out_isHead    = Output(Bool())                  // for testing purpose
     val out_lenCnt    = Output(Bool())                  // for testing purpose
     val out_pktLatch  = Output(Bool())                  // for testing purpose
@@ -71,7 +70,6 @@ class ViterbiDecoder[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U
   tracebackModule.io.enable       := pathMetricModule.io.outEnable
   tracebackModule.io.headInfo.valid := HeaderExtModule.io.headInfo.valid
   tracebackModule.io.headInfo.bits  := HeaderExtModule.io.headInfo.bits
-  io.restOut                      <> tracebackModule.io.restOut
   io.out                          <> tracebackModule.io.out
   io.out_en2  := pathMetricModule.io.outEnable                // for testing purpose
 }
