@@ -32,7 +32,6 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   val wrAddrPrev  = RegInit(0.U(addrWidth.W))
   val mem         = SyncReadMem(addrSize, Vec(params.nStates, UInt(m.W)))
   val enReg       = RegNext(io.enable)
-  val lastPMReg   = Reg(UInt(params.nStates.W))
   val lastSPReg   = Reg(Vec(params.nStates, UInt(params.m.W)))
 
   // Bits are decoded every D cycles, with the exception of the first decode.
@@ -245,12 +244,11 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   }
 
   // decoding last block
-  lastPMReg := newPMMinIndex
   val lastDecodeWire = Wire(Vec(params.nStates, UInt(m.W)))
   val indexTrackReg  = Reg(UInt(m.W))
   when(restOutVal === false.B){
     when(enReg =/= io.enable && state >= sWaitRest){    // when io.enable is switching from high to low
-      lastDecode((lastBit-1.U)) := lastPMReg >> (m-1)
+      lastDecode((lastBit-1.U)) := newPMMinIndex >> (m-1)
       lastDecode((lastBit-2.U)) := lastSPReg(newPMMinIndex) >> (m-1)
       indexTrackReg             := lastSPReg(newPMMinIndex)
       cntLenReg2                := cntLenReg2 + 2.U
@@ -268,7 +266,7 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   val selReadPortReg_delayed = ShiftRegister(selReadPortReg, delay, true.B)
   io.out.bits := decodeReg(selReadPortReg_delayed)
 
-  when (io.out.fire()) {
+  when (io.out.fire() && state < sAbyss) {
     outValid := false.B
   } .elsewhen(state < sAbyss) {
     outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, true.B)
@@ -277,30 +275,5 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
     outValidReg := true.B
   }
 
-  io.out.valid      := outValid
+  io.out.valid  := outValid
 }
-
-//printf(p" last PM Reg = ${lastPMReg} ********** ########## \n ")
-//printf(p" last SP Reg0 = ${lastSPReg(0)}  ********** ########## \n")
-//printf(p" last SP Reg1 = ${lastSPReg(1)}  ********** ########## \n")
-//printf(p" last SP Reg2 = ${lastSPReg(2)}  ********** ########## \n")
-//printf(p" last SP Reg3 = ${lastSPReg(3)}  ********** ########## \n")
-//
-//printf(p"tbCount = ${tbCount} ^&^&^&^&^&^&^&^ \n")
-//printf(p"lastValDecodeWire = ${lastValDecodeWire} ^&^&^&^&^&^&^&^ \n")
-//printf(p"read !!!! ${lastDecodeWire} \n")
-//
-//printf(p" wrAddrPrev = ${wrAddrPrev} !!! \n")
-//printf(p" wrAddr     = ${wrAddr} !!! \n")
-//printf(p" lastValDecodeWire = ${lastValDecodeWire} !!! \n")
-//printf(p"lastBit    = ${lastBit}    ****** \n ")
-//printf(p"cntLenReg  = ${cntLenReg}  ****** \n ")
-//printf(p"cntLenReg2 = ${cntLenReg2}  ****** \n ")
-//printf(p"dataLen    = ${dataLen}    ****** \n ")
-//printf(p"wrAddr = ${wrAddr} ************** \n")
-//printf(p"lastDecode = ${lastDecode} ****** \n")
-//printf(p"mem.read(lastValDecodeWire) = ${lastDecodeWire} ****()()()*** \n ")
-//printf(p"mem.read(7) = ${mem.read(7.U)} ****()()()*** \n ")
-//printf(p"mem.read(8) = ${mem.read(8.U)} ****()()()*** \n ")
-//printf(p"mem.read(9) = ${mem.read(9.U)} ****()()()*** \n ")
-//printf(p"io.inSP = ${io.inSP} ****()()()*** \n ")
