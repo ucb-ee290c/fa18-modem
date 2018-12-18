@@ -3,25 +3,31 @@ package modem
 import chisel3._
 import chisel3.util._
 import dsptools.numbers.Real
-//import freechips.rocketchip.diplomacy.LazyModule
-//import freechips.rocketchip.subsystem.BaseSubsystem
 
 // Written by Kunmo Kim : kunmok@berkeley.edu
-// TODO: zero-flush bufInterleaver when all the packets are properly received -> assuming this will be done by MAC layer
 class Puncturing[T <: Data, U <: Data](params: CodingParams[T, U]) extends Module {
   val io = IO(new Bundle {
     val in          = Input(Vec(params.n, UInt(1.W)))
-    val inReady     = Input(UInt(1.W))
+    val inReady     = Input(Bool())
     val isHead      = Input(Bool())                               // from MAC layer
     val puncMatrix  = Input(Vec(4, UInt(1.W)))                    // from MAC layer
     val pktStrIn    = Input(Bool())
     val pktEndIn    = Input(Bool())
+    val pktLatIn    = Input(Bool())
 
     val out         = Decoupled(Vec(params.bitsWidth, UInt(1.W)))
     val modCtrl     = Output(UInt(2.W))
     val pktStrOut   = Output(Bool())
     val pktEndOut   = Output(Bool())
   })
+
+  // FSM states
+  val sIdle :: sStartWrite :: sEndWrite :: Nil = Enum(3)
+  val state     = RegInit(sIdle)
+  val nextState = Wire(state.cloneType)
+
+  nextState := state
+  state     := nextState
 
   val puncMatBitWidth     = RegInit(0.U(4.W))
   val punctureVecReg      = RegInit(VecInit(Seq.fill(params.n)(VecInit(Seq.fill(7)(0.U(1.W))))))  // support up to 7/8 coding rate
@@ -34,7 +40,8 @@ class Puncturing[T <: Data, U <: Data](params: CodingParams[T, U]) extends Modul
   pktStartReg := io.pktStrIn
   val pktEndReg           = RegInit(false.B)
   pktEndReg   := io.pktEndIn
-
+  val pktLatReg   = RegInit(false.B)
+  pktLatReg   := io.pktLatIn
 
   val bpsk = 0.U
   val qpsk = 1.U
@@ -117,15 +124,31 @@ class Puncturing[T <: Data, U <: Data](params: CodingParams[T, U]) extends Modul
   val p_cnt             = RegInit(0.U(log2Ceil(params.bitsWidth).W))              // counter for outReg tracker
   val bufInterleaver    = RegInit(VecInit(Seq.fill(params.bitsWidth)(0.U(1.W))))  // buffer for interleaver
 
-  // Make states for state machine
-  val sStartRecv  = 0.U(2.W)        // start taking input bits
-  val sEOS        = 1.U(2.W)
-  val sDone       = 2.U(2.W)
   val outValid    = RegInit(false.B)
+
+  // FSM
+  switch (state) {
+    is (sIdle) {
+      when(io.pktLatIn === pktLatReg){
+        p_cnt := 0.U
+        o_cnt := 0.U
+      }.otherwise{                        // when pktLatIn go from L -> H
+        nextState := sStartWrite
+      }
+    }
+    is (sStartWrite){
+      when(io.pktLatIn =/= pktLatReg){    // when pktLatIn go from H -> L
+        nextState := sEndWrite
+      }
+    }
+    is (sEndWrite) {
+      nextState := sIdle
+    }
+  }
 
   // ex) puncturing Matrix: [1,1,0],[1,0,1]
   // -> Input Matrix: [A0,A1,A2], [B0, B1, B2] -> Output Matrix: [A0, B0, A1, B2]
-  when( io.inReady === 1.U && io.isHead === false.B){
+  when( io.inReady === 1.U && io.isHead === false.B && io.pktLatIn === true.B){
     // if puncturing is enabled,
     for (i <- 0 until params.n) {
       when(punctureVecReg((o_cnt+i.U) % params.n.U)((o_cnt / params.n.U) % puncMatBitWidth) === 1.U) {
@@ -134,16 +157,17 @@ class Puncturing[T <: Data, U <: Data](params: CodingParams[T, U]) extends Modul
     }
 
     p_cnt := p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)
+    val nextPCnt = p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)
     o_cnt := o_cnt + params.n.U
     when(p_cnt >= (params.bitsWidth.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
       outValid  := true.B
       p_cnt := 0.U
-
     }
     when((o_cnt >= (params.bitsWidth - params.n).U) && ((((o_cnt+1.U) / params.n.U) % puncMatBitWidth) === (puncMatBitWidth -1.U))) {
       o_cnt := 0.U
     }
-  }.elsewhen( io.inReady === 1.U && io.isHead === true.B){    // no puncturing
+
+  }.elsewhen( io.inReady === 1.U && io.isHead === true.B && io.pktLatIn === true.B){    // no puncturing
     (0 until params.n).map(i => { bufInterleaver(o_cnt + i.U) := io.in(i.U) })
     o_cnt := o_cnt + params.n.U
     when(o_cnt === (params.bitsWidth - params.n).U) {
@@ -151,6 +175,22 @@ class Puncturing[T <: Data, U <: Data](params: CodingParams[T, U]) extends Modul
       o_cnt := 0.U
     }
   }
+
+  // when pktEnd was raised (pktLatch go from H -> L), fill up the rest of bufInterleaver with 0s and then send it to Interleaver
+  // TODO: test it
+  when(state === sEndWrite && io.inReady === 1.U){
+    outValid := true.B
+    when(p_cnt < (params.bitsWidth.U - puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth))) {
+      for (i <- 0 until params.bitsWidth) {
+        when(i.U + p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth) <= params.bitsWidth.U){
+          bufInterleaver(i.U + p_cnt + puncListColSumReg((o_cnt/params.n.U) % puncMatBitWidth)) := 0.U
+        }
+      }
+    }
+    p_cnt := 0.U
+    o_cnt := 0.U
+  }
+
   when(io.out.fire()){
     outValid := false.B
   }
