@@ -266,7 +266,7 @@ class Traceback[T <: Data: Real, U <: Data: Real](params: CodingParams[T, U]) ex
   val selReadPortReg_delayed = ShiftRegister(selReadPortReg, delay, true.B)
   io.out.bits := decodeReg(selReadPortReg_delayed)
 
-  when (io.out.fire()) {
+  when (io.out.fire() && state < sAbyss) {
     outValid := false.B
   } .elsewhen(state < sAbyss) {
     outValid := ShiftRegister(state === sDecodeFirst || state === sDecodeRest, delay, true.B)
